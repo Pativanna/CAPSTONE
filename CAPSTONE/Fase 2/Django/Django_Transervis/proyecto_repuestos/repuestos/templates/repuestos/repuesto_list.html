@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lista de Repuestos</title>
+</head>
+<body>
+    <h1>Repuestos</h1>
+    <a href="{% url 'repuesto-create' %}">Agregar Nuevo</a>
+    <ul>
+        {% for repuesto in repuestos %}
+            <li>
+                {{ repuesto.nombre_repuesto }} - ${{ repuesto.precio }}
+                <a href="{% url 'repuesto-detail' repuesto.pk %}">Ver</a>
+                <a href="{% url 'repuesto-update' repuesto.pk %}">Editar</a>
+                <a href="{% url 'repuesto-delete' repuesto.pk %}">Eliminar</a>
+            </li>
+        {% empty %}
+            <li>No hay repuestos registrados</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

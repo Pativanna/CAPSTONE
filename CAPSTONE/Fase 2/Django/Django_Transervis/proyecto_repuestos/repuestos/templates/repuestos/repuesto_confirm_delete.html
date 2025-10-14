@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Eliminar Repuesto</title>
+</head>
+<body>
+    <h1>Eliminar Repuesto</h1>
+    <p>¿Estás seguro de que quieres eliminar "{{ repuesto.nombre_repuesto }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Confirmar</button>
+    </form>
+    <a href="{% url 'repuesto-list' %}">Cancelar</a>
+</body>
+</html>

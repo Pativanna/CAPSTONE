@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detalle de Repuesto</title>
+</head>
+<body>
+    <h1>{{ repuesto.nombre_repuesto }}</h1>
+    <p><strong>Precio:</strong> ${{ repuesto.precio }}</p>
+    <p><strong>Fecha Ingreso:</strong> {{ repuesto.fec_ingreso }}</p>
+    <p><strong>Fecha Venta:</strong> {{ repuesto.fec_venta }}</p>
+    <p><strong>Notas:</strong> {{ repuesto.notas }}</p>
+    <p><strong>Estado:</strong> {{ repuesto.id_estado.nombre_estado }}</p>
+    <p><strong>Modelo Auto:</strong> {{ repuesto.id_modelo.nombre_modelo }} ({{ repuesto.id_modelo.año }})</p>
+    <p><strong>Taller:</strong> {{ repuesto.id_taller.nombre_taller }}</p>
+    <a href="{% url 'repuesto-list' %}">Volver</a>
+</body>
+</html>
