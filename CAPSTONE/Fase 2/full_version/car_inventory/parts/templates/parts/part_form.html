@@ -1,0 +1,32 @@
+{% extends 'parts/base.html' %}
+
+{% block content %}
+<h2>{{ form.instance.pk|yesno:"Edit Part,Add New Part" }}</h2>
+
+<form method="post" enctype="multipart/form-data" class="mt-3">
+  {% csrf_token %}
+  {{ form.as_p }}
+
+  <!-- 🎙️ Recording controls -->
+  <div class="mb-3">
+    <button type="button" id="record" class="btn btn-danger">🎙️ Start Recording</button>
+    <button type="button" id="stop" class="btn btn-secondary" disabled>Stop</button>
+  </div>
+
+  <!-- 📝 Show transcribed text + JSON -->
+  <div class="form-group">
+    <label>Transcription Preview:</label>
+    <pre id="output" class="border p-2 bg-light"></pre>
+  </div>
+  <div class="form-group">
+    <label>Detected Info:</label>
+    <pre id="vehicle" class="border p-2 bg-light"></pre>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save</button>
+  <a href="{% url 'part_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+
+{% load static %}
+<script src="{% static 'parts/recorder.js' %}"></script>
+{% endblock %}

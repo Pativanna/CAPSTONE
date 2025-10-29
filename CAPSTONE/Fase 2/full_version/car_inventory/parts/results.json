@@ -1,0 +1,56 @@
+[
+  {
+    "source": "/tmp/tmp9ze7y5mk.webm.wav",
+    "data": {
+      "modelo": null,
+      "parte": null,
+      "color": null,
+      "valor": null
+    }
+  },
+  {
+    "source": "/tmp/tmpl_nc5wpz.webm.wav",
+    "data": {
+      "modelo": "Toyota del 2025",
+      "parte": "puerta",
+      "color": "azul",
+      "valor": "500000"
+    }
+  },
+  {
+    "source": "/tmp/tmp5tg47c_7.webm.wav",
+    "data": {
+      "modelo": null,
+      "parte": null,
+      "color": null,
+      "valor": null
+    }
+  },
+  {
+    "source": "/tmp/tmpfy6vav99.webm.wav",
+    "data": {
+      "modelo": "Hyundai RJ-45, año no mencionado",
+      "parte": "puerta",
+      "color": null,
+      "valor": "$100000"
+    }
+  },
+  {
+    "source": "/tmp/tmpeobm028o.webm.wav",
+    "data": {
+      "modelo": null,
+      "parte": "Motor",
+      "color": null,
+      "valor": null
+    }
+  },
+  {
+    "source": "/tmp/tmpkmmialo8.webm.wav",
+    "data": {
+      "modelo": "Toyota RJ45",
+      "parte": "puerta",
+      "color": "rosado",
+      "valor": "600000"
+    }
+  }
+]

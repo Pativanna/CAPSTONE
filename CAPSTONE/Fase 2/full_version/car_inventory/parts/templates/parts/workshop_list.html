@@ -1,0 +1,23 @@
+{% extends 'parts/base.html' %}
+{% block content %}
+<h2>Workshops</h2>
+<a href="{% url 'workshop_create' %}" class="btn btn-success mb-3">Add New Workshop</a>
+<table class="table table-striped">
+  <tr>
+    <th>ID</th><th>Name</th><th>Direction</th><th>Actions</th>
+  </tr>
+  {% for w in workshops %}
+  <tr>
+    <td>{{ w.id }}</td>
+    <td>{{ w.name }}</td>
+    <td>{{ w.direction }}</td>
+    <td>
+      <a href="{% url 'workshop_edit' w.id %}" class="btn btn-sm btn-primary">Edit</a>
+      <a href="{% url 'workshop_delete' w.id %}" class="btn btn-sm btn-danger">Delete</a>
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="4">No workshops found.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

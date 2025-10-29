@@ -1,0 +1,26 @@
+{% extends 'parts/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Car Parts</h2>
+  <a href="{% url 'part_create' %}" class="btn btn-primary">Add New Part</a>
+</div>
+
+<div class="row">
+  {% for part in parts %}
+  <div class="col-md-4 mb-3">
+    <div class="card shadow-sm">
+      {% if part.image %}
+        <img src="{{ part.image.url }}" class="card-img-top" style="height:200px;object-fit:cover;">
+      {% endif %}
+      <div class="card-body">
+        <h5 class="card-title">{{ part.name }}</h5>
+        <p class="card-text text-muted">{{ part.car_model }}</p>
+        <p><strong>${{ part.value }}</strong></p>
+        <a href="{% url 'part_update' part.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+        <a href="{% url 'part_delete' part.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

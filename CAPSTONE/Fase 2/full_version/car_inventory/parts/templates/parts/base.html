@@ -1,0 +1,23 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Car Parts Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="{% static 'css/style.css' %}" rel="stylesheet">
+</head>
+<body class="bg-light text-dark">
+
+<nav class="navbar navbar-dark bg-primary mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/">🚗 Car Parts Inventory</a>
+  </div>
+</nav>
+
+<div class="container">
+  {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
