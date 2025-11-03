@@ -1,0 +1,197 @@
+:root{
+  --bs-font-sans-serif: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --bs-body-font-size: 1rem; /* 16px */
+  --bs-primary: #5B9BD5; /* azul claro sin ser celeste */
+  --bs-primary-rgb: 91, 155, 213;
+  --bs-success: #22a06b;
+  --bs-danger: #dc3545;
+  --bs-dark: #101418;
+  --bs-light: #f8f9fa;
+}
+
+/****** Dark mode automático según sistema *****/
+@media (prefers-color-scheme: dark) {
+  :root{
+    --bs-body-bg: #0b0e12;
+    --bs-body-color: #e6e6e6;
+    --bs-dark: #0b0e12;
+    --bs-light: #1a212c;
+    --bs-primary: #74a8db; /* un poco más claro en dark */
+  }
+  .navbar-dark.bg-primary {
+    background-color: var(--bs-primary) !important;
+  }
+  .card {
+    background-color: #141922;
+    border-color: #1a212c;
+  }
+  .table {
+    --bs-table-bg: #101418;
+    --bs-table-color: #e6e6e6;
+    --bs-table-striped-bg: #141922;
+    --bs-table-hover-bg: #1a212c;
+    --bs-table-border-color: #1a212c;
+  }
+  .form-control, .form-select {
+    background-color: #141922;
+    border-color: #1a212c;
+    color: #e6e6e6;
+  }
+  .form-control:focus, .form-select:focus {
+    background-color: #1a212c;
+    border-color: var(--bs-primary);
+    color: #e6e6e6;
+  }
+  .form-floating > label {
+    color: #b9c4cf;
+  }
+  .btn-outline-secondary {
+    color: #e6e6e6;
+    border-color: #495057;
+  }
+  .btn-outline-secondary:hover {
+    background-color: #495057;
+    color: #fff;
+  }
+}
+
+/* Utilidades generales */
+.card { 
+  border-radius: .75rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.btn { 
+  border-radius: .5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+
+/* Tablas mejoradas */
+.table {
+  border-radius: .5rem;
+  overflow: hidden;
+}
+.table thead th { 
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.875rem;
+  letter-spacing: 0.025em;
+  padding: 1rem 0.75rem;
+}
+
+/* Botón circular de grabación */
+.record-btn{
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, #6ca7dc 0%, #5B9BD5 100%);
+  box-shadow: 0 10px 30px rgba(91,155,213,.3);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  font-size: 24px;
+  cursor: pointer;
+}
+.record-btn i {
+  font-size: 60px;
+  margin-bottom: 10px;
+}
+.record-btn .btn-text {
+  font-size: 18px;
+  font-weight: 600;
+}
+.record-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 15px 40px rgba(91,155,213,.4);
+}
+.record-btn:active {
+  transform: scale(0.95);
+}
+.record-btn.recording {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  animation: pulse 1.5s infinite;
+}
+.record-btn.loading {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  animation: rotate 1s linear infinite;
+  cursor: wait;
+}
+.record-btn.loading i {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 10px 30px rgba(245, 87, 108, 0.4); }
+  50% { box-shadow: 0 15px 50px rgba(245, 87, 108, 0.8); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes rotate {
+  0%, 100% { box-shadow: 0 10px 30px rgba(79, 172, 254, 0.4); }
+  50% { box-shadow: 0 15px 50px rgba(79, 172, 254, 0.8); }
+}
+
+/* Responsive: móviles */
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  .table thead th {
+    font-size: 0.75rem;
+    padding: 0.75rem 0.5rem;
+  }
+  .table tbody td {
+    padding: 0.75rem 0.5rem;
+  }
+  .btn {
+    font-size: 0.9rem;
+  }
+  main.container {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .card {
+    border-radius: 0.5rem;
+  }
+  .record-btn {
+    width: 150px;
+    height: 150px;
+  }
+  #bottom-control-bar .btn {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.9rem !important;
+  }
+  #results-preview .card {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Transiciones suaves */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Success overlay mobile sizing */
+@media (max-width: 576px) {
+  #success-overlay h1 {
+    font-size: 48px !important;
+  }
+  #success-overlay i {
+    font-size: 72px !important;
+  }
+}

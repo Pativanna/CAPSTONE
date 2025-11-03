@@ -1,0 +1,125 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block content %}
+<h2>{{ form.instance.pk|yesno:"Editar Pieza,Agregar Nueva Pieza" }}</h2>
+
+{% if not form.instance.pk %}
+<!-- Step 0: Vehicle selector / entry choice (solo para nuevo ingreso) -->
+<div id="vehicle-selection" class="card mb-3 p-3">
+  <div class="mb-2">
+    <strong>Elija modo de ingreso:</strong>
+  </div>
+  <div class="btn-group mb-3" role="group" aria-label="modes">
+    <button type="button" id="mode-select-auto" class="btn btn-outline-primary">Seleccionar Auto</button>
+    <a href="{% url 'workshop_list' %}" class="btn btn-outline-secondary" id="mode-add-auto">Agregar Auto</a>
+    <button type="button" id="mode-single" class="btn btn-outline-info">Ingreso Unitario</button>
+  </div>
+
+  <!-- Select existing auto (newest first) -->
+  <div id="select-auto-box" style="display:none;">
+    <label for="auto-selector">Seleccionar Auto:</label>
+    <select id="auto-selector" class="form-control mb-2">
+      <option value="">-- Seleccione un auto --</option>
+      {% for a in autos %}
+      <option value="{{ a.id }}">{{ a.model }} ({{ a.color }}) - {{ a.date_added }}</option>
+      {% endfor %}
+    </select>
+    <div>
+      <button type="button" id="confirm-auto" class="btn btn-success">Usar este vehículo</button>
+      <button type="button" id="clear-selection" class="btn btn-link text-danger">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Ingreso unitario: provide small fields for model/color (will not create Auto automatically yet) -->
+  <div id="single-entry-box" style="display:none;">
+    <label>Ingreso unitario (modelo / color)</label>
+    <div class="form-row">
+      <input id="single-model" class="form-control mb-2" placeholder="Modelo (ej: Toyota Yaris 2010)">
+      <input id="single-color" class="form-control mb-2" placeholder="Color (ej: blanco)">
+    </div>
+    <div>
+      <button type="button" id="use-single" class="btn btn-success">Usar este vehículo</button>
+      <button type="button" id="cancel-single" class="btn btn-link text-danger">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="current-selection" style="display:none; margin-top:12px;">
+    <strong>Vehículo seleccionado:</strong>
+    <span id="selected-display" class="ml-2"></span>
+    <button type="button" id="change-vehicle" class="btn btn-sm btn-outline-secondary ml-2">Cambiar</button>
+    <button type="button" id="use-previous" class="btn btn-sm btn-success ml-2" style="display:none;">Usar selección anterior</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- Main form: shown immediately for editing -->
+<form method="post" enctype="multipart/form-data" class="mt-3" id="part-form" data-is-edit="{{ form.instance.pk|yesno:'true,false' }}" style="display:{{ form.instance.pk|yesno:'block,none' }}">
+  {% csrf_token %}
+  {{ form.as_p }}
+
+  <!-- 🎙️ Recording controls -->
+  <div class="mb-3">
+    <button type="button" id="record" class="btn btn-danger">🎙️ Start Recording</button>
+    <button type="button" id="stop" class="btn btn-secondary" disabled>Stop</button>
+    <button type="button" id="clear-fields" class="btn btn-warning ml-2">🧹 Limpiar campos</button>
+  </div>
+
+  <!-- 📝 Show transcribed text + JSON -->
+  <div class="form-group">
+    <label>Transcription Preview:</label>
+    <pre id="output" class="border p-2 bg-light"></pre>
+  </div>
+  <div class="form-group">
+    <label>Detected Info:</label>
+    <pre id="vehicle" class="border p-2 bg-light"></pre>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Save</button>
+  <a href="{% url 'part_list' %}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+  // Función para actualizar los campos del formulario con la información del JSON
+  function updateFormFields(data) {
+    if (!data) return;
+    
+    // Actualizar el campo de nombre si viene una parte
+    if (data.parte) {
+      const nameField = document.querySelector('input[name="name"]');
+      if (nameField) nameField.value = data.parte;
+    }
+    
+    // Actualizar el campo de detalles
+    if (data.detalles) {
+      const detailsField = document.querySelector('input[name="details"]');
+      if (detailsField) detailsField.value = data.detalles;
+    }
+    
+    // Actualizar los campos de valor si viene un valor
+    if (data.valor) {
+      const maxValueField = document.querySelector('input[name="max_value"]');
+      const minValueField = document.querySelector('input[name="min_value"]');
+      if (maxValueField) maxValueField.value = data.valor;
+      if (minValueField) minValueField.value = data.valor;
+    }
+  }
+
+  // Agregar funcionalidad al botón de limpiar
+  document.getElementById('clear-fields').addEventListener('click', function() {
+    const form = document.getElementById('part-form');
+    if (form) {
+      // Limpiar campos específicos
+      ['name', 'details', 'max_value', 'min_value'].forEach(fieldName => {
+        const field = form.querySelector(`[name="${fieldName}"]`);
+        if (field) field.value = '';
+      });
+    }
+  });
+</script>
+
+{% load static %}
+<script src="{% static 'parts/recorder.js' %}"></script>
+<script src="{% static 'parts/form-handler.js' %}"></script>
+
+{% endblock %}

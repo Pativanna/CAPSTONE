@@ -1,32 +1,284 @@
 {% extends 'parts/base.html' %}
+{% load static %}
 
 {% block content %}
-<h2>{{ form.instance.pk|yesno:"Edit Part,Add New Part" }}</h2>
+<h2 id="page-title">{{ form.instance.pk|yesno:"Editar Pieza,Agregar Nueva Pieza" }}</h2>
 
-<form method="post" enctype="multipart/form-data" class="mt-3">
+{% if not form.instance.pk %}
+<!-- Step 0: Vehicle selector / entry choice (solo para nuevo ingreso) -->
+<div id="vehicle-selection" class="card mb-3 p-3">
+  <!-- Selector de Ubicación Persistente -->
+  <div class="form-floating mb-2">
+    <select id="persistent-workshop-selector" class="form-select" placeholder="Ubicación de trabajo">
+      <option value="">-- Seleccione su ubicación --</option>
+      {% for ws in workshops %}
+        <option value="{{ ws.id }}">{{ ws.name }}</option>
+      {% endfor %}
+    </select>
+    <label for="persistent-workshop-selector"><i class="fas fa-map-marker-alt me-1"></i> Ubicación de trabajo</label>
+  </div>
+  <div id="workshop-status" class="form-text mb-3">Se recordará para futuros ingresos</div>
+
+  <div class="mb-2">
+    <strong>Elija modo de ingreso:</strong>
+  </div>
+  <div class="row g-2 mb-3" role="group" aria-label="modes">
+    <div class="col-12 col-sm-4">
+      <button type="button" id="mode-select-auto" class="btn btn-outline-primary w-100">Seleccionar Auto</button>
+    </div>
+    <div class="col-12 col-sm-4">
+      <a href="{% url 'workshop_list' %}" class="btn btn-outline-secondary w-100" id="mode-add-auto">Agregar Auto</a>
+    </div>
+    <div class="col-12 col-sm-4">
+      <button type="button" id="mode-single" class="btn btn-outline-info w-100">Ingreso Unitario</button>
+    </div>
+  </div>
+
+  <!-- Select existing auto (newest first) -->
+  <div id="select-auto-box" style="display:none;">
+    <div class="form-floating mb-2">
+      <select id="auto-selector" class="form-select" placeholder="Seleccionar Auto">
+        <option value="">-- Seleccione un auto --</option>
+        {% for a in autos %}
+        <option value="{{ a.id }}">{{ a.brand_model }} ({{ a.year }}) - {{ a.date_added }}</option>
+        {% endfor %}
+      </select>
+      <label for="auto-selector">Seleccionar Auto</label>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button type="button" id="confirm-auto" class="btn btn-success flex-grow-1">Usar este vehículo</button>
+      <button type="button" id="clear-selection" class="btn btn-outline-secondary flex-grow-1">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Ingreso unitario: provide small fields for model/color (will not create Auto automatically yet) -->
+  <div id="single-entry-box" style="display:none;">
+    <div class="row g-2 align-items-stretch">
+      <div class="col-12 col-md-8">
+        <div class="form-floating h-100">
+          <input id="single-model" class="form-control" placeholder="Marca y Modelo (ej: Toyota Yaris)">
+          <label for="single-model">Marca y Modelo</label>
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="form-floating h-100">
+          <input id="single-year" class="form-control" placeholder="Año (ej: 2010)" type="number" min="1900" max="2100" inputmode="numeric" pattern="\\d*">
+          <label for="single-year">Año</label>
+        </div>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap mt-2">
+      <button type="button" id="use-single" class="btn btn-success flex-grow-1">Usar este vehículo</button>
+      <button type="button" id="cancel-single" class="btn btn-outline-secondary flex-grow-1">Cancelar</button>
+    </div>
+  </div>
+
+  <div id="current-selection" class="d-flex flex-wrap align-items-center gap-2 mt-2" style="display:none;">
+    <strong>Vehículo seleccionado:</strong>
+    <span id="selected-display"></span>
+    <button type="button" id="change-vehicle" class="btn btn-sm btn-outline-secondary">Cambiar</button>
+    <button type="button" id="use-previous" class="btn btn-sm btn-success" style="display:none;">Usar selección anterior</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- Overlay de confirmación verde -->
+<div id="success-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #28a745; z-index: 9999; opacity: 0; transition: opacity 0.3s ease;">
+  <div style="display: flex; justify-content: center; align-items: center; height: 100%; flex-direction: column;">
+    <i class="fas fa-check-circle" style="color: white; font-size: 120px; margin-bottom: 30px;"></i>
+    <h1 style="color: white; font-size: 80px; font-weight: bold; margin: 0;">Ingresado</h1>
+  </div>
+</div>
+
+<!-- Barra de controles inferior fija -->
+<div id="bottom-control-bar" class="bg-body border-top shadow" style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; display: none;">
+  <div class="container-fluid py-3 px-4">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6 col-12 mb-2 mb-md-0">
+        <a href="{% url 'part_list' %}" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center" style="padding: 0.875rem 1.5rem; font-size: 1rem; border-radius: 0.5rem; transition: all 0.2s ease;">
+          <i class="fas fa-arrow-left me-2"></i>
+          <span class="fw-semibold">Volver al Inventario</span>
+        </a>
+      </div>
+      <div class="col-md-6 col-12">
+        <button type="button" id="bottom-manual-entry-btn" class="btn btn-primary w-100 d-flex align-items-center justify-content-center" style="padding: 0.875rem 1.5rem; font-size: 1rem; border-radius: 0.5rem; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(79, 140, 201, 0.25);">
+          <i class="fas fa-keyboard me-2"></i>
+          <span class="fw-semibold">Ingreso Manual</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Voice Recording Interface -->
+<div id="voice-recording-interface" style="display:none; padding-bottom: 100px;">
+  <div class="text-center mt-4">
+    <h3 id="voice-title" class="mb-3">Grabar Información de Pieza</h3>
+    
+    <!-- Botón circular de grabación -->
+    <div id="record-container" class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
+      <button type="button" id="record-voice-btn" class="record-btn">
+        <i class="fas fa-microphone"></i>
+        <span class="btn-text">Grabar</span>
+      </button>
+    </div>
+    
+    <!-- Results Preview -->
+  <div id="results-preview" style="display:none;" class="mt-3">
+      <div class="card">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">Información Detectada</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Transcripción:</strong></p>
+              <p id="transcription-text" class="text-muted"></p>
+            </div>
+             <div class="col-md-6">
+               <p><strong>Datos Extraídos:</strong></p>
+               <div id="extracted-data"></div>
+             </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button type="button" id="confirm-data-btn" class="btn btn-success btn-lg mr-2">
+            <i class="fas fa-check"></i> Confirmar
+          </button>
+          <button type="button" id="modify-data-btn" class="btn btn-warning btn-lg">
+            <i class="fas fa-edit"></i> Modificar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main form: shown immediately for editing -->
+<form method="post" enctype="multipart/form-data" class="mt-3" id="part-form" data-is-edit="{{ form.instance.pk|yesno:'true,false' }}" style="display:{{ form.instance.pk|yesno:'block,none' }}">
   {% csrf_token %}
-  {{ form.as_p }}
+  <div id="form-fields">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="id_name">{{ form.name.label }}</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+              <div class="invalid-feedback d-block">{{ form.name.errors|striptags }}</div>
+            {% endif %}
 
-  <!-- 🎙️ Recording controls -->
-  <div class="mb-3">
-    <button type="button" id="record" class="btn btn-danger">🎙️ Start Recording</button>
-    <button type="button" id="stop" class="btn btn-secondary" disabled>Stop</button>
+            <label class="form-label mt-3" for="id_details">{{ form.details.label }}</label>
+            {{ form.details }}
+            {% if form.details.errors %}
+              <div class="invalid-feedback d-block">{{ form.details.errors|striptags }}</div>
+            {% endif %}
+
+            <label class="form-label mt-3" for="id_auto">{{ form.auto.label }}</label>
+            {{ form.auto }}
+            {% if form.auto.errors %}
+              <div class="invalid-feedback d-block">{{ form.auto.errors|striptags }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label" for="id_workshop">{{ form.workshop.label }}</label>
+            {{ form.workshop }}
+            {% if form.workshop.errors %}
+              <div class="invalid-feedback d-block">{{ form.workshop.errors|striptags }}</div>
+            {% endif %}
+
+            <div class="row g-3 mt-1">
+              <div class="col-md-6">
+                <label class="form-label" for="id_min_value">{{ form.min_value.label }}</label>
+                {{ form.min_value }}
+                {% if form.min_value.errors %}
+                  <div class="invalid-feedback d-block">{{ form.min_value.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="id_max_value">{{ form.max_value.label }}</label>
+                {{ form.max_value }}
+                {% if form.max_value.errors %}
+                  <div class="invalid-feedback d-block">{{ form.max_value.errors|striptags }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <div class="form-check form-check-inline">
+                {{ form.sold }}
+                <label class="form-check-label" for="id_sold">{{ form.sold.label }}</label>
+              </div>
+              <div class="form-check form-check-inline">
+                {{ form.state }}
+                <label class="form-check-label" for="id_state">{{ form.state.label }}</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- 📝 Show transcribed text + JSON -->
-  <div class="form-group">
-    <label>Transcription Preview:</label>
-    <pre id="output" class="border p-2 bg-light"></pre>
+  <div class="mt-3">
+    <button type="submit" class="btn btn-primary btn-lg">
+      <i class="fas fa-save"></i> Guardar
+    </button>
+    <a href="{% url 'part_list' %}" class="btn btn-secondary btn-lg ms-2">
+      <i class="fas fa-times"></i> Cancelar
+    </a>
   </div>
-  <div class="form-group">
-    <label>Detected Info:</label>
-    <pre id="vehicle" class="border p-2 bg-light"></pre>
-  </div>
-
-  <button type="submit" class="btn btn-primary">Save</button>
-  <a href="{% url 'part_list' %}" class="btn btn-secondary">Cancel</a>
 </form>
+
+<!-- Estilos CSS -->
+<style>
+  /* Los estilos del record-btn ahora están en theme.css, solo agregamos ajustes locales */
+  
+  #voice-recording-interface {
+    padding-bottom: 120px; /* espacio para barra inferior */
+  }
+  
+  @media (max-width: 768px) {
+    #voice-recording-interface {
+      padding-bottom: 140px;
+    }
+    
+    .btn-group {
+      flex-direction: column;
+    }
+    
+    .btn-group .btn {
+      border-radius: 0.5rem !important;
+      margin-bottom: 0.5rem;
+    }
+    
+    #vehicle-selection .card {
+      padding: 1rem !important;
+    }
+    
+    #bottom-control-bar {
+      font-size: 0.9rem;
+    }
+  }
+  
+  #manual-entry-btn {
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  #manual-entry-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
+</style>
 
 {% load static %}
 <script src="{% static 'parts/recorder.js' %}"></script>
+<script src="{% static 'parts/form-handler.js' %}"></script>
+
 {% endblock %}

@@ -6,6 +6,8 @@ urlpatterns = [
     path('parts/add/', views.part_create, name='part_create'),
     path('parts/edit/<int:pk>/', views.part_edit, name='part_edit'),
     path('parts/delete/<int:pk>/', views.part_delete, name='part_delete'),
+    path('parts/<int:pk>/toggle-sold/', views.toggle_part_sold, name='toggle_part_sold'),
+    path('parts/<int:pk>/update-field/', views.update_part_field, name='update_part_field'),
     path('upload/', views.upload_audio, name='upload_audio'),
 
     path('autos/', views.auto_list, name='auto_list'),

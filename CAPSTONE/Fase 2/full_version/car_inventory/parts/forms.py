@@ -11,7 +11,7 @@ class PartForm(forms.ModelForm):
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'details': forms.TextInput(attrs={'class': 'form-control'}),
+            'details': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Ingresa todos los detalles, sin resumir'}),
             'auto': forms.Select(attrs={'class': 'form-control'}),
             'workshop': forms.Select(attrs={'class': 'form-control'}),
            'sold': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
@@ -23,9 +23,10 @@ class PartForm(forms.ModelForm):
 class AutoForm(forms.ModelForm):
     class Meta:
         model = Auto
-        fields = ['model', 'color']
+        fields = ['brand_model', 'year', 'color']
         widgets = {
-            'model': forms.TextInput(attrs={'class': 'form-control'}),
+            'brand_model': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Toyota Yaris'}),
+            'year': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 2010'}),
             'color': forms.TextInput(attrs={'class': 'form-control'}),
         }
 

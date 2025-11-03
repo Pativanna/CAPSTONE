@@ -28,6 +28,9 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+# Character encoding settings
+DEFAULT_CHARSET = 'utf-8'
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -37,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'parts',
 ]
 
@@ -126,3 +130,22 @@ STATICFILES_DIRS = [BASE_DIR / 'parts' / 'static']
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ------------------------------------------------------------------
+# Development helper: toggle Windows-mode for external binaries
+# When WINDOWS_MODE = True the views will attempt to use the paths
+# defined in WINDOWS_PATHS (useful to test on Windows). When False the
+# original unix-style hardcoded paths are used.
+# NOTE: This is intended for quick local testing only.
+WINDOWS_MODE = True
+
+# Provide default suggestions here; please update these paths to match
+# your local installation if you enable WINDOWS_MODE.
+WINDOWS_PATHS = {
+    # Example path to whisper-cli binary on Windows (update as needed)
+    'whisper_bin': r"C:\\Tools\\whisper_cpp\\Release\\whisper-cli.exe",
+    # Example model path for ggml model (we downloaded ggml-medium.bin)
+    'model_path': r"C:\\Tools\\whisper_cpp\\models\\ggml-medium.bin",
+    # Actual ollama executable path on Windows
+    'ollama_bin': r"C:\\Users\\seban\\AppData\\Local\\Programs\\Ollama\\ollama.exe",
+}
