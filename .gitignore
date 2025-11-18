@@ -34,6 +34,23 @@ local_settings.py
 .pydevproject
 .settings/
 
+# AI Tools (GitHub Copilot, Cursor, etc)
+.github/copilot-instructions.md
+.github/prompts/
+.github/chatmodes/
+.github/instructions/
+.cursorrules
+.cursorignore
+.aidigestignore
+.copilot/
+*.prompt.md
+*.chatmode.md
+copilot-instructions.md
+
+# AI Session Data (fuera del proyecto)
+../.copilot/
+../car_inventory_backups/
+
 # OS
 .DS_Store
 .DS_Store?
