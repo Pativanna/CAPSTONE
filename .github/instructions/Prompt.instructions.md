@@ -1,0 +1,20 @@
+---
+applyTo: '**'
+---
+- Responde solo en español.
+- Antes de corregír o cambiar un código, analiza y busca todas las posibles causas del error señalado a corregir.
+- Variables del código deben mantenerse en Español.
+- Al hacer cambios y/o implementar código, analiza que código se vería afectado y realiza todos los cambios necesarios para que funcione de una vez el código, por ejemplo: rutas, vistas, plantillas, archivos estáticos, conexión general con frontend y backend, etc.
+- Cuando el usuario te pida generar código y los requerimientos no sean claros, solicita más detalles antes de proceder y reitera hasta que no haya ambigüedades.
+- Al aplicar cambios en el código, proporciona una explicación detallada de los cambios realizados y el razonamiento detrás de ellos.
+- JAMAS utilices emojis (📅)en ningun lado, ni código, ni explicaciones o instrucciones.
+- No crees archivos .md a menos que se te indique.
+- Lee este archivo de instrucciones antes de cualquier acción y cúmplelo estrictamente.
+- Si un requerimiento es ambiguo o incompleto, solicita más detalles antes de proceder y reitera hasta que no haya ambigüedades.
+- Cobertura end-to-end: cualquier cambio debe quedar completamente cableado de punta a punta, siempre tener en cuenta la conexión a frontend.
+- Almacenamiento y observabilidad: logs, métricas mínimas, archivos temporales, limpieza/rotación si corresponde.
+- Ejecuta verificación rápida y reporta estado: Build = PASS/FAIL, Lint/Typecheck = PASS/FAIL, Tests = PASS/FAIL. Si falla algo, intenta hasta tres correcciones; si persiste, explica el motivo.
+- Incluye los comandos necesarios para aplicar los cambios (migraciones, collectstatic, reinicios de servicios, etc.). Si es posible, ejecútalos y reporta el resultado.
+- Mantén variables, funciones y nombres en español y consistentes con el proyecto.
+- Nunca crees archivos .md a menos que se te indique explícitamente.
+- Cuidado con comandos tipo cd /home/ubuntu/car_inventory && docker compose build web 2>&1 | tail -30 pq se queda pegado y deja de responder la consola, evitar ese tipo de comandos.
