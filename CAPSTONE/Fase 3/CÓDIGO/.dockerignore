@@ -1,0 +1,97 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+*.pyc
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/media/*
+/staticfiles/*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose.yml
+.dockerignore
+*.md
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Documentation
+docs/
+README.md
+LICENSE
+
+# Voice logs y auditoría (no copiar a imagen)
+voice_logs/
+logs/
+*.jsonl
+*.log
+
+# Backups
+backups/
+car_inventory_backups/
+*.bak
+
+# Vosk models (montados como volumen)
+vosk-models/
+
+# Environment files
+.env
+.env.*
+
+# Scripts de desarrollo
+scripts/test_*.py
+create_test_data.py
+aplicar_cambios.sh
+todo/
+
+# Results and temp files
+results.json
+*.tmp
+*.temp
+
+# Node (si existe)
+node_modules/
+npm-debug.log
+
+
+# Vosk models (montar desde /opt)
+vosk-models/
+vosk-model-*/
+
+# Build artifacts
+nohup.out
+*.tmp
+*.bak
+
+# Environment variables
+.env
+.env.local
