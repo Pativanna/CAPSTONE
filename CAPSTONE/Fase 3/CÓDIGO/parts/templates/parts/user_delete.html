@@ -1,0 +1,237 @@
+{% extends "parts/base.html" %}
+{% load static %}
+
+{% block title %}Eliminar Usuario - Transervis{% endblock %}
+
+{% block content %}
+<style>
+    .delete-container {
+        max-width: 550px;
+        margin: 80px auto;
+        padding: 40px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        border-top: 5px solid #e74c3c;
+    }
+    
+    .delete-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .delete-icon {
+        font-size: 64px;
+        margin-bottom: 15px;
+    }
+    
+    .delete-header h1 {
+        color: #e74c3c;
+        font-size: 28px;
+        margin: 0 0 10px 0;
+    }
+    
+    .delete-header p {
+        color: #7f8c8d;
+        font-size: 16px;
+        margin: 0;
+    }
+    
+    .user-details {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        margin: 30px 0;
+    }
+    
+    .user-details h3 {
+        margin: 0 0 20px 0;
+        color: #2c3e50;
+        font-size: 16px;
+        text-align: center;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #34495e;
+    }
+    
+    .detail-value {
+        color: #7f8c8d;
+    }
+    
+    .role-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .role-admin {
+        background: #ffe5e5;
+        color: #e74c3c;
+    }
+    
+    .role-bodega {
+        background: #e5f4ff;
+        color: #3498db;
+    }
+    
+    .role-ventas {
+        background: #e5ffe5;
+        color: #27ae60;
+    }
+    
+    .warning-box {
+        background: #fff3cd;
+        border: 2px solid #ffecb5;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 25px 0;
+        text-align: center;
+    }
+    
+    .warning-box strong {
+        color: #856404;
+        font-size: 15px;
+        display: block;
+        margin-bottom: 8px;
+    }
+    
+    .warning-box p {
+        color: #856404;
+        font-size: 14px;
+        margin: 0;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+    
+    .btn-delete {
+        flex: 1;
+        padding: 14px;
+        background: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-delete:hover {
+        background: #c0392b;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
+    }
+    
+    .btn-cancel {
+        flex: 1;
+        padding: 14px;
+        background: #95a5a6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-cancel:hover {
+        background: #7f8c8d;
+    }
+</style>
+
+<div class="delete-container">
+    <div class="delete-header">
+        <div class="delete-icon"></div>
+        <h1>Eliminar usuario</h1>
+        <p>Esta acción quita el acceso por completo.</p>
+    </div>
+    
+    <div class="user-details">
+        <h3> Información del Usuario</h3>
+        
+        <div class="detail-row">
+            <span class="detail-label">Usuario:</span>
+            <span class="detail-value"><strong>{{ delete_user.username }}</strong></span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Nombre Completo:</span>
+            <span class="detail-value">{{ delete_user.first_name }} {{ delete_user.last_name }}</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Email:</span>
+            <span class="detail-value">{{ delete_user.email|default:"No especificado" }}</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Rol:</span>
+            <span class="detail-value">
+                <span class="role-badge role-{{ delete_user.profile.role|lower }}">
+                    {{ delete_user.profile.get_role_display }}
+                </span>
+            </span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Fecha Registro:</span>
+            <span class="detail-value">{{ delete_user.date_joined|date:"d/m/Y H:i" }}</span>
+        </div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Estado:</span>
+            <span class="detail-value">
+                {% if delete_user.is_active %}
+                    <span class="status-active"> Activo</span>
+                {% else %}
+                    <span class="status-inactive"> Inactivo</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    
+    <div class="warning-box">
+        <strong>¡Ojo!</strong>
+        <p>Esta acción es permanente, no hay marcha atrás.</p>
+        <p>El usuario perderá acceso inmediato.</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-actions">
+            <a href="{% url 'parts:user_list' %}" class="btn-cancel">
+                ← Cancelar
+            </a>
+            <button type="submit" class="btn-delete">
+                 Confirmar Eliminación
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

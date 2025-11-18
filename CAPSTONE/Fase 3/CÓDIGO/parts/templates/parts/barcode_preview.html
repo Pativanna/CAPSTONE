@@ -1,0 +1,440 @@
+{# Plantilla ajustada: usar base con namespace correcto y solo rutas definidas #}
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block title %}Preview Etiqueta - {{ part.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="bi bi-upc-scan"></i>
+                    Preview de Etiqueta
+                </h2>
+                <a href="{% url 'parts:part_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver al listado
+                </a>
+            </div>
+
+            <!-- Información de la pieza -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-box-seam"></i>
+                        Información de la Pieza
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nombre:</strong> {{ part.name }}</p>
+                            <p><strong>Auto:</strong> {{ part.auto.brand_model }} {{ part.auto.year }}</p>
+                            <p><strong>Taller:</strong> {{ part.workshop.name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Código:</strong> <code>{{ codigo_barras }}</code></p>
+                            {% if part.max_value > 0 %}
+                            <p><strong>Precio:</strong> ${{ part.max_value|floatformat:0 }}</p>
+                            {% endif %}
+                            <p><strong>Fecha:</strong> {{ part.date_added|date:"d/m/Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview de la etiqueta -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-printer"></i>
+                        Preview de Etiqueta (58mm)
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <img src="{{ etiqueta_url }}" 
+                             alt="Etiqueta para {{ part.name }}"
+                             class="img-fluid border border-dark"
+                             style="max-width: 384px; image-rendering: crisp-edges;">
+                    </div>
+                    <p class="text-muted">
+                        <small>
+                            <i class="bi bi-info-circle"></i>
+                            Esta es una vista previa de la etiqueta que se imprimirá en papel térmico de 58mm
+                        </small>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Configuración de impresora -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-gear"></i>
+                        Configuración de Impresora
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="print-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">Tipo de Conexión:</label>
+                            <select class="form-select" id="connection-type" name="tipo_conexion">
+                                <option value="usb" selected>USB (Recomendado)</option>
+                                <option value="serial">Serial (COM)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="device-path-group" style="display: none;">
+                            <label class="form-label">Ruta del Dispositivo:</label>
+                            <input type="text" class="form-control" id="device-path" name="ruta_dispositivo" 
+                                   placeholder="/dev/usb/lp0 o /dev/ttyUSB0">
+                            <small class="text-muted">Dejar vacío para autodetección</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="test-first">
+                                <label class="form-check-label" for="test-first">
+                                    Hacer prueba de impresión primero
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Selector de método de impresión -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightning-fill"></i>
+                        Método de Impresión
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="print-method" id="method-server" value="server" checked>
+                        <label class="btn btn-outline-primary" for="method-server">
+                            <i class="bi bi-hdd-network"></i> Servidor
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="print-method" id="method-bluetooth" value="bluetooth">
+                        <label class="btn btn-outline-success" for="method-bluetooth">
+                            <i class="bi bi-bluetooth"></i> Bluetooth Directo
+                        </label>
+                    </div>
+                    <small class="text-muted d-block mt-2" id="method-info">
+                        <strong>Servidor:</strong> Imprime desde el servidor (funciona en todos los navegadores)
+                    </small>
+                </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="d-grid gap-2 mb-4">
+                <button class="btn btn-success btn-lg" id="btn-imprimir">
+                    <i class="bi bi-printer-fill"></i>
+                    <span id="btn-text">Imprimir Etiqueta en GOOJPRT PT210</span>
+                </button>
+                
+                <button class="btn btn-outline-primary" id="btn-test">
+                    <i class="bi bi-check-circle"></i>
+                    Probar Impresora
+                </button>
+                
+                <button class="btn btn-outline-info" id="btn-detectar">
+                    <i class="bi bi-search"></i>
+                    Detectar Impresora
+                </button>
+                
+                <a href="{{ etiqueta_url }}" download="etiqueta_parte_{{ part.id }}.png" 
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-download"></i>
+                    Descargar Imagen
+                </a>
+            </div>
+
+            <!-- Mensajes de estado -->
+            <div id="status-messages"></div>
+
+            <!-- Información técnica -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        Información Técnica
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>Impresora:</strong> GOOJPRT PT210 (Thermal Receipt Printer)</li>
+                        <li><strong>Ancho de papel:</strong> 58mm</li>
+                        <li><strong>Resolución:</strong> 203 DPI</li>
+                        <li><strong>Formato de código:</strong> CODE128</li>
+                        <li><strong>Dimensión de etiqueta:</strong> 384px x variable</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de carga -->
+<div class="modal fade" id="loading-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p id="loading-text">Enviando a impresora...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .img-fluid.border {
+        background: #f8f9fa;
+        padding: 10px;
+    }
+    
+    #status-messages .alert {
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<script src="{% static 'parts/bluetooth-printer.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const partId = {{ part.id }};
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const loadingModal = new bootstrap.Modal(document.getElementById('loading-modal'));
+    
+    let bluetoothPrinter = null;
+    
+    // Actualizar info según método seleccionado
+    document.querySelectorAll('input[name="print-method"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const methodInfo = document.getElementById('method-info');
+            const btnText = document.getElementById('btn-text');
+            
+            if (this.value === 'server') {
+                methodInfo.innerHTML = '<strong>Servidor:</strong> Imprime desde el servidor (funciona en todos los navegadores)';
+                btnText.textContent = 'Imprimir Etiqueta en GOOJPRT PT210';
+            } else {
+                if ('bluetooth' in navigator) {
+                    methodInfo.innerHTML = '<strong>Bluetooth Directo:</strong> Imprime desde tu dispositivo (requiere Chrome/Edge)';
+                    btnText.textContent = 'Conectar e Imprimir por Bluetooth';
+                } else {
+                    methodInfo.innerHTML = '<span class="text-danger"><strong>Bluetooth Directo:</strong> No soportado en este navegador. Usa Chrome o Edge.</span>';
+                    btnText.textContent = 'Bluetooth No Disponible';
+                    document.getElementById('btn-imprimir').disabled = true;
+                    return;
+                }
+            }
+            document.getElementById('btn-imprimir').disabled = false;
+        });
+    });
+    
+    // Mostrar/ocultar campo de ruta de dispositivo
+    document.getElementById('connection-type').addEventListener('change', function() {
+        const devicePathGroup = document.getElementById('device-path-group');
+        devicePathGroup.style.display = this.value === 'serial' ? 'block' : 'none';
+    });
+    
+    // Función para mostrar mensajes
+    function showMessage(type, title, message) {
+        const messagesDiv = document.getElementById('status-messages');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
+            <strong>${title}</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        messagesDiv.innerHTML = '';
+        messagesDiv.appendChild(alert);
+        
+        // Auto-ocultar después de 10 segundos
+        setTimeout(() => {
+            alert.remove();
+        }, 10000);
+    }
+    
+    // Función para imprimir por Bluetooth directo
+    async function imprimirBluetooth() {
+        try {
+            document.getElementById('loading-text').textContent = 'Conectando a impresora Bluetooth...';
+            loadingModal.show();
+            
+            // Crear cliente si no existe
+            if (!bluetoothPrinter) {
+                bluetoothPrinter = new BluetoothPrinterClient();
+            }
+            
+            // Conectar (muestra diálogo de selección)
+            await bluetoothPrinter.connect();
+            
+            document.getElementById('loading-text').textContent = 'Descargando etiqueta...';
+            
+            // Imprimir imagen
+            await bluetoothPrinter.printImageFromUrl('{{ etiqueta_url }}');
+            
+            loadingModal.hide();
+            showMessage('success', '¡Éxito!', 'Etiqueta impresa correctamente por Bluetooth.');
+            
+            // Desconectar después de 2 segundos
+            setTimeout(() => {
+                if (bluetoothPrinter) {
+                    bluetoothPrinter.disconnect();
+                }
+            }, 2000);
+            
+        } catch (error) {
+            loadingModal.hide();
+            console.error('Error Bluetooth:', error);
+            showMessage('danger', 'Error', error.message);
+        }
+    }
+    
+    // Función para imprimir desde servidor
+    async function imprimirServidor() {
+        const testFirst = document.getElementById('test-first').checked;
+        
+        // Si debe hacer prueba primero
+        if (testFirst) {
+            const testResult = await testPrinter();
+            if (!testResult) {
+                showMessage('warning', 'Prueba fallida', 
+                    'La prueba de impresión falló. Verifica la conexión antes de continuar.');
+                return;
+            }
+        }
+        
+        // Imprimir etiqueta
+        loadingModal.show();
+        document.getElementById('loading-text').textContent = 'Imprimiendo etiqueta...';
+        
+        const formData = new FormData(document.getElementById('print-form'));
+        
+        try {
+            const response = await fetch(`/parts/${partId}/imprimir/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            loadingModal.hide();
+            
+            if (data.success) {
+                showMessage('success', '¡Éxito!', data.mensaje);
+            } else {
+                showMessage('danger', 'Error', data.detalle || 'Error desconocido');
+            }
+        } catch (error) {
+            loadingModal.hide();
+            showMessage('danger', 'Error de conexión', error.message);
+        }
+    }
+    
+    // Botón de imprimir - delegador
+    document.getElementById('btn-imprimir').addEventListener('click', async function() {
+        const method = document.querySelector('input[name="print-method"]:checked').value;
+        
+        if (method === 'bluetooth') {
+            await imprimirBluetooth();
+        } else {
+            await imprimirServidor();
+        }
+    });
+    
+    // Botón de prueba
+    document.getElementById('btn-test').addEventListener('click', async function() {
+        await testPrinter();
+    });
+    
+    async function testPrinter() {
+        loadingModal.show();
+        document.getElementById('loading-text').textContent = 'Probando impresora...';
+        
+        const formData = new FormData(document.getElementById('print-form'));
+        
+        try {
+            const response = await fetch('/parts/impresora/test/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            loadingModal.hide();
+            
+            if (data.success) {
+                showMessage('success', '¡Prueba exitosa!', 
+                    `Impresora ${data.impresora} funcionando correctamente. Dispositivo: ${data.dispositivo}`);
+                return true;
+            } else {
+                showMessage('danger', 'Prueba fallida', data.detalle || 'Error desconocido');
+                if (data.solucion) {
+                    showMessage('info', 'Solución', data.solucion);
+                }
+                return false;
+            }
+        } catch (error) {
+            loadingModal.hide();
+            showMessage('danger', 'Error de conexión', error.message);
+            return false;
+        }
+    }
+    
+    // Botón de detectar
+    document.getElementById('btn-detectar').addEventListener('click', async function() {
+        loadingModal.show();
+        document.getElementById('loading-text').textContent = 'Detectando impresora...';
+        
+        try {
+            const response = await fetch('/parts/impresora/detectar/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            });
+            
+            const data = await response.json();
+            loadingModal.hide();
+            
+            if (data.dispositivo_detectado) {
+                showMessage('success', 'Impresora detectada', 
+                    `Dispositivo: ${data.dispositivo_detectado}`);
+                document.getElementById('device-path').value = data.dispositivo_detectado;
+            } else {
+                showMessage('warning', 'No se detectó impresora', data.mensaje);
+                if (data.instrucciones) {
+                    console.log('Instrucciones:', data.instrucciones);
+                }
+            }
+        } catch (error) {
+            loadingModal.hide();
+            showMessage('danger', 'Error de detección', error.message);
+        }
+    });
+});
+</script>
+{% endblock %}

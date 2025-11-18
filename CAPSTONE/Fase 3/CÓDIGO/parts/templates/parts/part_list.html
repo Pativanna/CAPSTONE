@@ -1,0 +1,438 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Inventario de Piezas</h2>
+  <a href="{% url 'parts:part_create' %}" class="btn btn-primary" data-turbo-frame="app-frame">
+    <i class="fas fa-plus"></i> Agregar Nueva Pieza
+  </a>
+</div>
+
+<!-- Búsqueda rápida -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <label for="global-part-search" class="form-label text-muted small mb-1">Búsqueda inteligente</label>
+    <div class="input-group input-group-lg shadow-sm rounded-pill">
+      <span class="input-group-text bg-transparent border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
+      <input type="search"
+             id="global-part-search"
+             class="form-control border-0"
+             placeholder="Ej: volante en cuero, focos toyota, etc."
+             aria-label="Buscar en todo el inventario">
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<section class="filter-surface card border-0 shadow-sm mb-4" id="parts-filter-shell">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center">
+      <div class="d-flex flex-wrap gap-2 small">
+        <span class="badge rounded-pill bg-body-secondary text-body fw-semibold">
+          <i class="fas fa-boxes-stacked me-1"></i> {{ total_piezas }} piezas
+        </span>
+        {% if modelo_filtrado %}
+          <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">
+            <i class="fas fa-car-side me-1"></i> Modelo: {{ modelo_filtrado }}
+          </span>
+        {% endif %}
+        {% if anio_filtrado %}
+          <span class="badge rounded-pill bg-info-subtle text-info-emphasis">
+            <i class="fas fa-calendar me-1"></i> Año: {{ anio_filtrado }}
+          </span>
+        {% endif %}
+        <span class="badge rounded-pill bg-dark-subtle text-dark-emphasis" data-filter-count>0 filtros rápidos</span>
+      </div>
+      <div class="d-flex flex-column flex-lg-row gap-2 w-100 w-lg-auto">
+        <button class="btn btn-outline-primary w-100 w-lg-auto {% if not filtros_partes_abiertos %}collapsed{% endif %}"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#parts-filter-panel"
+                aria-controls="parts-filter-panel"
+                aria-expanded="{{ filtros_partes_abiertos|yesno:'true,false' }}">
+          <i class="fas fa-sliders-h me-1"></i> Filtros avanzados
+        </button>
+        <button id="clear-filters-btn" type="button" class="btn btn-outline-secondary w-100 w-lg-auto">
+          <i class="fas fa-arrows-rotate"></i> Reiniciar todo
+        </button>
+      </div>
+    </div>
+
+    <div id="parts-filter-panel"
+         class="collapse {% if filtros_partes_abiertos %}show{% endif %} mt-4"
+         data-persist-key="partsFiltersPanel"
+         data-mobile-default="closed">
+      <form id="parts-filter-form" method="get" action="{% url 'parts:part_list' %}" class="row g-3 align-items-end">
+        <div class="col-12 col-md-4 col-lg-3">
+          <label for="filter-model" class="form-label text-muted small mb-1">Modelo asociado</label>
+          <select id="filter-model" name="modelo" class="form-select">
+            <option value="">Todos</option>
+            {% for modelo in modelos_disponibles %}
+              <option value="{{ modelo }}" {% if modelo_filtrado == modelo %}selected{% endif %}>{{ modelo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label for="filter-year" class="form-label text-muted small mb-1">Año del vehículo</label>
+          <select id="filter-year" name="anio" class="form-select" {% if not modelo_filtrado %}data-placeholder="true"{% endif %}>
+            <option value="">Todos</option>
+            {% for anio in anios_disponibles %}
+              <option value="{{ anio }}" {% if anio_filtrado == anio|stringformat:"s" %}selected{% endif %}>{{ anio }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label for="filter-workshop" class="form-label text-muted small mb-1">Ubicación / taller</label>
+          <select id="filter-workshop" class="form-select column-filter" data-column="workshop">
+            <option value="">Todos</option>
+            {% for taller in talleres_disponibles %}
+              <option value="{{ taller.name }}">{{ taller.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-4 col-lg-2">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-filter me-1"></i> Aplicar
+          </button>
+        </div>
+      </form>
+
+      <div class="row g-3 align-items-end mt-1">
+        <div class="col-12">
+          <label class="form-label text-muted small mb-1">Estado y disponibilidad</label>
+          <div class="filter-chip-group">
+            <button type="button" class="filter-chip active" data-filter-chip data-column="sold" data-value="">
+              <i class="fas fa-layer-group me-1"></i> Todos
+            </button>
+            <button type="button" class="filter-chip" data-filter-chip data-column="sold" data-value="disponible">
+              <i class="fas fa-circle-notch me-1 text-success"></i> Disponibles
+            </button>
+            <button type="button" class="filter-chip" data-filter-chip data-column="sold" data-value="vendido">
+              <i class="fas fa-check-circle me-1 text-danger"></i> Vendidos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Desktop Table View (≥992px) -->
+<div class="table-responsive d-none d-lg-block">
+  <table class="table table-striped table-hover table-bordered align-middle" id="parts-table">
+    <thead class="thead-dark">
+      <tr>
+        <th class="sortable" data-column="name">
+          Nombre <i class="fas fa-sort"></i>
+          <input type="text" class="form-control form-control-sm column-filter mt-1" placeholder="Filtrar..." data-column="name">
+        </th>
+        <th class="sortable" data-column="sold">
+          Estado <i class="fas fa-sort"></i>
+          <select class="form-select form-select-sm column-filter mt-1" data-column="sold">
+            <option value="">Todos</option>
+            <option value="disponible">Disponible</option>
+            <option value="vendido">Vendido</option>
+          </select>
+        </th>
+        <th class="sortable" data-column="min_value">
+          Precio Inicial <i class="fas fa-sort"></i>
+        </th>
+        <th class="sortable" data-column="max_value">
+          Último Precio <i class="fas fa-sort"></i>
+        </th>
+        <th>
+          Descripción
+        </th>
+        <th>
+          Ubicación
+          <select class="form-select form-select-sm column-filter mt-1" data-column="workshop">
+            <option value="">Todos</option>
+            {% for taller in talleres_disponibles %}
+              <option value="{{ taller.name }}">{{ taller.name }}</option>
+            {% endfor %}
+          </select>
+        </th>
+        <th class="sortable" data-column="date_added">
+          Fecha Ingreso <i class="fas fa-sort"></i>
+          <input type="text" class="form-control form-control-sm column-filter mt-1" placeholder="Filtrar..." data-column="date_added">
+        </th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pieza in piezas %}
+        <tr class="part-row {% if pieza.sold %}sold-row{% endif %}"
+            data-part-id="{{ pieza.id }}"
+            data-auto-search="{{ pieza.auto.brand_model|default_if_none:''|lower }} {{ pieza.auto.year|default_if_none:'' }}">
+          <td class="editable part-name-cell" data-field="name"
+              data-auto-model="{{ pieza.auto.brand_model|default_if_none:'' }}"
+              data-auto-year="{{ pieza.auto.year|default_if_none:'' }}"
+              data-auto-search="{{ pieza.auto.brand_model|default_if_none:''|lower }} {{ pieza.auto.year|default_if_none:'' }}">
+            <div class="part-name-text fw-semibold">{{ pieza.name }}</div>
+            <div class="part-name-meta text-muted">
+              <i class="fas fa-car-side me-1 text-primary"></i>
+              <span class="part-name-meta-model">{{ pieza.auto.brand_model|default:"-" }}</span>
+              <span class="text-body-secondary ms-1">{{ pieza.auto.year|default:"" }}</span>
+            </div>
+          </td>
+          <td class="text-center">
+            <button class="btn btn-sm toggle-sold-btn {% if pieza.sold %}btn-success{% else %}btn-outline-success{% endif %}" 
+                    data-part-id="{{ pieza.id }}" 
+                    data-sold="{{ pieza.sold|yesno:'true,false' }}">
+              {% if pieza.sold %}
+                <i class="fas fa-check-circle"></i> Vendido
+              {% else %}
+                <i class="far fa-circle"></i> Disponible
+              {% endif %}
+            </button>
+          </td>
+          <td class="editable" data-field="min_value">
+            {% if pieza.min_value %}${{ pieza.min_value|intcomma }}{% else %}-{% endif %}
+          </td>
+          <td class="editable" data-field="max_value">
+            {% if pieza.max_value %}${{ pieza.max_value|intcomma }}{% else %}-{% endif %}
+          </td>
+          <td class="editable text-truncate" data-field="details" style="max-width: 300px;" title="{{ pieza.details }}">
+            {{ pieza.details|default:"-" }}
+          </td>
+          <td data-col="workshop">{{ pieza.workshop.name }}</td>
+          <td data-col="date">{{ pieza.date_added|date:"d/m/Y" }}</td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-danger delete-part-btn" data-part-id="{{ pieza.id }}">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-muted">
+            <i class="fas fa-inbox"></i> No hay piezas registradas
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Mobile Card View (<992px) -->
+<div class="d-lg-none">
+  {% for pieza in piezas %}
+  <div class="card mb-3 shadow-sm part-row-mobile {% if pieza.sold %}sold-row{% endif %}"
+       data-part-id="{{ pieza.id }}"
+       data-auto-search="{{ pieza.auto.brand_model|default_if_none:''|lower }} {{ pieza.auto.year|default_if_none:'' }}">
+    <div class="card-body">
+      <!-- Header: Nombre + Estado -->
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <h5 class="card-title mb-0 flex-grow-1">
+          <i class="fas fa-cog text-primary me-2"></i>
+          <span class="editable-mobile part-name-text" data-field="name">{{ pieza.name }}</span>
+          <span class="part-name-meta text-muted d-block">
+            <i class="fas fa-car-side me-1 text-primary"></i>
+            {{ pieza.auto.brand_model|default:"-" }} <span class="text-body-secondary ms-1">{{ pieza.auto.year|default:"" }}</span>
+          </span>
+        </h5>
+        <button class="btn btn-sm toggle-sold-btn {% if pieza.sold %}btn-success{% else %}btn-outline-success{% endif %} ms-2" 
+                data-part-id="{{ pieza.id }}" 
+                data-sold="{{ pieza.sold|yesno:'true,false' }}">
+          {% if pieza.sold %}
+            <i class="fas fa-check-circle"></i>
+          {% else %}
+            <i class="far fa-circle"></i>
+          {% endif %}
+        </button>
+      </div>
+      
+      <!-- Data Grid 2x2 -->
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <small class="text-muted d-block">
+            <i class="fas fa-dollar-sign me-1"></i> Precio Inicial
+          </small>
+          <strong class="editable-mobile" data-field="min_value">
+            {% if pieza.min_value %}${{ pieza.min_value|intcomma }}{% else %}-{% endif %}
+          </strong>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">
+            <i class="fas fa-tag me-1"></i> Último Precio
+          </small>
+          <strong class="editable-mobile" data-field="max_value">
+            {% if pieza.max_value %}${{ pieza.max_value|intcomma }}{% else %}-{% endif %}
+          </strong>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">
+            <i class="fas fa-map-marker-alt me-1"></i> Ubicación
+          </small>
+          <span class="badge bg-secondary">{{ pieza.workshop.name }}</span>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">
+            <i class="fas fa-calendar me-1"></i> Fecha Ingreso
+          </small>
+          {{ pieza.date_added|date:"d/m/Y" }}
+        </div>
+      </div>
+      
+      <!-- Descripción -->
+      {% if pieza.details %}
+      <div class="mb-3">
+        <small class="text-muted d-block">
+          <i class="fas fa-file-text me-1"></i> Descripción
+        </small>
+        <p class="mb-0 editable-mobile" data-field="details">{{ pieza.details }}</p>
+      </div>
+      {% endif %}
+      
+      <!-- Botón eliminar -->
+      <button class="btn btn-danger w-100 delete-part-btn" data-part-id="{{ pieza.id }}">
+        <i class="fas fa-trash"></i> Eliminar Pieza
+      </button>
+    </div>
+  </div>
+  {% empty %}
+  <div class="card">
+    <div class="card-body text-center text-muted py-5">
+      <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+      <p class="mb-0">No hay piezas registradas</p>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<style>
+  /* Sold row styles moved to theme.css using CSS variables */
+  
+  .editable {
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s ease;
+  }
+  
+  .editable:hover {
+    background-color: rgba(79, 140, 201, 0.1);
+  }
+  
+  .editing {
+    background-color: #fff3cd !important;
+  }
+  
+  .edit-input {
+    width: 100%;
+    border: 2px solid #0d6efd;
+    padding: 5px;
+  }
+  
+  .sortable {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .part-name-text {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .part-name-meta {
+    font-size: 0.92rem;
+    line-height: 1.2;
+  }
+  
+  .sortable i {
+    cursor: pointer;
+    padding: 5px;
+    margin-left: 5px;
+  }
+  
+  .sortable i:hover {
+    color: #ffc107;
+    transform: scale(1.2);
+  }
+  
+  .column-filter {
+    width: 100%;
+    font-size: 0.85rem;
+  }
+  
+  thead th {
+    position: sticky;
+    top: 0;
+    background-color: #343a40;
+    z-index: 10;
+  }
+  
+  .toggle-sold-btn {
+    min-width: 110px;
+  }
+</style>
+
+<script>
+  // Surface responsive enhancements for inventory filters
+  function initPartListFilters(){
+    const modelSel = document.getElementById('filter-model');
+    const yearSel = document.getElementById('filter-year');
+    const filterForm = document.getElementById('parts-filter-form');
+
+    function submitFilters(){
+      if (!filterForm) return;
+      if (typeof filterForm.requestSubmit === 'function'){
+        filterForm.requestSubmit();
+      } else {
+        filterForm.submit();
+      }
+    }
+
+    if (modelSel){
+      modelSel.addEventListener('change', function(){
+        if (yearSel) yearSel.value = '';
+        submitFilters();
+      });
+    }
+
+    if (yearSel){
+      yearSel.addEventListener('change', submitFilters);
+    }
+
+    document.addEventListener('parts:filters-cleared', function(){
+      const target = window.location.pathname;
+      const frame = document.getElementById('app-frame');
+      if (frame) frame.src = target;
+      else window.location.href = target;
+    });
+  }
+  document.addEventListener('page:ready', initPartListFilters);
+  if (document.readyState !== 'loading') initPartListFilters();
+
+  document.addEventListener('page:ready', function(){
+    window.persistCollapsePanel?.('parts-filter-panel', 'partsFiltersPanel', { mobileDefault: 'closed' });
+  });
+  if (document.readyState !== 'loading'){
+    window.persistCollapsePanel?.('parts-filter-panel', 'partsFiltersPanel', { mobileDefault: 'closed' });
+  }
+</script>
+
+<!-- Modal eliminar pieza -->
+<div class="modal fade" id="deletePartModal" tabindex="-1" aria-labelledby="deletePartLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deletePartLabel"><i class="fas fa-triangle-exclamation text-danger me-2"></i> Confirmar eliminación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        ¿Quieres eliminar la pieza <strong id="deletePartName"></strong>? Esta acción no se puede deshacer.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn"><i class="fas fa-trash"></i> Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript personalizado (versión sin jQuery) -->
+<script src="{% static 'parts/table-functions-vanilla.js' %}?v=20250211a"></script>
+
+{% endblock %}

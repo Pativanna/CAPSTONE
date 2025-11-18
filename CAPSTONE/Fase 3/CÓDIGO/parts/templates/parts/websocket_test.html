@@ -1,0 +1,127 @@
+{% extends "parts/base.html" %}
+{% block content %}
+<section class="py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">Prueba de WebSocket</h2>
+      <p class="text-muted mb-0">Sirve para comprobar la conexión en tiempo real del navegador.</p>
+    </div>
+    <a href="{% url 'parts:part_list' %}" class="btn btn-outline-secondary" data-turbo-frame="app-frame">
+      <i class="fas fa-arrow-left"></i> Volver
+    </a>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <p class="mb-3">
+        Este tablero abre un socket contra <code>ws://</code> usando el endpoint de pruebas.
+        Si la sesión caduca verás un aviso inmediato y se te enviará al login.
+      </p>
+      <div class="alert alert-info d-flex align-items-center gap-2" role="alert">
+        <i class="bi bi-wifi text-primary fs-4"></i>
+        <div>
+          <strong>Estado actual:</strong>
+          <span id="ws-status-text">Sin conectar</span>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-primary" id="ws-start-btn">
+          <i class="bi bi-play-fill"></i> Iniciar prueba
+        </button>
+        <button class="btn btn-outline-danger" id="ws-stop-btn" disabled>
+          <i class="bi bi-stop-fill"></i> Cerrar
+        </button>
+      </div>
+
+      <div class="mt-4">
+        <h5>Logs</h5>
+        <pre id="ws-log" class="bg-dark text-light p-3 rounded small" style="min-height: 140px; overflow:auto;">Esperando evento…</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  let socket = null;
+  const statusText = document.getElementById('ws-status-text');
+  const logBox = document.getElementById('ws-log');
+  const startBtn = document.getElementById('ws-start-btn');
+  const stopBtn = document.getElementById('ws-stop-btn');
+
+  function log(msg){
+    const now = new Date().toLocaleTimeString('es-CL');
+    logBox.textContent = `[${now}] ${msg}\n` + (logBox.textContent || '');
+  }
+
+  function setStatus(text, cls){
+    statusText.textContent = text;
+    statusText.className = cls || '';
+  }
+
+  function buildUrl(){
+    const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${scheme}://${window.location.host}/ws/ping/`;
+  }
+
+  function start(){
+    if (socket){ socket.close(); }
+    const url = buildUrl();
+    log(`Intentando abrir ${url}`);
+    socket = new WebSocket(url);
+    setStatus('Conectando…', 'text-warning');
+
+    socket.addEventListener('open', () => {
+      setStatus('Conectado', 'text-success fw-bold');
+      log('Socket listo, enviando ping inicial.');
+      socket.send(JSON.stringify({ action: 'ping' }));
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+    });
+
+    socket.addEventListener('message', (event) => {
+      log(`Mensaje recibido: ${event.data}`);
+    });
+
+    socket.addEventListener('close', () => {
+      setStatus('Cerrado', 'text-muted');
+      log('Socket cerrado');
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    });
+
+    socket.addEventListener('error', (evt) => {
+      setStatus('Error', 'text-danger fw-bold');
+      log(`Error en socket: ${evt.message || 'sin detalle'}`);
+    });
+  }
+
+  function stop(){
+    if (socket){
+      log('Cerrando socket por petición del usuario.');
+      socket.close();
+      socket = null;
+    }
+  }
+
+  if (startBtn){
+    startBtn.addEventListener('click', function(ev){
+      ev.preventDefault();
+      start();
+    });
+  }
+
+  if (stopBtn){
+    stopBtn.addEventListener('click', function(ev){
+      ev.preventDefault();
+      stop();
+    });
+  }
+
+  document.addEventListener('turbo:before-cache', () => {
+    stop();
+  });
+})();
+</script>
+{% endblock %}

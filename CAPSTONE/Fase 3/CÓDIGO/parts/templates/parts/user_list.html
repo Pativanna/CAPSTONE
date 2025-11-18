@@ -1,0 +1,284 @@
+{% extends "parts/base.html" %}
+{% load static %}
+
+{% block title %}Gestión de Usuarios - Transervis{% endblock %}
+
+{% block content %}
+<style>
+    .users-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-soft));
+        color: #fff;
+        border-radius: 12px;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .users-header h1 {
+        margin: 0;
+        font-size: 28px;
+    }
+    
+    .btn-create-user {
+        padding: 12px 24px;
+        background: #fff;
+        color: var(--brand-primary);
+        border: 1px solid transparent;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    
+    .btn-create-user:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(255,255,255,0.3);
+    }
+    
+    .users-table {
+        background: var(--surface-card);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+    }
+    
+    .users-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .users-table th {
+        background: var(--surface-muted);
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-strong);
+    }
+    
+    .users-table td {
+        padding: 15px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .users-table tr:hover {
+        background: var(--surface-muted);
+    }
+    
+    .role-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .role-admin {
+        background: rgba(231, 76, 60, 0.12);
+        color: #c0392b;
+    }
+    
+    .role-bodega {
+        background: rgba(52, 152, 219, 0.12);
+        color: #1f6fa5;
+    }
+    
+    .role-ventas {
+        background: rgba(39, 174, 96, 0.12);
+        color: #1e7a4f;
+    }
+    
+    .status-active {
+        color: #27ae60;
+        font-weight: 600;
+    }
+    
+    .status-inactive {
+        color: #95a5a6;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .btn-edit, .btn-delete {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .btn-edit {
+        background: #3498db;
+        color: white;
+    }
+    
+    .btn-edit:hover {
+        background: #2980b9;
+    }
+    
+    .btn-delete {
+        background: #e74c3c;
+        color: white;
+    }
+    
+    .btn-delete:hover {
+        background: #c0392b;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #95a5a6;
+    }
+    
+    .empty-state h3 {
+        margin-bottom: 10px;
+    }
+    
+    [data-theme="dark"] .users-header {
+        background: linear-gradient(135deg, #2f4b7c, #4d3b78);
+    }
+    
+    [data-theme="dark"] .btn-create-user {
+        background: #253041;
+        color: #a8c8f4;
+        border-color: #344055;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.55);
+    }
+    
+    [data-theme="dark"] .btn-create-user:hover {
+        background: #2d3a4f;
+    }
+    
+    [data-theme="dark"] .users-table th,
+    [data-theme="dark"] .users-table td {
+        border-bottom-color: var(--border-color);
+    }
+    
+    [data-theme="dark"] .role-admin {
+        background: rgba(231, 76, 60, 0.2);
+        color: #ff9b94;
+    }
+    
+    [data-theme="dark"] .role-bodega {
+        background: rgba(92, 167, 230, 0.2);
+        color: #9bd1ff;
+    }
+    
+    [data-theme="dark"] .role-ventas {
+        background: rgba(39, 174, 96, 0.2);
+        color: #85f7bf;
+    }
+    
+    [data-theme="dark"] .empty-state {
+        color: var(--text-muted);
+    }
+    
+    [data-theme="dark"] .alert-success {
+        background-color: rgba(39, 174, 96, 0.12);
+        border-color: rgba(39, 174, 96, 0.4);
+        color: #8ff0ba;
+    }
+    
+    [data-theme="dark"] .alert-danger {
+        background-color: rgba(231, 76, 60, 0.12);
+        border-color: rgba(231, 76, 60, 0.4);
+        color: #ff9b94;
+    }
+</style>
+
+<div class="users-header">
+    <h1>Usuarios del Equipo</h1>
+    <a href="{% url 'parts:user_create' %}" class="btn-create-user">
+         Crear Usuario
+    </a>
+</div>
+
+{% if messages %}
+    <div style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}alert alert-success{% else %}alert alert-danger{% endif %}" 
+                 style="padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="users-table">
+    {% if users %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Nombre Completo</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th>Fecha Registro</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><strong>{{ user.username }}</strong></td>
+                    <td>{{ user.first_name }} {{ user.last_name }}</td>
+                    <td>{{ user.email|default:"—" }}</td>
+                    <td>
+                        <span class="role-badge role-{{ user.profile.role|lower }}">
+                            {{ user.profile.get_role_display }}
+                        </span>
+                    </td>
+                    <td>{{ user.profile.phone|default:"Sin datos" }}</td>
+                    <td>
+                        <span class="{% if user.is_active %}status-active{% else %}status-inactive{% endif %}">
+                            {{ user.is_active|yesno:" Activo, Inactivo" }}
+                        </span>
+                    </td>
+                    <td>{{ user.date_joined|date:"d/m/Y" }}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="{% url 'parts:user_edit' user.id %}" class="btn-edit">
+                                 Editar
+                            </a>
+                            {% if user.id != request.user.id %}
+                                <a href="{% url 'parts:user_delete' user.id %}" class="btn-delete">
+                                     Eliminar
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="empty-state">
+            <h3>No hay usuarios registrados</h3>
+            <p>Crea el primer usuario haciendo clic en "Crear Usuario"</p>
+        </div>
+    {% endif %}
+</div>
+
+<div class="text-center mt-4">
+    <a href="{% url 'parts:part_list' %}" class="btn btn-link">
+        ← Volver al Inventario
+    </a>
+</div>
+{% endblock %}

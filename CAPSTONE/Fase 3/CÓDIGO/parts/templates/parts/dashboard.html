@@ -1,0 +1,220 @@
+{% extends 'parts/base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4 text-center">Dashboard de Inventario & Voz</h2>
+
+  <!-- KPI Cards -->
+  <div class="row g-3 mb-2 justify-content-center">
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card shadow-sm h-100 border-0" style="background: linear-gradient(135deg,#0069BC,#4fc3f7); color: #fff;">
+        <div class="card-body py-3 text-center">
+          <div class="small text-uppercase opacity-75">Piezas</div>
+          <div class="display-6 fw-bold">{{ total_parts }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card shadow-sm h-100 border-0" style="background: linear-gradient(135deg,#10a37f,#4caf50); color: #fff;">
+        <div class="card-body py-3 text-center">
+          <div class="small text-uppercase opacity-75">Disponibles</div>
+          <div class="display-6 fw-bold">{{ available_parts }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card shadow-sm h-100 border-0" style="background: linear-gradient(135deg,#ef5350,#e53935); color: #fff;">
+        <div class="card-body py-3 text-center">
+          <div class="small text-uppercase opacity-75">Vendidas</div>
+          <div class="display-6 fw-bold">{{ sold_parts }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card shadow-sm h-100 border-0" style="background: linear-gradient(135deg,#7e57c2,#5e35b1); color: #fff;">
+        <div class="card-body py-3 text-center">
+          <div class="small text-uppercase opacity-75">Autos</div>
+          <div class="display-6 fw-bold">{{ total_autos }}</div>
+        </div>
+      </div>
+    </div>
+    <!-- Talleres y Mic Configs eliminados -->
+  </div>
+
+  <!-- Eliminado el gráfico circular de piezas vendidas/disponibles -->
+
+  <!-- Resumen interactivo principal, con estilo mejorado -->
+  <div class="row g-4 mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+            <h5 class="card-title mb-2 mb-md-0">Resumen Interactivo</h5>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <label class="me-2 small text-muted d-none d-sm-inline">Tipo de Resumen</label>
+              <select id="summaryMode" class="form-select form-select-sm" style="width:auto;min-width:140px;">
+                <option value="monthly" selected>Mensual</option>
+                <option value="weekly">Semanal</option>
+                <option value="special">Especial</option>
+              </select>
+              <select id="specialKind" class="form-select form-select-sm" style="width:auto; display:none;min-width:180px;">
+                <option value="available_by_workshop" selected>Disponibles por Taller</option>
+                <option value="parts_by_model">Piezas por Modelo</option>
+                <option value="model_value_sum">Suma de Promedios (por Modelo)</option>
+              </select>
+            </div>
+          </div>
+          <div id="summarySelectorRow" class="mb-3 d-flex gap-2 flex-wrap"></div>
+          <div class="bg-light rounded p-2 mb-2" style="min-height:40px;">
+            <span id="chartDescription" class="text-muted small"></span>
+          </div>
+          <canvas id="summaryChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Los gráficos detallados se muestran solo en el resumen interactivo -->
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  // Eliminado el gráfico circular de piezas vendidas/disponibles y su código JS
+  const commonOpts = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    interaction: { mode: 'nearest', axis: 'x', intersect: false },
+    scales: { y: { beginAtZero: true, ticks: { precision:0 } } }
+  };
+
+  // --- Resumen Interactivo ---
+  const summaryEl = document.getElementById('summaryChart');
+  let summaryChart = null;
+  let statsCache = null;
+
+  function buildDataset(label, data, color) {
+    return [{
+      label: label,
+      data: data,
+      borderColor: color,
+      backgroundColor: color.includes('#') ? color + '33' : color,
+      fill: true,
+      tension: 0.35
+    }];
+  }
+
+  function renderSummary(mode) {
+    if (!statsCache) return;
+    let type = 'line';
+    let labels = [];
+    let datasets = [];
+
+    // Limpieza de selectores previos
+    const selectorRow = document.getElementById('summarySelectorRow');
+    if (selectorRow) selectorRow.innerHTML = '';
+
+    // Limpieza de selectores previos
+    selectorRow.innerHTML = '';
+    let chartDesc = '';
+    if (mode === 'monthly') {
+      const d = statsCache.monthly;
+      labels = d.axis;
+      // Selector mensual
+      const sel = document.createElement('select');
+      sel.className = 'form-select form-select-sm';
+      sel.style.maxWidth = '220px';
+      sel.style.display = 'inline-block';
+      sel.innerHTML = '<option value="sold">Piezas Vendidas por Mes</option><option value="added">Piezas Agregadas por Mes</option>';
+      sel.value = window.monthlyType || 'sold';
+      sel.onchange = function(){ window.monthlyType = sel.value; renderSummary('monthly'); };
+      selectorRow.appendChild(sel);
+      datasets = [];
+      if (sel.value === 'sold') {
+        datasets.push({ label: 'Vendidas', data: d.sold, backgroundColor: '#ef5350', borderColor: '#ef5350' });
+        chartDesc = 'Cantidad de piezas vendidas agrupadas por mes.';
+      } else {
+        datasets.push({ label: 'Agregadas', data: d.added, backgroundColor: '#0069BC', borderColor: '#0069BC' });
+        chartDesc = 'Cantidad de piezas agregadas al inventario agrupadas por mes.';
+      }
+      type = 'bar';
+    } else if (mode === 'weekly') {
+      const d = statsCache.weekly;
+      labels = d.axis;
+      // Selector semanal
+      const sel = document.createElement('select');
+      sel.className = 'form-select form-select-sm';
+      sel.style.maxWidth = '220px';
+      sel.style.display = 'inline-block';
+      sel.innerHTML = '<option value="sold">Piezas Vendidas por Semana</option><option value="voice_sessions">Sesiones de Voz por Semana</option>';
+      sel.value = window.weeklyType || 'sold';
+      sel.onchange = function(){ window.weeklyType = sel.value; renderSummary('weekly'); };
+      selectorRow.appendChild(sel);
+      datasets = [];
+      if (sel.value === 'sold') {
+        datasets.push({ label: 'Vendidas', data: d.sold, backgroundColor: '#ef5350', borderColor: '#ef5350' });
+        chartDesc = 'Cantidad de piezas vendidas agrupadas por semana.';
+      } else {
+        datasets.push({ label: 'Sesiones Voz', data: d.voice_sessions, backgroundColor: '#7e57c2', borderColor: '#7e57c2' });
+        chartDesc = 'Cantidad de sesiones de voz agrupadas por semana.';
+      }
+      type = 'bar';
+    } else {
+      const kind = document.getElementById('specialKind').value;
+      const d = statsCache.special[kind];
+      labels = d.labels;
+      if (kind === 'available_by_workshop') {
+        chartDesc = 'Cantidad de piezas disponibles agrupadas por taller.';
+      } else if (kind === 'parts_by_model') {
+        chartDesc = 'Cantidad de piezas disponibles agrupadas por modelo de auto.';
+      } else if (kind === 'model_value_sum') {
+        chartDesc = 'Suma de los promedios de precios de piezas disponibles agrupadas por modelo.';
+      }
+      datasets = [{ label: 'Total', data: d.values, backgroundColor: '#26a69a' }];
+      type = 'bar';
+    }
+    document.getElementById('chartDescription').textContent = chartDesc;
+
+    if (summaryChart) {
+      summaryChart.destroy();
+    }
+    summaryChart = new Chart(summaryEl, {
+      type,
+      data: { labels, datasets },
+      options: { ...commonOpts, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+
+  function onModeChange() {
+    const mode = document.getElementById('summaryMode').value;
+    const specialSel = document.getElementById('specialKind');
+    specialSel.style.display = (mode === 'special') ? 'inline-block' : 'none';
+    // Limpieza de selectores previos
+    let selectorRow = document.getElementById('summarySelectorRow');
+    if (!selectorRow) {
+      selectorRow = document.createElement('div');
+      selectorRow.id = 'summarySelectorRow';
+      selectorRow.className = 'mb-3 d-flex gap-2 flex-wrap';
+      summaryEl.parentElement.insertBefore(selectorRow, summaryEl);
+    }
+    selectorRow.innerHTML = '';
+    renderSummary(mode);
+  }
+
+  document.getElementById('summaryMode').addEventListener('change', onModeChange);
+  document.getElementById('specialKind').addEventListener('change', onModeChange);
+
+  // Cargar datos del backend
+  fetch('{% url "parts:dashboard_stats" %}')
+    .then(r => r.json())
+    .then(j => {
+      if (j && j.success) {
+        statsCache = j.data;
+        onModeChange();
+      }
+    })
+    .catch(() => {});
+</script>
+{% endblock %}

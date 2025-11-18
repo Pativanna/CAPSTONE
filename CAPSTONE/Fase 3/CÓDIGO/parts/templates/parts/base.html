@@ -1,0 +1,1515 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Transervis - Sistema de Inventario{% endblock %}</title>
+  <link rel="icon" href="{% static 'parts/favicon.svg' %}" type="image/svg+xml">
+  <script>
+    // Set responsive class ASAP (before CSS loads) to avoid initial wrong view
+    (function(){
+      try {
+        // Prefer persisted UI mode if available
+        var stored = null;
+        try { stored = sessionStorage.getItem('ui_mode'); } catch(e) { stored = null; }
+        var isMobile = stored === 'mobile' ? true : stored === 'desktop' ? false : null;
+        if (isMobile === null){
+          if (window.matchMedia){
+            isMobile = window.matchMedia('(max-width: 991.98px)').matches;
+          } else if (window.visualViewport && window.visualViewport.width){
+            isMobile = window.visualViewport.width < 992;
+          } else {
+            var vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+            isMobile = vw < 992;
+          }
+        }
+        var root = document.documentElement;
+        if (root){
+          if (isMobile){ root.classList.add('force-mobile'); root.classList.remove('force-desktop'); }
+          else { root.classList.add('force-desktop'); root.classList.remove('force-mobile'); }
+        }
+        try { sessionStorage.setItem('ui_mode', isMobile ? 'mobile' : 'desktop'); } catch(e) {}
+      } catch(e) {}
+    })();
+  </script>
+  <style>
+    /* Prevent initial wrong view flash: hide both until html gets force-* */
+    .d-lg-none, .d-none.d-lg-block { display: none !important; }
+    html.force-mobile .d-lg-none { display: block !important; }
+    html.force-desktop .d-none.d-lg-block { display: block !important; }
+    
+    /* Estilos profesionales para el navbar */
+    .navbar-brand .brand-logo {
+      display: inline-flex !important;
+      width: 40px;
+      height: 40px;
+      background: white;
+      border-radius: 8px;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #667eea;
+      font-size: 18px;
+      transition: transform 0.2s;
+    }
+    
+    .navbar-brand:hover .brand-logo {
+      transform: scale(1.05);
+    }
+    
+    .navbar-brand .brand-text {
+      font-size: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    
+    /* Responsive navbar */
+    @media (max-width: 991px) {
+      .navbar-brand .brand-text {
+        font-size: 18px;
+      }
+      
+      .navbar-brand .brand-logo {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .navbar-brand .brand-text {
+        font-size: 16px;
+      }
+      
+      .navbar-brand .brand-logo {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+      }
+    }
+    /* Mejora visual de switches en navbar */
+    .navbar .switch-tile{
+      display:flex;align-items:center;gap:.5rem;padding:.35rem .6rem;border-radius:999px;
+      background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);cursor:pointer; user-select:none;
+      transition:all .15s ease;
+    }
+    .navbar .switch-tile:hover{ background:rgba(255,255,255,.2); transform: translateY(-1px); }
+    .navbar .switch-tile .label{ color:#fff; font-weight:600; font-size:.9rem; }
+    
+    /* Ocultar texto del switch en móviles */
+    @media (max-width: 991px) {
+      .navbar .switch-tile .label {
+        display: none;
+      }
+      .navbar .switch-tile {
+        padding: .5rem;
+        width: 40px;
+        height: 40px;
+        justify-content: center;
+      }
+    }
+    .navbar .tile-icon{ width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,.22); }
+    .navbar .tile-icon i{ color:#fff; font-size:.9rem; }
+    .navbar .switch-tile.active{ background:#10a37f; border-color:#0e8f6e; }
+    .navbar .switch-tile.active .tile-icon{ background:rgba(255,255,255,.25); }
+    .navbar .switch-tile.active .label{ color:#fff; }
+  </style>
+  <script>
+    (function(){
+      var key = 'ui_theme_preference';
+      var stored = null;
+      try {
+        stored = localStorage.getItem(key);
+      } catch (_) {
+        stored = null;
+      }
+      var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = stored || (systemDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Turbo para navegación sin recarga completa -->
+  <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@7.3.0/dist/turbo.es2017-umd.js" data-turbo-track="reload"></script>
+  <!-- Font Awesome (iconos) -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <!-- Tema custom con versión para forzar recarga -->
+  <link href="{% static 'css/theme.css' %}?v=20250115c" rel="stylesheet">
+  <script src="{% static 'parts/ui-utils.js' %}?v=20250115c" defer></script>
+</head>
+<body data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+
+<!-- Navbar fija superior -->
+{% block navbar %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow-sm">
+  <div class="container-fluid">
+  <a class="navbar-brand d-flex align-items-center" href="{% url 'parts:part_list' %}" data-turbo-frame="app-frame" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-weight: 600; letter-spacing: 0.5px;">
+      <span class="brand-logo me-2" style="display: inline-block; width: 40px; height: 40px; background: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #667eea; font-size: 18px;">T</span>
+      <span class="brand-text" style="font-size: 20px;">TRANSERVIS</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarMain">
+      <ul class="navbar-nav mx-auto" style="flex-grow: 0;">
+        {% if user.is_authenticated %}
+          <!-- Navegación principal centrada -->
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="{% url 'parts:part_list' %}" data-turbo-frame="app-frame">
+              <i class="fas fa-cogs"></i> Repuestos
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="{% url 'parts:auto_list' %}" data-turbo-frame="app-frame">
+              <i class="fas fa-car"></i> Autos
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="{% url 'parts:workshop_list' %}" data-turbo-frame="app-frame">
+              <i class="fas fa-wrench"></i> Talleres
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="{% url 'parts:dashboard' %}" data-turbo-frame="app-frame">
+              <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+          </li>
+          {% if user.profile.is_admin %}
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="{% url 'parts:part_publish_root' %}" data-turbo-frame="app-frame">
+              <i class="bi bi-megaphone"></i> Publicar
+            </a>
+          </li>
+          {% endif %}
+        {% endif %}
+      </ul>
+      
+      <!-- Controles de usuario a la derecha -->
+      <ul class="navbar-nav ms-auto">
+        {% if user.is_authenticated %}
+          <li class="nav-item">
+            <button type="button" id="theme-toggle" class="switch-tile" aria-pressed="false">
+              <span class="tile-icon"><i class="bi bi-sun-fill"></i></span>
+              <span class="label">Modo claro</span>
+            </button>
+          </li>
+          
+          <!-- Dropdown Más (configuraciones y herramientas) -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="moreDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-ellipsis-h"></i> <span class="d-none d-lg-inline">Más</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="moreDropdown">
+              <!-- Modo de transcripción -->
+              <li>
+                <a class="dropdown-item" href="#" id="transcription-mode-toggle" title="Cambiar modo de transcripción">
+                  <i class="fas fa-microphone" id="transcription-icon"></i>
+                  <span id="transcription-mode-text">Local</span>
+                  <span id="transcription-mode-badge" class="badge bg-info ms-1">
+                    <i class="fas fa-server"></i>
+                  </span>
+                  <!-- Marcadores de compatibilidad con tests legacy -->
+                  <span id="ai-model-switch" style="display:none"></span>
+                  <span id="beep-switch" style="display:none"></span>
+                </a>
+              </li>
+              
+              <!-- Conexión Bluetooth con indicador de estado -->
+              <li>
+                <button type="button" class="dropdown-item d-flex align-items-center justify-content-between" id="printer-connect-btn" title="Conectar impresora Bluetooth">
+                  <span><i class="bi bi-bluetooth"></i> Conectar Impresora</span>
+                  <span id="bluetooth-status-container"></span>
+                </button>
+              </li>
+              
+              <li><hr class="dropdown-divider"></li>
+              
+              <!-- Reportes -->
+              <li>
+                <a class="dropdown-item" href="{% url 'parts:report_page' %}" data-turbo-frame="app-frame">
+                  <i class="fas fa-file-pdf"></i> Reportes
+                </a>
+              </li>
+              
+              <!-- Usuarios (solo si tiene permisos) -->
+              {% if user.profile.can_manage_users %}
+              <li>
+                <a class="dropdown-item" href="{% url 'parts:user_list' %}" data-turbo-frame="app-frame">
+                  <i class="fas fa-users"></i> Usuarios
+                </a>
+              </li>
+              {% endif %}
+              
+              <!-- Logs (solo admin) -->
+              {% if user.profile.is_admin %}
+              <li>
+                <a class="dropdown-item" href="{% url 'parts:logs_page' %}" data-turbo-frame="app-frame">
+                  <i class="bi bi-activity"></i> Logs
+                </a>
+              </li>
+              {% endif %}
+            </ul>
+          </li>
+          
+          <!-- Dropdown de usuario -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-user-circle me-1"></i>
+              <span class="d-none d-lg-inline">{{ user.first_name|default:user.username }}</span>
+              <span class="badge bg-secondary ms-2">{{ user.profile.get_role_display }}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+              <li>
+                <span class="dropdown-item-text">
+                  <strong>{{ user.get_full_name|default:user.username }}</strong><br>
+                  <small class="text-muted">{{ user.email }}</small>
+                </span>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item text-danger" href="{% url 'parts:logout' %}">
+                  <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </a>
+              </li>
+            </ul>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+{% endblock navbar %}
+
+<!-- Contenido con padding-top para navbar fija -->
+<turbo-frame id="app-frame">
+  <main class="container py-4" style="padding-top: 6.25rem !important;">
+    {% block content %}{% endblock %}
+  </main>
+</turbo-frame>
+
+<!-- Toasts container -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 1080">
+  <div id="toast-container" class="toast-container"></div>
+  <!-- los toasts se inyectan aquí dinámicamente -->
+  
+</div>
+
+<!-- Bootstrap JS (sin jQuery) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Bluetooth Printer System (Bridge Unificado) -->
+<script src="{% static 'parts/bluetooth-printer.js' %}"></script>
+<script src="{% static 'parts/printer-bridge.js' %}"></script>
+<script src="{% static 'parts/bluetooth-status-indicator.js' %}"></script>
+
+<script>
+// Asegurar que el botón del navbar (hamburguesa) abra y cierre correctamente,
+// incluso en navegaciones Turbo o recargas parciales.
+(function(){
+  document.addEventListener('click', function(ev){
+    const btn = ev.target.closest('.navbar-toggler');
+    if (!btn) return;
+    const targetSelector = btn.getAttribute('data-bs-target');
+    if (!targetSelector) return;
+    const target = document.querySelector(targetSelector);
+    if (!target || typeof bootstrap === 'undefined' || !bootstrap.Collapse) return;
+    const instance = bootstrap.Collapse.getOrCreateInstance(target, { toggle: false });
+    instance.toggle();
+    // Sincronizar aria-expanded manualmente para accesibilidad
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+  });
+})();
+
+// Cerrar navbar en móviles al seleccionar una opción
+(function(){
+  function collapseNav(){
+    const nav = document.getElementById('navbarMain');
+    if (!nav || !nav.classList.contains('show')) return;
+    if (typeof bootstrap === 'undefined' || !bootstrap.Collapse) return;
+    const instance = bootstrap.Collapse.getOrCreateInstance(nav, { toggle: false });
+    instance.hide();
+    const toggler = document.querySelector('.navbar-toggler');
+    if (toggler) toggler.setAttribute('aria-expanded', 'false');
+  }
+  document.addEventListener('click', function(ev){
+    const link = ev.target.closest('.navbar-nav .nav-link, .navbar-nav .dropdown-item');
+    if (!link) return;
+    // Solo cerrar si el menú está desplegado (vista móvil)
+    const nav = document.getElementById('navbarMain');
+    if (!nav || !nav.classList.contains('show')) return;
+    collapseNav();
+  }, true);
+})();
+
+// Persistencia de paneles de filtros/collapse
+(function(){
+  function syncButtons(id, isOpen){
+    const toggles = document.querySelectorAll(`[data-bs-target="#${id}"]`);
+    toggles.forEach(btn => {
+      btn.classList.toggle('collapsed', !isOpen);
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+  }
+
+window.persistCollapsePanel = function persistCollapsePanel(id, storageKey, opts){
+    const panel = document.getElementById(id);
+    if (!panel || panel._persistInit) return;
+    panel._persistInit = true;
+    const key = storageKey || `collapse:${id}`;
+    const options = opts || {};
+    const mobileDefault = options.mobileDefault || panel.dataset.mobileDefault || '';
+
+    function setState(val){
+      try { sessionStorage.setItem(key, val); } catch(_){}
+    }
+
+    const saved = (() => {
+      try { return sessionStorage.getItem(key); } catch(_){ return null; }
+    })();
+
+    function ensureInstance(){
+      if (!window.bootstrap || !window.bootstrap.Collapse) return null;
+      return window.bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false });
+    }
+
+    const isMobileViewport = (() => {
+      if (window.matchMedia){ return window.matchMedia('(max-width: 991.98px)').matches; }
+      return (window.innerWidth || document.documentElement.clientWidth || 0) < 992;
+    })();
+
+    if (saved === null && mobileDefault === 'closed' && isMobileViewport){
+      panel.classList.remove('show');
+      ensureInstance()?.hide();
+      syncButtons(id, false);
+      setState('closed');
+    } else if (saved === 'open'){
+      panel.classList.add('show');
+      ensureInstance()?.show();
+      syncButtons(id, true);
+    } else if (saved === 'closed'){
+      panel.classList.remove('show');
+      ensureInstance()?.hide();
+      syncButtons(id, false);
+    }
+
+    panel.addEventListener('shown.bs.collapse', function(){
+      setState('open');
+      syncButtons(id, true);
+    });
+
+    panel.addEventListener('hidden.bs.collapse', function(){
+      setState('closed');
+      syncButtons(id, false);
+    });
+  };
+})();
+</script>
+
+<script>
+// Unificar inicialización en navegaciones Turbo y cargas normales
+(function(){
+  function dispararListo(){
+    try { document.dispatchEvent(new Event('page:ready')); } catch(_){ }
+  }
+  document.addEventListener('turbo:load', dispararListo);
+  document.addEventListener('turbo:frame-load', dispararListo);
+  // Compatibilidad: también en load clásico
+  window.addEventListener('load', dispararListo);
+})();
+</script>
+<script>
+// Botón opcional para abrir hub en nueva ventana (persistencia avanzada) adaptado a Turbo
+(function(){
+  function initHubOpenButton(){
+    const linkHub = document.getElementById('printer-open-hub');
+    if (linkHub && !linkHub.__hubInit){
+      linkHub.__hubInit = true;
+      linkHub.addEventListener('click', function(e){
+        e.preventDefault();
+        const w = window.open('/parts/impresora/hub/', 'hub_impresora_bt', 'width=480,height=420');
+        if (!w){
+          alert('No se pudo abrir la ventana del hub. Deshabilita bloqueadores de ventanas emergentes.');
+        }
+      });
+    }
+  }
+  document.addEventListener('page:ready', initHubOpenButton);
+  if (document.readyState !== 'loading') initHubOpenButton();
+})();
+</script>
+
+<script>
+  // Persist current UI mode before navigations
+  window.__persistUIMode = function(){
+    try {
+      var isMobile = false;
+      if (window.matchMedia){ isMobile = window.matchMedia('(max-width: 991.98px)').matches; }
+      else if (window.visualViewport && window.visualViewport.width){ isMobile = window.visualViewport.width < 992; }
+      else { var vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0); isMobile = vw < 992; }
+      sessionStorage.setItem('ui_mode', isMobile ? 'mobile' : 'desktop');
+    } catch(e) {}
+  };
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (!href) return;
+    // Ignorar anclas, descargas y toggles de Bootstrap
+    if (href.charAt(0) === '#') return;
+    if (a.hasAttribute('download')) return;
+    if (a.dataset && (a.dataset.bsToggle || a.dataset.bsDismiss)) return;
+    if (a.id === 'printer-open-hub') return;
+    // Respetar opt-out explícito
+    if (a.dataset && a.dataset.turbo === 'false') return;
+    // Evitar afectar enlaces externos o con target distinto
+    if (a.target && a.target !== '_self') return;
+    var url;
+    try { url = new URL(href, window.location.href); } catch(_) { return; }
+    if (url.origin !== window.location.origin) return;
+    // Si ya especificó frame, respetar
+    if (a.dataset && a.dataset.turboFrame) return;
+    // Enrutar al frame solo para rutas bajo /parts/
+    if (url.pathname && url.pathname.indexOf('/parts/') === 0) {
+      var frame = document.getElementById('app-frame');
+      if (frame) {
+        e.preventDefault();
+        window.__persistUIMode();
+        var newPath = url.pathname + url.search + url.hash;
+        // Cargar contenido en el frame
+        frame.src = newPath;
+        // Actualizar URL visible del navegador (historial)
+        try { history.pushState({ turboFrame: 'app-frame' }, '', newPath); } catch(_) {}
+        return;
+      }
+    }
+    window.__persistUIMode();
+  }, true);
+  // Sincronizar URL también cuando el contenido del frame cambia sin interacción (ej: navegación interna, programática)
+  document.addEventListener('turbo:frame-load', function(ev){
+    try {
+      var frame = ev.target;
+      if (!frame || frame.id !== 'app-frame') return;
+      // Obtener ruta actual cargada en el frame (src puede contener solo path)
+      var currentPath = frame.src || '';
+      if (!currentPath) return;
+      // Normalizar: si es absoluta, quedarnos con pathname
+      try {
+        var urlObj = new URL(currentPath, window.location.origin);
+        currentPath = urlObj.pathname + urlObj.search + urlObj.hash;
+      } catch(_){ /* ignorar */ }
+      if (currentPath.indexOf('/parts/') === 0) {
+        // Actualizar barra de navegación si difiere
+        if (window.location.pathname !== urlObj.pathname) {
+          try { history.replaceState({ turboFrame: 'app-frame' }, '', currentPath); } catch(_) {}
+        }
+      }
+    } catch(_e) { /* no-op */ }
+  });
+  // Manejar navegación atrás/adelante para mantener el contenido del frame en sincronía
+  window.addEventListener('popstate', function(){
+    try {
+      var path = window.location.pathname + window.location.search + window.location.hash;
+      if (path.indexOf('/parts/') === 0) {
+        var frame = document.getElementById('app-frame');
+        if (frame) frame.src = path;
+      }
+    } catch(_) {}
+  });
+  // Last-resort persistence for programmatic navigations or form submits
+  window.addEventListener('beforeunload', function(){
+    window.__persistUIMode();
+  }, { capture: true });
+
+  // Forzar que submits actualicen el turbo-frame por defecto
+  document.addEventListener('submit', function(e){
+    try {
+      var form = e.target.closest && e.target.closest('form');
+      if (!form) return;
+      // Respetar opt-out explícito
+      if (form.dataset && form.dataset.turbo === 'false') return;
+      // Solo para mismo origen
+      var action = form.getAttribute('action') || window.location.href;
+      var url = new URL(action, window.location.href);
+  if (url.origin !== window.location.origin) return;
+  if (!(url.pathname && url.pathname.indexOf('/parts/') === 0)) return; // solo /parts/
+      // Si no tiene destino de frame, establecerlo
+      if (!form.dataset || !form.dataset.turboFrame) {
+        form.setAttribute('data-turbo-frame', 'app-frame');
+      }
+    } catch(_) { /* no-op */ }
+  }, true);
+  // Fuerza la reevaluación de media queries al cargar la página.
+  // Esto mitiga un bug intermitente en algunos navegadores/emuladores
+  // donde las clases responsivas (d-lg-none, d-none d-lg-block, etc.)
+  // no se aplican hasta que se "mueve" la resolución.
+  (function(){
+    function pingResize(){
+      try { window.dispatchEvent(new Event('resize')); } catch(e) {}
+    }
+    function setResponsiveMode(){
+      try {
+        var isMobile = false;
+        if (window.matchMedia){
+          // Use Bootstrap's exact breakpoint for < lg
+          var mqMobile = window.matchMedia('(max-width: 991.98px)');
+          isMobile = !!(mqMobile && mqMobile.matches);
+        } else {
+          var vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+          isMobile = vw < 992;
+        }
+        var root = document.documentElement;
+        if (!root) return;
+        if (isMobile){
+          root.classList.add('force-mobile');
+          root.classList.remove('force-desktop');
+        } else {
+          root.classList.add('force-desktop');
+          root.classList.remove('force-mobile');
+        }
+      } catch(e) {}
+    }
+    function forceRecalc(){
+      // Dispara varios "resize" para asegurar recálculo de media queries
+      setResponsiveMode();
+      pingResize();
+      setTimeout(pingResize, 25);
+      setTimeout(pingResize, 100);
+      if (window.requestAnimationFrame){
+        requestAnimationFrame(function(){ setResponsiveMode(); pingResize(); });
+        requestAnimationFrame(function(){ setTimeout(function(){ setResponsiveMode(); pingResize(); }, 0); });
+      }
+    }
+    document.addEventListener('page:ready', forceRecalc);
+    window.addEventListener('load', forceRecalc);
+    window.addEventListener('pageshow', forceRecalc);
+    window.addEventListener('orientationchange', forceRecalc);
+    // Debounce resize -> keep classes in sync during manual resizes in emulator
+    var _t;
+    window.addEventListener('resize', function(){
+      clearTimeout(_t);
+      _t = setTimeout(setResponsiveMode, 50);
+    });
+  })();
+
+  // Utilidad global para toasts Bootstrap
+  window.showToast = function({ title = 'Aviso', body = '', variant = 'primary', delay = 3000 } = {}) {
+    try {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const id = 't' + Math.random().toString(36).slice(2);
+      const headerClass = variant === 'danger' ? 'bg-danger text-white' :
+                         variant === 'success' ? 'bg-success text-white' :
+                         variant === 'warning' ? 'bg-warning' : 'bg-primary text-white';
+      const toastEl = document.createElement('div');
+      toastEl.className = 'toast align-items-center border-0 shadow';
+      toastEl.id = id;
+      toastEl.role = 'alert';
+      toastEl.ariaLive = 'assertive';
+      toastEl.ariaAtomic = 'true';
+      toastEl.innerHTML = `
+        <div class="toast-header ${headerClass}">
+          <strong class="me-auto">${title}</strong>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">${body}</div>
+      `;
+      container.appendChild(toastEl);
+      const toast = new bootstrap.Toast(toastEl, { delay });
+      toast.show();
+      toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    } catch (e) {
+      console.error('Toast error:', e);
+    }
+  }
+</script>
+
+<script>
+  // Inicializa toggles del navbar (botones) y persiste en localStorage
+  (function(){
+    function initNavbarToggles(){
+      try {
+        var aiTile = document.getElementById('ai-model-toggle');
+        var beepTile = document.getElementById('beep-toggle');
+        // IA en Nube
+        if (aiTile){
+          var useCloud = (localStorage.getItem('useCloud') || 'false') === 'true';
+          aiTile.classList.toggle('active', useCloud);
+          aiTile.setAttribute('aria-pressed', useCloud ? 'true' : 'false');
+          aiTile.addEventListener('click', function(){
+            useCloud = !useCloud;
+            localStorage.setItem('useCloud', useCloud ? 'true' : 'false');
+            aiTile.classList.toggle('active', useCloud);
+            aiTile.setAttribute('aria-pressed', useCloud ? 'true' : 'false');
+            if (window.showToast){
+              window.showToast({ title: 'Preferencia IA', body: useCloud ? 'Usando Nube (OpenAI)' : 'Usando Local (Ollama)', variant: 'success', delay: 2000 });
+            }
+            // Reflejar en inline si existe
+            var inline = document.getElementById('ai-model-toggle-inline');
+            if (inline){ inline.classList.toggle('active', useCloud); inline.setAttribute('aria-pressed', useCloud ? 'true':'false'); }
+          });
+        }
+        // Sonidos
+        if (beepTile){
+          var beepDisabled = (localStorage.getItem('beepDisabled') || 'true') === 'true';
+          var soundsOn = !beepDisabled;
+          beepTile.classList.toggle('active', soundsOn);
+          beepTile.setAttribute('aria-pressed', soundsOn ? 'true' : 'false');
+          beepTile.addEventListener('click', function(){
+            soundsOn = !soundsOn;
+            localStorage.setItem('beepDisabled', soundsOn ? 'false' : 'true');
+            beepTile.classList.toggle('active', soundsOn);
+            beepTile.setAttribute('aria-pressed', soundsOn ? 'true' : 'false');
+            if (window.showToast){
+              window.showToast({ title: 'Sonidos', body: soundsOn ? 'Sonidos activados' : 'Sonidos desactivados', variant: 'primary', delay: 1500 });
+            }
+            var inlineB = document.getElementById('beep-toggle-inline');
+            if (inlineB){ inlineB.classList.toggle('active', soundsOn); inlineB.setAttribute('aria-pressed', soundsOn ? 'true':'false'); }
+          });
+        }
+      } catch(e) { console.warn('Init navbar toggles error:', e); }
+    }
+    document.addEventListener('page:ready', initNavbarToggles);
+    if (document.readyState !== 'loading') { initNavbarToggles(); }
+  })();
+</script>
+
+<!-- Modal de configuración de impresora -->
+<div class="modal fade" id="printerConfigModal" tabindex="-1" aria-labelledby="printerConfigModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="printerConfigModalLabel">
+          <i class="fas fa-print"></i>
+          Configuración de Impresora
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">
+          <i class="fas fa-info-circle"></i>
+          Selecciona cómo deseas imprimir las etiquetas de código de barras en tu GOOJPRT PT210.
+        </p>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Método de Conexión:</label>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="printerMethod" id="printerUSB" value="usb" checked>
+            <label class="btn btn-outline-primary" for="printerUSB">
+              <i class="fas fa-usb"></i> USB
+            </label>
+            
+            <input type="radio" class="btn-check" name="printerMethod" id="printerBluetooth" value="bluetooth">
+            <label class="btn btn-outline-success" for="printerBluetooth">
+              <i class="fas fa-bluetooth"></i> Bluetooth
+            </label>
+            
+            <input type="radio" class="btn-check" name="printerMethod" id="printerNetwork" value="network">
+            <label class="btn btn-outline-info" for="printerNetwork">
+              <i class="fas fa-network-wired"></i> Red
+            </label>
+          </div>
+        </div>
+        
+        <div id="bluetoothOptions" style="display: none;">
+          <div class="alert alert-info">
+            <strong>Bluetooth Directo (Web Bluetooth API):</strong>
+            <ul class="mb-0 mt-2">
+              <li> Solo funciona en Chrome o Edge</li>
+              <li> Imprime directamente desde tu celular/PC</li>
+              <li> La impresora debe estar emparejada con tu dispositivo</li>
+              <li> No requiere configuración del servidor</li>
+            </ul>
+          </div>
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Importante:</strong> Al presionar "Ejecutar Test", se abrirá un diálogo
+            para seleccionar tu impresora Bluetooth. Asegúrate de que esté encendida.
+          </div>
+        </div>
+        
+        <div id="networkOptions" style="display: none;">
+          <div class="mb-3">
+            <label class="form-label">Dirección IP:</label>
+            <input type="text" class="form-control" id="printerIP" placeholder="192.168.1.100">
+            <small class="text-muted">Dirección IP del servidor con la impresora compartida</small>
+          </div>
+        </div>
+        
+        <div id="usbOptions">
+          <div class="alert alert-success">
+            <strong>USB (Servidor):</strong>
+            <ul class="mb-0 mt-2">
+              <li>Funciona en todos los navegadores</li>
+              <li>Impresora conectada al servidor</li>
+              <li>Más confiable y estable</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div id="printerStatus" class="alert alert-secondary mt-3">
+          <i class="fas fa-info-circle"></i>
+          <span id="printerStatusText">Método actual: USB (Servidor)</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="savePrinterConfig">
+          <i class="fas fa-save"></i>
+          Guardar Configuración
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Test de Impresora -->
+<div class="modal fade" id="printerTestModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-vial"></i>
+          Test de Impresora
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          <strong>Prueba rápida de conexión</strong><br>
+          Verifica que la impresora térmica esté conectada y funcionando correctamente.
+        </div>
+        
+        <div id="testResult" style="display:none;"></div>
+        
+        <div id="testLog" class="mt-3" style="display:none;">
+          <h6 class="text-muted">
+            <i class="fas fa-terminal"></i>
+            Diagnóstico:
+          </h6>
+          <pre id="testLogContent" class="bg-light p-3 rounded" style="font-size: 0.85rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-family: 'Courier New', monospace;"></pre>
+        </div>
+        
+        <div id="testCommands" class="mt-3" style="display:none;">
+          <h6 class="text-muted">
+            <i class="fas fa-code"></i>
+            Comandos sugeridos:
+          </h6>
+          <div id="testCommandsContent" class="bg-dark text-light p-3 rounded" style="font-size: 0.85rem; font-family: 'Courier New', monospace;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="runPrinterTest">
+          <i class="fas fa-play"></i>
+          <span id="testBtnText">Ejecutar Test</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Configuración de impresora - Persistencia en localStorage
+  (function() {
+    const modal = document.getElementById('printerConfigModal');
+    if (!modal) return;
+    
+    // Cargar configuración guardada
+    function loadPrinterConfig() {
+      const method = localStorage.getItem('printerMethod') || 'usb';
+      const ip = localStorage.getItem('printerIP') || '';
+      
+      // Seleccionar radio button
+      document.querySelector(`input[name="printerMethod"][value="${method}"]`).checked = true;
+      
+      // Llenar IP si existe
+      if (ip) document.getElementById('printerIP').value = ip;
+      
+      // Actualizar indicador en navbar
+      updatePrinterIndicator(method);
+      
+      // Mostrar opciones según método
+      togglePrinterOptions(method);
+    }
+    
+    // Actualizar indicador visual en navbar
+    function updatePrinterIndicator(method) {
+      const indicator = document.getElementById('printer-status-indicator');
+      if (!indicator) return;
+      
+      indicator.classList.remove('bg-secondary', 'bg-success', 'bg-info');
+      
+      switch(method) {
+        case 'usb':
+          indicator.textContent = 'USB';
+          indicator.classList.add('bg-secondary');
+          break;
+        case 'bluetooth':
+          indicator.textContent = 'BT';
+          indicator.classList.add('bg-success');
+          break;
+        case 'network':
+          indicator.textContent = 'RED';
+          indicator.classList.add('bg-info');
+          break;
+      }
+    }
+    
+    // Mostrar/ocultar opciones según método
+    function togglePrinterOptions(method) {
+      document.getElementById('usbOptions').style.display = method === 'usb' ? 'block' : 'none';
+      document.getElementById('bluetoothOptions').style.display = method === 'bluetooth' ? 'block' : 'none';
+      document.getElementById('networkOptions').style.display = method === 'network' ? 'block' : 'none';
+      
+      const statusText = document.getElementById('printerStatusText');
+      switch(method) {
+        case 'usb':
+          statusText.textContent = 'Método actual: USB (Servidor)';
+          break;
+        case 'bluetooth':
+          statusText.textContent = 'Método actual: Bluetooth Directo';
+          break;
+        case 'network':
+          statusText.textContent = 'Método actual: Red (CUPS/TCP)';
+          break;
+      }
+    }
+    
+    // Cambiar opciones al seleccionar método
+    document.querySelectorAll('input[name="printerMethod"]').forEach(radio => {
+      radio.addEventListener('change', function() {
+        togglePrinterOptions(this.value);
+      });
+    });
+    
+    // Guardar configuración
+    document.getElementById('savePrinterConfig').addEventListener('click', function() {
+      const method = document.querySelector('input[name="printerMethod"]:checked').value;
+      const ip = document.getElementById('printerIP').value;
+      
+      localStorage.setItem('printerMethod', method);
+      localStorage.setItem('printerIP', ip);
+      
+      updatePrinterIndicator(method);
+      
+      // Cerrar modal
+      const modalInstance = bootstrap.Modal.getInstance(modal);
+      if (modalInstance) modalInstance.hide();
+      
+      // Mostrar toast de confirmación
+      if (window.showToast) {
+        let message = '';
+        switch(method) {
+          case 'usb':
+            message = 'Impresora configurada: USB (Servidor)';
+            break;
+          case 'bluetooth':
+            message = 'Impresora configurada: Bluetooth Directo';
+            break;
+          case 'network':
+            message = `Impresora configurada: Red (${ip || 'IP pendiente'})`;
+            break;
+        }
+        window.showToast({ 
+          title: 'Configuración Guardada', 
+          body: message, 
+          variant: 'success', 
+          delay: 3000 
+        });
+      }
+    });
+    
+    // Cargar configuración al abrir modal
+    modal.addEventListener('show.bs.modal', function() {
+      loadPrinterConfig();
+    });
+    
+    // Cargar configuración inicial
+    loadPrinterConfig();
+  })();
+  
+  // Test de Impresora
+  (function() {
+    const testBtn = document.getElementById('printer-test-btn');
+    
+    // Verificar que el botón existe antes de agregar listener
+    if (!testBtn) {
+      console.log('⚠️ Botón de test de impresora no encontrado en navbar');
+      return;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('printerTestModal'));
+    const runTestBtn = document.getElementById('runPrinterTest');
+    const testResult = document.getElementById('testResult');
+    const testLog = document.getElementById('testLog');
+    const testLogContent = document.getElementById('testLogContent');
+    const testBtnText = document.getElementById('testBtnText');
+    
+    // Abrir modal al hacer clic en el botón del navbar
+    testBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      modal.show();
+      // Resetear estado
+      testResult.style.display = 'none';
+      testLog.style.display = 'none';
+      testLogContent.textContent = '';
+      document.getElementById('testCommands').style.display = 'none';
+      document.getElementById('testCommandsContent').innerHTML = '';
+      runTestBtn.disabled = false;
+      testBtnText.textContent = 'Ejecutar Test';
+    });
+    
+    // Ejecutar test
+    runTestBtn.addEventListener('click', async function() {
+      runTestBtn.disabled = true;
+      testBtnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Probando...';
+      testResult.style.display = 'none';
+      testLog.style.display = 'none';
+      document.getElementById('testCommands').style.display = 'none';
+      
+      // Obtener configuración de impresora
+      const printerMethod = localStorage.getItem('printerMethod') || 'usb';
+      const printerIP = localStorage.getItem('printerIP') || '';
+      
+      // Si es Bluetooth, usar Web Bluetooth API directamente
+      if (printerMethod === 'bluetooth') {
+        try {
+          // Verificar soporte
+          if (!('bluetooth' in navigator)) {
+            throw new Error('Web Bluetooth no soportado. Usa Chrome o Edge en Android/Windows/macOS.');
+          }
+          
+          // Crear cliente Bluetooth
+          const printer = new BluetoothPrinterClient();
+          
+          testResult.style.display = 'block';
+          testResult.className = 'alert alert-info';
+          testResult.innerHTML = `
+            <i class="fas fa-bluetooth"></i>
+            <strong>Abriendo diálogo de Bluetooth...</strong><br>
+            <small>Selecciona tu impresora GOOJPRT PT210 en el diálogo</small>
+          `;
+          
+          // Conectar (muestra diálogo nativo)
+          await printer.connect();
+          
+          testResult.className = 'alert alert-warning';
+          testResult.innerHTML = `
+            <i class="fas fa-print"></i>
+            <strong>Conectado! Imprimiendo página de prueba...</strong>
+          `;
+          
+          // Imprimir prueba
+          await printer.testPrint();
+          
+          // Desconectar
+          printer.disconnect();
+          
+          // Éxito
+          testResult.className = 'alert alert-success';
+          testResult.innerHTML = `
+            <i class="fas fa-check-circle"></i>
+            <strong>¡Prueba exitosa por Bluetooth!</strong><br>
+            <small>La etiqueta de prueba debería haberse impreso. Verifica tu impresora.</small>
+          `;
+          
+          testLog.style.display = 'block';
+          testLogContent.textContent = ` Conexión Bluetooth Directa establecida
+ Impresora: ${printer.device ? printer.device.name : 'GOOJPRT PT210'}
+ Método: Web Bluetooth API (navegador)
+ Test de impresión enviado
+ Desconexión completada`;
+          
+        } catch (error) {
+          testResult.style.display = 'block';
+          testResult.className = 'alert alert-danger';
+          testResult.innerHTML = `
+            <i class="fas fa-exclamation-circle"></i>
+            <strong>Error de Bluetooth</strong><br>
+            <small>${error.message}</small>
+          `;
+          
+          testLog.style.display = 'block';
+          testLogContent.textContent = ` Error: ${error.message}
+
+Posibles causas:
+• Navegador no soporta Web Bluetooth (usa Chrome o Edge)
+• Impresora no está encendida o no está en modo emparejamiento
+• Cancelaste el diálogo de selección de dispositivo
+• La impresora no está dentro del rango Bluetooth
+
+Soluciones:
+1. Usa Chrome o Edge (no funciona en Firefox/Safari)
+2. Enciende la impresora y activa modo emparejamiento
+3. Asegúrate de estar cerca de la impresora
+4. Intenta emparejar la impresora con tu dispositivo primero (opcional)`;
+          
+          const testCommands = document.getElementById('testCommands');
+          const testCommandsContent = document.getElementById('testCommandsContent');
+          testCommands.style.display = 'block';
+          testCommandsContent.innerHTML = `
+            <div class="mb-2">1. Verifica que estés en Chrome o Edge</div>
+            <div class="mb-2">2. Enciende la impresora GOOJPRT PT210</div>
+            <div class="mb-2">3. Activa modo emparejamiento (LED azul parpadeando)</div>
+            <div class="mb-2">4. Intenta el test de nuevo</div>
+          `;
+        } finally {
+          runTestBtn.disabled = false;
+          testBtnText.textContent = 'Ejecutar Test';
+        }
+        return;
+      }
+      
+      // Para USB/Network, usar endpoint del servidor
+      try {
+        const response = await fetch('{% url "parts:impresora_test" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({
+            connection_type: printerMethod,
+            ip_address: printerIP
+          })
+        });
+        
+        const data = await response.json();
+        
+        // Mostrar resultado
+        testResult.style.display = 'block';
+        testResult.className = 'alert';
+        
+        if (data.success) {
+          testResult.className += ' alert-success';
+          testResult.innerHTML = `
+            <i class="fas fa-check-circle"></i>
+            <strong>Impresora conectada correctamente</strong><br>
+            <small>${data.message || 'Test completado exitosamente'}</small>
+          `;
+        } else {
+          testResult.className += ' alert-danger';
+          testResult.innerHTML = `
+            <i class="fas fa-exclamation-circle"></i>
+            <strong>Error de conexión</strong><br>
+            <small>${data.message || 'No se pudo conectar a la impresora'}</small>
+          `;
+        }
+        
+        // Mostrar diagnóstico detallado si existe
+        if (data.details) {
+          // Mostrar diagnóstico
+          if (data.details.diagnostico && data.details.diagnostico.length > 0) {
+            testLog.style.display = 'block';
+            testLogContent.textContent = data.details.diagnostico.join('\n');
+          }
+          
+          // Mostrar comandos sugeridos
+          const testCommands = document.getElementById('testCommands');
+          const testCommandsContent = document.getElementById('testCommandsContent');
+          if (data.details.comandos_sugeridos && data.details.comandos_sugeridos.length > 0) {
+            testCommands.style.display = 'block';
+            testCommandsContent.innerHTML = data.details.comandos_sugeridos
+              .map(cmd => `<div class="mb-2"><code class="text-warning">$</code> ${cmd}</div>`)
+              .join('');
+          }
+        }
+        
+      } catch (error) {
+        testResult.style.display = 'block';
+        testResult.className = 'alert alert-danger';
+        testResult.innerHTML = `
+          <i class="fas fa-times-circle"></i>
+          <strong>Error de comunicación</strong><br>
+          <small>${error.message}</small>
+        `;
+      } finally {
+        runTestBtn.disabled = false;
+        testBtnText.textContent = 'Ejecutar Test';
+      }
+    });
+    
+    // Helper para obtener CSRF token
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+  })();
+</script>
+
+<!-- Script de gestión de impresora con reconexión inteligente -->
+<script>
+(function() {
+  'use strict';
+  
+  // Elemento del botón de conexión
+  const connectBtn = document.getElementById('printer-connect-btn');
+  
+  if (!connectBtn || !window.printerManager) {
+    console.warn('⚠️ Elementos de impresora no encontrados');
+    return;
+  }
+  
+  // Manejar clic en botón de conexión
+  connectBtn.addEventListener('click', async function(e) {
+    e.preventDefault();
+    
+    try {
+      // Deshabilitar botón durante conexión
+      connectBtn.disabled = true;
+      connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
+      
+      // Conectar (muestra diálogo nativo de Bluetooth)
+      await window.printerManager.connect();
+      
+      // Actualizar botón
+      connectBtn.innerHTML = '<i class="fas fa-check"></i> Conectado';
+      connectBtn.classList.remove('btn-outline-light');
+      connectBtn.classList.add('btn-success');
+      
+      // Opcional: ocultar botón después de conectar
+      setTimeout(() => {
+        connectBtn.style.display = 'none';
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error al conectar:', error);
+      
+      // Restaurar botón
+      connectBtn.innerHTML = '<i class="fas fa-bluetooth"></i> Conectar';
+      connectBtn.disabled = false;
+      
+      // Mostrar error
+      if (window.showToast) {
+        window.showToast({
+          title: 'Error de Conexión',
+          body: error.message || 'No se pudo conectar a la impresora',
+          variant: 'danger',
+          delay: 5000
+        });
+      } else {
+        alert('Error al conectar: ' + (error.message || 'Error desconocido'));
+      }
+    }
+  });
+  
+  // Registrar listener de cambios de estado para actualizar botón
+  if (window.printerManager.onStatusChange) {
+    window.printerManager.onStatusChange((status) => {
+      switch(status.type) {
+        case 'connected':
+          connectBtn.innerHTML = '<i class="fas fa-check"></i> Conectado';
+          connectBtn.classList.remove('btn-outline-light');
+          connectBtn.classList.add('btn-success');
+          connectBtn.disabled = false;
+          
+          // Ocultar botón (el indicador visual muestra el estado)
+          setTimeout(() => {
+            connectBtn.style.display = 'none';
+          }, 2000);
+          break;
+          
+        case 'disconnected':
+          connectBtn.innerHTML = '<i class="fas fa-bluetooth"></i> Conectar';
+          connectBtn.classList.remove('btn-success');
+          connectBtn.classList.add('btn-outline-light');
+          connectBtn.disabled = false;
+          connectBtn.style.display = 'inline-block';
+          break;
+          
+        case 'error':
+          connectBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error';
+          connectBtn.disabled = false;
+          break;
+      }
+    });
+  }
+  
+  // Verificar si ya está conectado al cargar
+  if (window.printerManager && typeof window.printerManager.isConnected === 'function') {
+    try {
+      if (window.printerManager.isConnected()) {
+        connectBtn.innerHTML = '<i class="fas fa-check"></i> Conectado';
+        connectBtn.classList.remove('btn-outline-light');
+        connectBtn.classList.add('btn-success');
+        connectBtn.style.display = 'none';
+      }
+    } catch (error) {
+      console.warn('Error verificando estado de impresora:', error);
+    }
+  }
+  
+  console.log('✓ Sistema de conexión Bluetooth inicializado');
+})();
+</script>
+
+<!-- Script legacy para compatibilidad (deprecated) -->
+<script>
+(function() {
+  'use strict';
+  
+  // Esperar a que printerManager esté disponible
+  function waitForPrinterManager(callback, maxAttempts = 20) {
+    let attempts = 0;
+    const checkInterval = setInterval(() => {
+      attempts++;
+      
+      if (window.printerManager && typeof window.printerManager.onStatusChange === 'function') {
+        clearInterval(checkInterval);
+        callback();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.warn('⚠️ printerManager no disponible después de esperar');
+      }
+    }, 100); // Verificar cada 100ms
+  }
+  
+  // Funciones de compatibilidad para código antiguo
+  const statusBadge = document.getElementById('printer-status-badge');
+  const statusText = statusBadge ? statusBadge.querySelector('.status-text') : null;
+  const spinnerIcon = statusBadge ? statusBadge.querySelector('.fa-spin') : null;
+  const printerIcon = document.getElementById('printer-icon');
+  const printerStatusText = document.getElementById('printer-status-text');
+  
+  // Si existen elementos legacy, mantener compatibilidad
+  if (!statusBadge) {
+    console.log('ℹ️ Elementos legacy de impresora no encontrados (esperado)');
+    return;
+  }
+  
+  // Actualizar UI según estado (función legacy)
+  function updateUI(status) {
+    const { type, message, deviceName } = status;
+    
+    switch(type) {
+      case 'connecting':
+      case 'reconnecting':
+        if (statusBadge) statusBadge.className = 'badge bg-warning ms-1';
+        if (statusText) statusText.textContent = 'Conectando...';
+        if (spinnerIcon) spinnerIcon.style.display = 'inline-block';
+        if (printerIcon) printerIcon.className = 'fas fa-bluetooth';
+        if (printerStatusText) printerStatusText.textContent = 'Conectando';
+        break;
+        
+      case 'connected':
+        if (statusBadge) statusBadge.className = 'badge bg-success ms-1';
+        if (statusText) statusText.textContent = deviceName || 'Conectado';
+        if (spinnerIcon) spinnerIcon.style.display = 'none';
+        if (printerIcon) printerIcon.className = 'fas fa-bluetooth text-success';
+        if (printerStatusText) printerStatusText.textContent = 'Conectado';
+        
+        // Guardar en localStorage
+        localStorage.setItem('bluetoothPrinterConnected', 'true');
+        
+        // Mostrar toast
+        if (window.showToast) {
+          window.showToast({
+            title: 'Impresora Conectada',
+            body: `${deviceName || 'Impresora'} lista para usar`,
+            variant: 'success',
+            delay: 3000
+          });
+        }
+        break;
+        
+      case 'disconnected':
+        if (statusBadge) statusBadge.className = 'badge bg-secondary ms-1';
+        if (statusText) statusText.textContent = 'Desconectado';
+        if (spinnerIcon) spinnerIcon.style.display = 'none';
+        if (printerIcon) printerIcon.className = 'fas fa-bluetooth';
+        if (printerStatusText) printerStatusText.textContent = 'Conectar';
+        
+        localStorage.removeItem('bluetoothPrinterConnected');
+        break;
+        
+      case 'printing':
+        if (statusBadge) statusBadge.className = 'badge bg-info ms-1';
+        if (statusText) statusText.textContent = 'Imprimiendo...';
+        if (spinnerIcon) spinnerIcon.style.display = 'inline-block';
+        break;
+        
+      case 'printed':
+        if (statusBadge) statusBadge.className = 'badge bg-success ms-1';
+        if (statusText) statusText.textContent = 'Impreso ✓';
+        if (spinnerIcon) spinnerIcon.style.display = 'none';
+        
+        // Volver a "Conectado" después de 2 segundos
+        setTimeout(() => {
+          const deviceName = window.printerManager.getDeviceName();
+          if (statusText) statusText.textContent = deviceName || 'Conectado';
+        }, 2000);
+        break;
+        
+      case 'error':
+        if (statusBadge) statusBadge.className = 'badge bg-danger ms-1';
+        if (statusText) statusText.textContent = 'Error';
+        if (spinnerIcon) spinnerIcon.style.display = 'none';
+        if (printerIcon) printerIcon.className = 'fas fa-bluetooth text-danger';
+        
+        if (window.showToast) {
+          window.showToast({
+            title: 'Error de Impresora',
+            body: message || 'Error desconocido',
+            variant: 'danger',
+            delay: 5000
+          });
+        }
+        break;
+    }
+  }
+  
+  // Registrar listener de cambios de estado CUANDO printerManager esté listo
+  waitForPrinterManager(() => {
+    if (window.printerManager && typeof window.printerManager.onStatusChange === 'function') {
+      window.printerManager.onStatusChange(updateUI);
+      console.log('✓ Compatibilidad legacy de UI impresora cargada');
+    }
+  });
+})();
+</script>
+
+<!-- Script de gestión de modo de transcripción -->
+<script>
+(function() {
+  'use strict';
+  
+  // Modos disponibles
+  const MODES = {
+    LOCAL: {
+      id: 'local',
+      name: 'Local',
+      description: 'Vosk completo (offline, rápido)',
+      icon: 'fas fa-server',
+      badgeClass: 'bg-info',
+      tooltip: 'Modo Local: Todo procesado con Vosk (offline)'
+    },
+    HYBRID: {
+      id: 'hybrid',
+      name: 'Nube',
+      description: 'Vosk + OpenAI (comandos + transcripción precisa)',
+      icon: 'fas fa-cloud',
+      badgeClass: 'bg-success',
+      tooltip: 'Modo Nube: Vosk para comandos, OpenAI para transcripciones'
+    }
+  };
+  
+  // Obtener modo actual desde localStorage
+  function getCurrentMode() {
+    try {
+      const stored = localStorage.getItem('transcriptionMode');
+      return stored === 'hybrid' ? MODES.HYBRID : MODES.LOCAL;
+    } catch (e) {
+      console.error('Error leyendo modo de transcripción:', e);
+      return MODES.LOCAL;
+    }
+  }
+  
+  // ⚠️ CRÍTICO: Exponer funciones globales INMEDIATAMENTE (antes de verificar DOM)
+  // Esto asegura que voice-webrtc-hybrid.js siempre pueda verificar el modo
+  window.getTranscriptionMode = function() {
+    return getCurrentMode().id;
+  };
+  
+  window.isHybridMode = function() {
+    return getCurrentMode().id === 'hybrid';
+  };
+  
+  console.log(' Modo de transcripción:', window.isHybridMode() ? 'Nube (Vosk + OpenAI (comandos + transcripción precisa))' : 'Local');
+  
+  // Elementos del DOM (pueden no existir en todas las páginas)
+  const toggleBtn = document.getElementById('transcription-mode-toggle');
+  const modeText = document.getElementById('transcription-mode-text');
+  const modeBadge = document.getElementById('transcription-mode-badge');
+  const modeIcon = document.getElementById('transcription-icon');
+  
+  if (!toggleBtn || !modeText || !modeBadge || !modeIcon) {
+    console.warn(' Elementos de toggle de transcripción no encontrados (esperado si no hay navbar)');
+    return;
+  }
+  
+  // Guardar modo en localStorage
+  function saveMode(mode) {
+    try {
+      localStorage.setItem('transcriptionMode', mode.id);
+      console.log(` Modo de transcripción guardado: ${mode.name}`);
+    } catch (e) {
+      console.error('Error guardando modo de transcripción:', e);
+    }
+  }
+  
+  // Actualizar UI del toggle
+  function updateUI(mode) {
+    modeText.textContent = mode.name;
+    modeBadge.className = `badge ${mode.badgeClass} ms-1`;
+    modeBadge.innerHTML = `<i class="${mode.icon}"></i>`;
+    toggleBtn.title = mode.tooltip;
+    
+    // Cambiar color del icono principal
+    if (mode.id === 'hybrid') {
+      modeIcon.className = 'fas fa-microphone text-success';
+    } else {
+      modeIcon.className = 'fas fa-microphone text-info';
+    }
+    
+    // Disparar evento personalizado para que otros componentes se enteren
+    window.dispatchEvent(new CustomEvent('transcriptionModeChanged', {
+      detail: { mode: mode.id }
+    }));
+    
+    console.log(` Modo de transcripción: ${mode.name} (${mode.description})`);
+  }
+  
+  // Alternar entre modos
+  function toggleMode() {
+    const currentMode = getCurrentMode();
+    const newMode = currentMode.id === 'local' ? MODES.HYBRID : MODES.LOCAL;
+    
+    saveMode(newMode);
+    updateUI(newMode);
+    
+    // Mostrar toast si existe
+    if (window.showToast) {
+      window.showToast({
+        title: `Modo: ${newMode.name}`,
+        body: newMode.description,
+        variant: newMode.id === 'hybrid' ? 'success' : 'info',
+        delay: 3000
+      });
+    } else {
+      alert(`Modo cambiado a: ${newMode.name}\n${newMode.description}`);
+    }
+  }
+  
+  // Manejar clic en toggle
+  toggleBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    toggleMode();
+  });
+  
+  // Inicializar UI con modo actual
+  const initialMode = getCurrentMode();
+  updateUI(initialMode);
+  
+  console.log(' Toggle de modo de transcripción inicializado');
+})();
+</script>
+
+</body>
+</html>

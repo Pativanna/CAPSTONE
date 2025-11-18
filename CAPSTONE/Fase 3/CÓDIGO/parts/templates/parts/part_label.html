@@ -1,0 +1,140 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+{% block title %}Etiqueta de Pieza{% endblock %}
+
+{% block content %}
+<style>
+.label-print-card {
+  max-width: 420px;
+  margin: 0 auto;
+}
+#barcodeCanvas {
+  width: 384px;
+  height: 160px;
+  max-width: 100%;
+  image-rendering: pixelated;
+}
+@media (max-width: 576px) {
+  .label-print-card {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+}
+@media print {
+  body, html {
+    width: 60mm;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+  nav, header, footer, .navbar, .btn, .btn-link, .btn-primary, #btnRawBT, #btnSystemPrint {
+    display: none !important;
+  }
+  .label-print-card,
+  .label-print-card .card,
+  .label-print-card .card-body {
+    max-width: 60mm;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 4px;
+    margin: 0;
+  }
+  #barcodeCanvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+  #qrcode canvas {
+    width: 120px !important;
+    height: 120px !important;
+  }
+}
+.barcode-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.barcode-text {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  font-size: 18px;
+  margin-top: 6px;
+}
+</style>
+<div class="container py-4 label-print-card">
+  <div class="card shadow-sm">
+    <div class="card-body text-center">
+      <h4 class="mb-3">Etiqueta de Pieza</h4>
+
+      <p><strong>ID:</strong> {{ part.id }}</p>
+      <p><strong>Nombre:</strong> {{ part.name }}</p>
+      {% if part.auto %}
+      <p><strong>Modelo:</strong> {{ part.auto.brand_model }} {{ part.auto.year }}</p>
+      {% endif %}
+      {% if part.workshop %}
+      <p><strong>Taller:</strong> {{ part.workshop.name }}</p>
+      {% endif %}
+
+      <!-- Etiqueta generada server-side -->
+      <div class="barcode-wrapper">
+        <img id="label-image" src="{{ print_image_url }}" alt="Etiqueta" style="width:100%;max-width:384px;" />
+      </div>
+
+      <div class="d-flex gap-2 justify-content-center mt-4">
+        <button id="btnRawBT" class="btn btn-primary">Imprimir con RawBT</button>
+        <button id="btnSystemPrint" class="btn btn-outline-secondary">Imprimir del Sistema</button>
+        <a href="{% url 'parts:part_list' %}" class="btn btn-link">Volver</a>
+      </div>
+
+      <small class="d-block text-muted mt-3">
+        (Android) Instala <em>RawBT Print Service</em> para imprimir por Bluetooth
+      </small>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const labelUrl = "{{ print_image_url }}";
+  async function fetchEscposBase64() {
+    const response = await fetch("{{ print_escpos_url }}?t=" + Date.now());
+    if (!response.ok) {
+      throw new Error('No se pudo obtener la etiqueta ESC/POS');
+    }
+    const buffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      const sub = bytes.subarray(i, i + chunk);
+      binary += String.fromCharCode.apply(null, sub);
+    }
+    return btoa(binary);
+  }
+
+  function rawbtIntent(payload) {
+    return "intent:" + payload + "#Intent;scheme=rawbt:data;package=ru.a402d.rawbtprinter;end;";
+  }
+
+  document.getElementById("btnRawBT").onclick = async () => {
+    try {
+      const escposBase64 = await fetchEscposBase64();
+      const payload = 'application/octet-stream;base64,' + escposBase64;
+      window.location.href = rawbtIntent(payload);
+    } catch (err) {
+      alert('No se pudo preparar la impresión: ' + err.message);
+    }
+  };
+  document.getElementById("btnSystemPrint").onclick = () => {
+    window.print();
+  };
+
+  // Auto print en Android
+  const autoPrint = "{{ auto_print|yesno:'true,false' }}" === "true";
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  if (autoPrint && isAndroid) {
+    setTimeout(() => document.getElementById("btnRawBT").click(), 400);
+  }
+})();
+</script>
+{% endblock %}

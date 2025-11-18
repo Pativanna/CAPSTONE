@@ -1,0 +1,682 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- CSRF Token para JavaScript -->
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+<section class="container py-4 hands-free-section">
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+      
+      <!-- Tarjeta principal de Manos Libres -->
+      <div class="card shadow-lg border-0" id="hands-free-card"{% if user.is_authenticated %} data-user-id="{{ user.id }}"{% endif %}>
+        <div class="card-header bg-primary text-white text-center py-2">
+          <h4 class="mb-0 fs-5">&nbsp;</h4>
+        </div>
+        
+        <div class="card-body p-4">
+          
+          <div class="status-box mb-3" id="command-box" style="display:none;">
+            <small class="text-muted d-block mb-1">Comando</small>
+            <div id="expected-command" class="command-badge badge-info">
+              ESPERANDO COMANDO: "INICIAR"
+            </div>
+          </div>
+          <div id="current-status" class="visually-hidden" aria-live="polite">Inactivo</div>
+          <div id="audio-meter-wrapper" class="audio-meter-wrapper mb-4">
+            <small class="text-muted d-block">Nivel de audio</small>
+            <div class="audio-meter">
+              <div id="audio-level-bar" class="audio-meter-bar"></div>
+            </div>
+            <small id="audio-level-label" class="text-muted small d-block mt-1">Esperando audio...</small>
+          </div>
+
+          <!-- Botón Central Grande -->
+          <div id="hands-free-main-button-container" class="d-flex justify-content-center mb-4">
+            <button type="button" id="btn-hands-free" class="btn-main" data-state="inactive">
+              <i class="fas fa-microphone mb-2"></i>
+              <div class="btn-text">Iniciar Manos Libres</div>
+            </button>
+          </div>
+
+          <!-- Panel de Datos Capturados (oculto inicialmente) -->
+          <div id="data-panel" class="data-panel" style="display:none;">
+            <h6 class="mb-3">Datos Capturados</h6>
+            <div class="alert-hint d-flex align-items-center justify-content-between mb-3" id="confirm-hint" style="display:none;">
+              <span>Diga "confirmar" para guardar.</span>
+              <button type="button" id="inline-cancel-btn" class="btn btn-outline-secondary btn-sm ms-2">Cancelar</button>
+            </div>
+            <div class="context-summary mb-3" id="context-summary" style="display:none;">
+              <div class="text-muted small">Auto seleccionado: <strong id="summary-auto">-</strong></div>
+              <div class="text-muted small">Taller seleccionado: <strong id="summary-taller">-</strong></div>
+            </div>
+            <div class="data-grid">
+              <div class="data-field">
+                <label>Nombre de Pieza</label>
+                <div class="data-value" data-field="parte" id="data-parte">-</div>
+              </div>
+              <div class="data-field">
+                <label>Precio normal</label>
+                <div class="data-value" data-field="valor" id="data-valor">-</div>
+              </div>
+              <div class="data-field">
+                <label>Precio mínimo / oferta</label>
+                <div class="data-value" data-field="min_value" id="data-min-value">-</div>
+              </div>
+              <div class="data-field full-width">
+                <label>Detalles</label>
+                <div class="data-value" data-field="detalles" id="data-detalles">-</div>
+              </div>
+            </div>
+            
+            <!-- Selectores de Auto y Taller -->
+            <div class="mt-3">
+              <div class="row">
+                <div class="col-md-6 mb-2">
+                  <label class="form-label fw-bold small">Auto</label>
+                  <select id="select-auto" class="form-select form-select-sm" required>
+                    <option value="">-- Seleccione --</option>
+                    {% for a in autos %}
+                    <option value="{{ a.id }}">{{ a.brand_model }}, {{ a.year }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-6 mb-2">
+                  <label class="form-label fw-bold small">Taller</label>
+                  <select id="select-workshop" class="form-select form-select-sm" required>
+                    <option value="">-- Seleccione --</option>
+                    {% for w in workshops %}
+                    <option value="{{ w.id }}">{{ w.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center mt-3">
+              <small class="text-muted">Doble click/tap en un campo para editar</small>
+            </div>
+
+            <!-- Botón Confirmar Datos (oculto hasta que se muestren datos) -->
+            <div class="text-center mt-3">
+              <button type="button" id="btn-confirm-data" class="btn btn-success btn-lg" style="display:none;">
+                <i class="fas fa-check"></i> Confirmar Datos
+              </button>
+            </div>
+          </div>
+
+          <!-- Animación de Éxito (oculta inicialmente) -->
+          <div id="success-animation" class="success-animation" style="display:none;">
+            <div class="success-checkmark">
+              <div class="check-icon">
+                <span class="icon-line line-tip"></span>
+                <span class="icon-line line-long"></span>
+                <div class="icon-circle"></div>
+                <div class="icon-fix"></div>
+              </div>
+            </div>
+            <h4 class="text-success mt-3">¡Pieza Ingresada!</h4>
+          </div>
+
+          <!-- Log de Transcripción (solo para debug) -->
+          <div id="transcription-log" class="mt-3" style="display:none;">
+            <small class="text-muted">Transcripción:</small>
+            <div class="transcription-box" id="transcription-text"></div>
+          </div>
+
+        </div>
+
+        <!-- Botones en footer -->
+        <div class="card-footer bg-light text-center py-3">
+          <div class="d-flex justify-content-center gap-2">
+            <button type="button" id="btn-select-vehicle" class="btn btn-outline-primary">
+              <i class="fas fa-car"></i> Seleccionar Vehículo
+            </button>
+            <button type="button" id="btn-manual-entry" class="btn btn-outline-secondary">
+              <i class="fas fa-keyboard"></i> Ingreso Manual
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Modal para Selección de Vehículo -->
+<div class="modal fade" id="vehicleSelectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Seleccionar Taller y Vehículo</h5>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">Por favor seleccione el taller y auto antes de continuar con la ingesta de piezas.</p>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Taller <span class="text-danger">*</span></label>
+          <select id="modal-workshop-select" class="form-select" required>
+            <option value="">-- Seleccione un taller --</option>
+            {% for w in workshops %}
+            <option value="{{ w.id }}">{{ w.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Auto <span class="text-danger">*</span></label>
+          <select id="modal-auto-select" class="form-select" required>
+            <option value="">-- Seleccione un auto --</option>
+            {% for a in autos %}
+            <option value="{{ a.id }}">{{ a.brand_model }}, {{ a.year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-confirm-vehicle" class="btn btn-primary">
+          <i class="fas fa-check"></i> Confirmar Selección
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Ingreso Manual -->
+<div class="modal fade" id="manualEntryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Ingreso Manual de Pieza</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="manual-form">
+          {% csrf_token %}
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Nombre de la Pieza</label>
+            <input type="text" name="name" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Detalles</label>
+            <textarea name="details" class="form-control" rows="3"></textarea>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Auto</label>
+              <select name="auto" class="form-select" required>
+                <option value="">-- Seleccione --</option>
+                {% for a in autos %}
+                <option value="{{ a.id }}">{{ a.brand_model }}, {{ a.year }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Taller</label>
+              <select name="workshop" class="form-select" required>
+                <option value="">-- Seleccione --</option>
+                {% for w in workshops %}
+                <option value="{{ w.id }}">{{ w.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Valor Máximo</label>
+              <input type="number" name="max_value" class="form-control" value="0">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Valor Mínimo</label>
+              <input type="number" name="min_value" class="form-control" value="0">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="btn-save-manual" class="btn btn-primary">
+          <i class="fas fa-save"></i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Contenedor principal */
+#hands-free-card {
+  max-width: 600px;
+  margin: 0 auto;
+  border-radius: 1rem;
+}
+
+#hands-free-main-button-container {
+  margin-bottom: 1.5rem;
+}
+
+/* Indicadores de Estado */
+.status-box {
+  background: var(--surface-card);
+  padding: 0.85rem;
+  border-radius: 0.75rem;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+
+.status-badge, .command-badge {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#command-box .command-badge {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.badge-secondary { background: #6c757d; color: white; }
+.badge-info { background: #0dcaf0; color: #000; }
+.badge-success { background: #198754; color: white; }
+.badge-warning { background: #ffc107; color: #000; }
+.badge-danger { background: #dc3545; color: white; }
+
+/* Botón Central Grande */
+.btn-main {
+  width: min(55vw, 220px);
+  height: min(55vw, 220px);
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+  color: white;
+  font-size: 1.1rem;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(13, 110, 253, 0.35);
+  position: relative;
+  overflow: visible;
+  margin: 0 auto;
+}
+
+.btn-main i {
+  font-size: 3rem;
+}
+
+.btn-main:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 12px 35px rgba(13, 110, 253, 0.45);
+}
+
+.btn-main:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-main:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.audio-meter-wrapper {
+  background: var(--surface-muted);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+.audio-meter {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--border-color);
+  overflow: hidden;
+}
+
+.audio-meter-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #20c997 0%, #198754 100%);
+  transition: width 120ms ease-out;
+}
+
+/* Estados del botón */
+.btn-main[data-state="listening_init"] {
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+  box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+  animation: pulse-listening 2s infinite;
+}
+
+.btn-main[data-state="recording"] {
+  background: linear-gradient(135deg, #dc3545 0%, #bb2d3b 100%);
+  box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+  animation: pulse-recording 1.5s infinite;
+}
+
+.btn-main[data-state="processing"], .btn-main[data-state="confirming"] {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+}
+
+.btn-main[data-state="success"] {
+  background: linear-gradient(135deg, #198754 0%, #157347 100%);
+  box-shadow: 0 8px 25px rgba(25, 135, 84, 0.4);
+}
+
+@keyframes pulse-listening {
+  0%, 100% {
+    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 12px 40px rgba(255, 193, 7, 0.6);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes pulse-recording {
+  0%, 100% {
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+  }
+  50% {
+    box-shadow: 0 12px 40px rgba(220, 53, 69, 0.7);
+  }
+}
+
+@media (max-width: 576px) {
+  #hands-free-card .btn-main {
+    width: 160px;
+    height: 160px;
+  }
+}
+
+/* Panel de Datos */
+.data-panel {
+  background: var(--surface-card);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.context-summary {
+  background: var(--surface-muted);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--border-color);
+}
+
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.data-field {
+  background: var(--surface-muted);
+  padding: 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+}
+
+.data-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.data-field label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.data-value {
+  font-size: 1rem;
+  color: var(--text-primary);
+  min-height: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: background 0.2s;
+  word-break: break-word;
+}
+
+.data-value:hover {
+  background: var(--surface-card);
+}
+
+.data-value[contenteditable="true"] {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+  outline: none;
+}
+
+.hands-free-section {
+  padding-top: 1.5rem !important;
+}
+
+@media (max-width: 768px) {
+  .hands-free-section {
+    padding-top: 0.75rem !important;
+  }
+  #hands-free-card .card-body {
+    padding: 1.25rem;
+  }
+  #hands-free-card .card-header,
+  #hands-free-card .card-footer {
+    padding: 1rem 1.25rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .btn-main {
+    width: min(70vw, 190px);
+    height: min(70vw, 190px);
+  }
+  .audio-meter-wrapper {
+    margin-bottom: 1rem;
+  }
+  .data-panel {
+    padding: 1.25rem;
+  }
+}
+
+/* Animación de Éxito */
+.success-animation {
+  text-align: center;
+  padding: 2rem;
+}
+
+.success-checkmark {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.check-icon {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  border-radius: 50%;
+  box-sizing: content-box;
+  border: 4px solid #198754;
+}
+
+.icon-line {
+  height: 5px;
+  background-color: #198754;
+  display: block;
+  border-radius: 2px;
+  position: absolute;
+  z-index: 10;
+}
+
+.icon-line.line-tip {
+  top: 46px;
+  left: 14px;
+  width: 25px;
+  transform: rotate(45deg);
+  animation: icon-line-tip 0.75s;
+}
+
+.icon-line.line-long {
+  top: 38px;
+  right: 8px;
+  width: 47px;
+  transform: rotate(-45deg);
+  animation: icon-line-long 0.75s;
+}
+
+.icon-circle {
+  top: -4px;
+  left: -4px;
+  z-index: 10;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  position: absolute;
+  box-sizing: content-box;
+  border: 4px solid rgba(25, 135, 84, 0.5);
+}
+
+.icon-fix {
+  top: 8px;
+  width: 5px;
+  left: 26px;
+  z-index: 1;
+  height: 85px;
+  position: absolute;
+  transform: rotate(-45deg);
+  background-color: #fff;
+}
+
+@keyframes icon-line-tip {
+  0% {
+    width: 0;
+    left: 1px;
+    top: 19px;
+  }
+  54% {
+    width: 0;
+    left: 1px;
+    top: 19px;
+  }
+  70% {
+    width: 50px;
+    left: -8px;
+    top: 37px;
+  }
+  84% {
+    width: 17px;
+    left: 21px;
+    top: 48px;
+  }
+  100% {
+    width: 25px;
+    left: 14px;
+    top: 45px;
+  }
+}
+
+@keyframes icon-line-long {
+  0% {
+    width: 0;
+    right: 46px;
+    top: 54px;
+  }
+  65% {
+    width: 0;
+    right: 46px;
+    top: 54px;
+  }
+  84% {
+    width: 55px;
+    right: 0px;
+    top: 35px;
+  }
+  100% {
+    width: 47px;
+    right: 8px;
+    top: 38px;
+  }
+}
+
+/* Log de transcripción */
+.transcription-box {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: 0.875rem;
+  font-family: 'Courier New', monospace;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .btn-main {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .btn-main i {
+    font-size: 2.5rem;
+  }
+  
+  .btn-main .btn-text {
+    font-size: 0.9rem;
+  }
+  
+  .data-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+{% load static %}
+<script src="{% static 'parts/hands-free-voice.js' %}?v=1763161695"></script>
+<script src="{% static 'parts/voice_ingesta.js' %}?v=1763161695"></script>
+
+{% endblock %}
+
+.hands-free-section {
+  padding-top: 1.5rem !important;
+}
+
+@media (max-width: 768px) {
+  .hands-free-section {
+    padding-top: 0.75rem !important;
+  }
+  #hands-free-card .card-body {
+    padding: 1.25rem;
+  }
+  #hands-free-card .card-header, #hands-free-card .card-footer {
+    padding: 1rem 1.25rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .btn-main {
+    width: min(70vw, 190px);
+    height: min(70vw, 190px);
+  }
+  .audio-meter-wrapper {
+    margin-bottom: 1rem;
+  }
+  .data-panel {
+    padding: 1.25rem;
+  }
+}

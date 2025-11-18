@@ -1,0 +1,772 @@
+{% extends 'parts/base.html' %}
+{% block title %}Generador de Reportes{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --primary-color: #0069BC;
+    --primary-hover: #005599;
+    --primary-light: #E8F4FD;
+    --success-color: #00A86B;
+    --danger-color: #DC3545;
+    --gray-100: #F8F9FA;
+    --gray-200: #E9ECEF;
+    --gray-600: #6C757D;
+  }
+
+  .report-hero {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #004d8c 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 105, 188, 0.15);
+  }
+
+  .frequency-card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .frequency-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  .frequency-selector {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .frequency-btn {
+    position: relative;
+    padding: 2rem 1.5rem;
+    border: none;
+    background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
+    cursor: pointer;
+    border-radius: 16px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    min-height: 160px;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08), 
+                0 1px 3px rgba(0, 0, 0, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+  }
+
+  .frequency-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .frequency-btn:hover::before {
+    opacity: 1;
+  }
+
+  .frequency-btn:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 105, 188, 0.15),
+                0 4px 10px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 1);
+    background: linear-gradient(145deg, #ffffff 0%, var(--primary-light) 100%);
+  }
+
+  .frequency-btn.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #005599 100%);
+    color: white;
+    box-shadow: 0 8px 30px rgba(0, 105, 188, 0.35),
+                0 4px 12px rgba(0, 105, 188, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px) scale(1.03);
+  }
+
+  .frequency-btn.active::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    opacity: 1;
+  }
+
+  .frequency-btn.active:hover {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow: 0 10px 35px rgba(0, 105, 188, 0.4),
+                0 6px 15px rgba(0, 105, 188, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .frequency-btn.active .frequency-icon {
+    color: white;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  }
+
+  .frequency-btn.active small {
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .frequency-icon-wrapper {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, var(--primary-light) 0%, #ffffff 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    transition: all 0.35s ease;
+    box-shadow: 0 4px 12px rgba(0, 105, 188, 0.1);
+  }
+
+  .frequency-btn:hover .frequency-icon-wrapper {
+    transform: scale(1.1) rotate(5deg);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0056b3 100%);
+    box-shadow: 0 6px 20px rgba(0, 105, 188, 0.25);
+  }
+
+  .frequency-btn.active .frequency-icon-wrapper {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+
+  .frequency-btn.active:hover .frequency-icon-wrapper {
+    transform: scale(1.15) rotate(-5deg);
+  }
+
+  .frequency-icon {
+    font-size: 2rem;
+    color: var(--primary-color);
+    transition: all 0.35s ease;
+  }
+
+  .frequency-btn:hover .frequency-icon {
+    color: white;
+  }
+
+  .frequency-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.3px;
+    transition: all 0.3s ease;
+  }
+
+  .frequency-subtitle {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+    display: block;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+
+  .frequency-btn.active .frequency-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .frequency-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    opacity: 0;
+    transform: scale(0.5) translateY(-10px);
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .frequency-btn.active .frequency-badge {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    animation: badgePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes badgePulse {
+    0%, 100% {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    50% {
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.4);
+    }
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-action {
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-action i {
+    margin-right: 0.5rem;
+  }
+
+  .btn-primary-custom {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-primary-custom:hover {
+    background: var(--primary-hover);
+    color: white;
+  }
+
+  .btn-success-custom {
+    background: var(--success-color);
+    color: white;
+  }
+
+  .btn-success-custom:hover {
+    background: #008c59;
+    color: white;
+  }
+
+  .preview-container {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 2px solid var(--primary-light);
+  }
+
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  .preview-title {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .history-card {
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+  }
+
+  .history-card .card-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #005599 100%);
+    color: white;
+    border: none;
+    padding: 1rem 1.5rem;
+  }
+
+  .badge-custom {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  .badge-primary-custom {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
+  .badge-info-custom {
+    background: #17A2B8;
+    color: white;
+  }
+
+  .table-custom {
+    margin-bottom: 0;
+  }
+
+  .table-custom thead th {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    font-weight: 600;
+    border-bottom: 2px solid var(--gray-200);
+    padding: 1rem;
+  }
+
+  .table-custom tbody tr {
+    transition: background 0.2s;
+  }
+
+  .table-custom tbody tr:hover {
+    background: var(--primary-light);
+  }
+
+  .modal-header-custom {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #005599 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .modal-header-custom .btn-close {
+    filter: brightness(0) invert(1);
+  }
+
+  @media (max-width: 768px) {
+    .frequency-selector {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .frequency-btn {
+      min-height: 140px;
+      padding: 1.5rem 1rem;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .frequency-icon-wrapper {
+      width: 60px;
+      height: 60px;
+    }
+
+    .frequency-icon {
+      font-size: 1.75rem;
+    }
+
+    .frequency-title {
+      font-size: 1.1rem;
+    }
+
+    .action-buttons {
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .btn-action {
+      width: 100%;
+    }
+
+    .report-hero {
+      padding: 1.5rem 1rem;
+    }
+  }
+
+  @media (max-width: 576px) {
+    .frequency-btn {
+      min-height: 120px;
+      padding: 1.25rem 1rem;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .frequency-icon-wrapper {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 0.75rem;
+    }
+
+    .frequency-icon {
+      font-size: 1.5rem;
+    }
+
+    .frequency-title {
+      font-size: 1rem;
+    }
+
+    .frequency-subtitle {
+      font-size: 0.8rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5" style="max-width:1200px;">
+
+  <!-- Hero Section -->
+  <div class="card mb-4" style="background: white; color: #0069BC; border: 2px solid #0069BC; box-shadow: 0 2px 8px rgba(0, 105, 188, 0.1);">
+    <div class="card-body p-4">
+      <h1 class="h2 mb-2">
+        <i class="fas fa-chart-line"></i> Generador de Reportes
+      </h1>
+      <p class="mb-0">Sistema de gestión de inventario Transervis</p>
+      <small class="d-block mt-2 opacity-75">{{ 'now'|date:'d/m/Y H:i' }}</small>
+    </div>
+  </div>
+
+  {% if message %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-left: 4px solid #00A86B;">
+      <i class="fas fa-check-circle"></i> <strong>{{ message }}</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endif %}
+
+  <!-- Card de Selección de Período - BOOTSTRAP PURO -->
+  <div class="card shadow-sm mb-5" style="background: white; border: 2px solid #0069BC;">
+    <div class="card-header text-center py-4" style="background: white; color: #0069BC; border-bottom: 2px solid #0069BC;">
+      <h3 class="mb-0 fw-bold">
+        <i class="fas fa-calendar-alt"></i> Selecciona el Período del Reporte
+      </h3>
+    </div>
+    <div class="card-body p-5" style="background: white;">
+      
+      <!-- Selección de frecuencia -->
+      <div class="row justify-content-center g-3 mb-4">
+        
+        <!-- Botón Diario -->
+        <div class="col-12 col-md-4 col-lg-3">
+          <button type="button" class="btn btn-outline-primary w-100 p-3 frequency-btn-bootstrap position-relative" data-frequency="daily" style="border-width: 2px; border-radius: 12px; min-height: 140px; transition: all 0.3s ease;">
+            <div class="text-center">
+              <i class="fas fa-calendar-day fa-2x mb-2 d-block" style="color: #0069BC;"></i>
+              <h6 class="fw-bold mb-1">Diario</h6>
+              <small class="text-muted d-block">Reporte del día actual</small>
+            </div>
+          </button>
+        </div>
+
+        <!-- Botón Semanal - ACTIVO POR DEFECTO -->
+        <div class="col-12 col-md-4 col-lg-3">
+          <button type="button" class="btn btn-primary w-100 p-3 frequency-btn-bootstrap active position-relative" data-frequency="weekly" style="border-width: 2px; border-radius: 12px; min-height: 140px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0, 105, 188, 0.2);">
+                                                                        <span class="badge-seleccionado">SELECCIONADO</span>
+            <div class="text-center">
+              <i class="fas fa-calendar-week fa-2x mb-2 d-block text-white"></i>
+              <h6 class="fw-bold mb-1 text-white">Semanal</h6>
+              <small class="text-white-50 d-block">Últimos 7 días</small>
+            </div>
+          </button>
+        </div>
+
+        <!-- Botón Mensual -->
+        <div class="col-12 col-md-4 col-lg-3">
+          <button type="button" class="btn btn-outline-primary w-100 p-3 frequency-btn-bootstrap position-relative" data-frequency="monthly" style="border-width: 2px; border-radius: 12px; min-height: 140px; transition: all 0.3s ease;">
+            <div class="text-center">
+              <i class="fas fa-calendar-alt fa-2x mb-2 d-block" style="color: #0069BC;"></i>
+              <h6 class="fw-bold mb-1">Mensual</h6>
+              <small class="text-muted d-block">Últimos 30 días</small>
+            </div>
+          </button>
+        </div>
+        
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="row justify-content-center g-3 mt-3">
+        <div class="col-12 col-md-auto">
+          <button type="button" id="previewBtn" class="btn btn-secondary px-4 py-2" style="border-radius: 8px; font-weight: 600;">
+            <i class="fas fa-eye me-2"></i> Vista Previa
+          </button>
+        </div>
+        <div class="col-12 col-md-auto">
+          <button type="button" id="downloadBtn" class="btn btn-primary px-4 py-2" style="border-radius: 8px; font-weight: 600; background: #0069BC; border: none;">
+            <i class="fas fa-download me-2"></i> Descargar PDF
+          </button>
+        </div>
+        <div class="col-12 col-md-auto">
+          <button type="button" id="sendBtn" class="btn btn-success px-4 py-2" data-bs-toggle="modal" data-bs-target="#sendModal" style="border-radius: 8px; font-weight: 600; background: #00A86B; border: none;">
+            <i class="fas fa-paper-plane me-2"></i> Enviar por Email
+          </button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  <div id="previewContainer" class="preview-container" style="display: none;">
+    <div class="preview-header">
+      <h5 class="preview-title">
+        <i class="fas fa-file-pdf"></i> Vista Previa del Reporte
+      </h5>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="closePreview" style="border-radius: 6px;">
+        <i class="fas fa-times"></i> Cerrar
+      </button>
+    </div>
+    <div class="ratio ratio-4x3" style="border-radius: 8px; overflow: hidden; background: var(--gray-100); border: 1px solid var(--gray-200);">
+      <iframe id="pdfPreview" style="border: none;"></iframe>
+    </div>
+  </div>
+
+  {% if schedules %}
+  <div class="mt-5">
+    <h4 class="text-center mb-4" style="color: var(--primary-color); font-weight: 600;">
+      <i class="fas fa-history"></i> Historial de Reportes Enviados
+    </h4>
+    
+    {% for schedule in schedules %}
+      <div class="history-card card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <i class="fas fa-file-alt"></i>
+            <strong>{{ schedule.name }}</strong>
+            <span class="badge badge-primary-custom">{{ schedule.frequency|capfirst }}</span>
+          </div>
+          {% if schedule.last_generated %}
+            <span class="badge badge-info-custom">
+              <i class="fas fa-clock"></i> Último: {{ schedule.last_generated|date:"d/m/Y H:i" }}
+            </span>
+          {% endif %}
+        </div>
+        
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-custom table-hover mb-0">
+              <thead>
+                <tr>
+                  <th><i class="fas fa-calendar"></i> Fecha Generado</th>
+                  <th><i class="fas fa-file"></i> Archivo</th>
+                  <th class="text-center"><i class="fas fa-cog"></i> Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for log in schedule.logs.all|slice:":5" %}
+                  <tr>
+                    <td style="padding: 1rem;">
+                      <i class="fas fa-calendar-check text-primary"></i>
+                      {{ log.generated_at|date:"d/m/Y H:i" }}
+                    </td>
+                    <td style="padding: 1rem;">
+                      {% if log.file %}
+                        <i class="fas fa-file-pdf text-danger"></i>
+                        <span class="ms-2">report_{{ log.generated_at|date:"Ymd_His" }}.pdf</span>
+                      {% else %}
+                        <span class="text-muted"><i class="fas fa-times-circle"></i> No disponible</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center" style="padding: 1rem;">
+                      {% if log.file %}
+                        <a href="{{ log.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary" style="border-radius: 6px;">
+                          <i class="fas fa-eye"></i> Ver
+                        </a>
+                        <a href="{{ log.file.url }}" download class="btn btn-sm btn-outline-success" style="border-radius: 6px;">
+                          <i class="fas fa-download"></i> Descargar
+                        </a>
+                      {% else %}
+                        <span class="text-muted">-</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="3" class="text-center text-muted py-4">
+                      <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                      No hay reportes generados aún
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="modal fade" id="sendModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none;">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title"><i class="fas fa-paper-plane"></i> Enviar Reporte por Email</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="sendForm">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label for="reportName" class="form-label fw-bold">
+              <i class="fas fa-tag"></i> Nombre del Reporte
+            </label>
+            <input type="text" class="form-control" id="reportName" name="name" required 
+                   value="Reporte {{ 'now'|date:'d/m/Y' }}" style="border-radius: 8px;">
+          </div>
+          
+          <div class="mb-3">
+            <label for="reportFrequency" class="form-label fw-bold">
+              <i class="fas fa-calendar"></i> Frecuencia
+            </label>
+            <input type="text" class="form-control" id="reportFrequency" name="frequency" readonly 
+                   style="border-radius: 8px; background: var(--gray-100);">
+          </div>
+          
+          <div class="mb-3">
+            <label for="reportRecipients" class="form-label fw-bold">
+              <i class="fas fa-users"></i> Destinatarios
+            </label>
+            <select class="form-control" id="reportRecipients" name="recipients" multiple required size="6" 
+                    style="border-radius: 8px;">
+              {% for user in users %}
+                <option value="{{ user.id }}">
+                  {{ user.username }}{% if user.email %} ({{ user.email }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <small class="text-muted">
+              <i class="fas fa-info-circle"></i> Mantén presionado Ctrl/Cmd para seleccionar múltiples destinatarios
+            </small>
+          </div>
+        </div>
+        
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+          <button type="submit" name="send_now" class="btn btn-success-custom" style="border-radius: 8px;">
+            <i class="fas fa-paper-plane"></i> Enviar Ahora
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// VERSIÓN ULTRA NUEVA v20251110-005
+document.addEventListener('page:ready', function() {
+  let selectedFrequency = 'weekly';  
+
+  // Botones Bootstrap con clases .frequency-btn-bootstrap
+  const frequencyButtons = document.querySelectorAll('.frequency-btn-bootstrap');
+  frequencyButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      // Remover active de todos
+      frequencyButtons.forEach(b => {
+        b.classList.remove('btn-primary', 'active');
+        b.classList.add('btn-outline-primary');
+        b.style.boxShadow = 'none';
+        // Remover badge
+        const oldBadge = b.querySelector('.badge');
+        if (oldBadge) oldBadge.remove();
+        // Cambiar color de icono
+        const icon = b.querySelector('i.fa-3x');
+        if (icon) icon.style.color = '#0069BC';
+        // Cambiar color de texto
+        const title = b.querySelector('h5');
+        if (title) title.classList.remove('text-white');
+        const subtitle = b.querySelector('small');
+        if (subtitle) {
+          subtitle.classList.remove('text-white-50');
+          subtitle.classList.add('text-muted');
+        }
+      });
+      
+      // Activar el clickeado
+      this.classList.remove('btn-outline-primary');
+      this.classList.add('btn-primary', 'active');
+      this.style.boxShadow = '0 4px 12px rgba(0, 105, 188, 0.2)';
+      
+      // Agregar badge
+      const badge = document.createElement('span');
+      badge.className = 'position-absolute top-0 start-50 translate-middle badge rounded-pill bg-success px-3 py-2';
+      badge.style.fontSize = '0.75rem';
+      badge.textContent = 'SELECCIONADO';
+      this.insertBefore(badge, this.firstChild);
+      
+      // Cambiar color de icono a blanco
+      const icon = this.querySelector('i.fa-2x');
+      if (icon) icon.style.color = 'white';
+      
+      // Cambiar color de texto a blanco
+      const title = this.querySelector('h6');
+      if (title) title.classList.add('text-white');
+      const subtitle = this.querySelector('small');
+      if (subtitle) {
+        subtitle.classList.remove('text-muted');
+        subtitle.classList.add('text-white-50');
+      }
+      
+      selectedFrequency = this.dataset.frequency;
+      document.getElementById('reportFrequency').value = selectedFrequency;
+      const previewContainer = document.getElementById('previewContainer');
+      if (previewContainer) previewContainer.style.display = 'none';
+    });
+  });
+
+  var _previewBtn = document.getElementById('previewBtn');
+  if (_previewBtn) _previewBtn.addEventListener('click', function() {
+    const container = document.getElementById('previewContainer');
+    const iframe = document.getElementById('pdfPreview');
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';  
+    this.disabled = true;
+    container.style.display = 'block';
+    iframe.src = '/reports/preview/?frequency=' + selectedFrequency;
+    setTimeout(() => {
+      this.innerHTML = '<i class="fas fa-eye"></i> Vista Previa';
+      this.disabled = false;
+    }, 1000);
+    setTimeout(() => {
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  });
+
+  var _downloadBtn = document.getElementById('downloadBtn');
+  if (_downloadBtn) _downloadBtn.addEventListener('click', function() {
+    const originalText = this.innerHTML;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';  
+    this.disabled = true;
+    window.open('/reports/preview/?frequency=' + selectedFrequency, '_blank');
+    setTimeout(() => {
+      this.innerHTML = originalText;
+      this.disabled = false;
+    }, 1500);
+  });
+
+  var _closePreview = document.getElementById('closePreview');
+  if (_closePreview) _closePreview.addEventListener('click', function() {
+    var pc = document.getElementById('previewContainer');
+    if (pc) pc.style.display = 'none';
+  });
+
+  var _rf = document.getElementById('reportFrequency');
+  if (_rf) _rf.value = selectedFrequency;
+
+  var _sendForm = document.getElementById('sendForm');
+  if (_sendForm) _sendForm.addEventListener('submit', function(e) {
+    const selectedOptions = document.getElementById('reportRecipients').selectedOptions;
+    if (selectedOptions.length === 0) {
+      e.preventDefault();
+      alert('Por favor selecciona al menos un destinatario');
+      return false;
+    }
+    const submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+    submitBtn.disabled = true;
+  });
+});
+</script>
+{% endblock %}

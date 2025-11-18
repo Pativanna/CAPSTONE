@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hub de Impresora Bluetooth</title>
+  <style>
+    html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
+    .contenedor { display: flex; flex-direction: column; height: 100%; padding: 10px; }
+    .estado { font-size: 14px; margin-bottom: 8px; }
+    .log { flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px; overflow: auto; background: #fafafa; font-size: 12px; }
+    .acciones { margin-top: 8px; display: flex; gap: 8px; }
+    button { padding: 6px 10px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <div class="estado">Estado: <span id="estado">Inicializando…</span></div>
+    <div class="log" id="log"></div>
+    <div class="acciones">
+      <button id="btnConectar">Conectar</button>
+      <button id="btnDesconectar">Desconectar</button>
+    </div>
+  </div>
+
+  <script src="/static/parts/bluetooth-printer.js"></script>
+  <script src="/static/parts/printer-hub.js"></script>
+</body>
+</html>
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Hub Impresora Bluetooth</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 0; background: #111; color: #eee; }
+    .estado { padding: 0.75rem 1rem; font-size: 0.9rem; }
+    .ok { color: #4caf50; }
+    .warn { color: #ffc107; }
+    .err { color: #f44336; }
+    .log { font-family: monospace; max-height: 160px; overflow-y: auto; background:#000; padding:0.5rem; font-size:12px; }
+    .small { font-size:11px; opacity:0.8; }
+    header { background:#222; padding:0.75rem 1rem; display:flex; align-items:center; justify-content:space-between; }
+    button { background:#1976d2; border:none; padding:0.5rem 0.85rem; color:#fff; border-radius:4px; cursor:pointer; font-size:0.85rem; }
+    button[disabled] { opacity:0.5; cursor:default; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Hub Bluetooth</strong>
+    <div>
+      <button id="btn-conectar">Conectar</button>
+      <button id="btn-desconectar" disabled>Desconectar</button>
+    </div>
+  </header>
+  <div class="estado" id="estado">Inactivo. Abre conexión desde aquí para persistencia.</div>
+  <div class="log" id="log"></div>
+  <div class="estado small">Esta ventana puede permanecer minimizada. No la cierres si quieres mantener la conexión.</div>
+
+  <script src="{% static 'parts/bluetooth-printer.js' %}"></script>
+  <script>
+  (function(){
+    'use strict';
+    // Canal para comunicación con la página principal
+    const canal = new BroadcastChannel('canal_impresora_bt');
+    const estadoEl = document.getElementById('estado');
+    const logEl = document.getElementById('log');
+    const btnConectar = document.getElementById('btn-conectar');
+    const btnDesconectar = document.getElementById('btn-desconectar');
+
+    let printerClient = null;
+
+    function log(msg){
+      const ts = new Date().toISOString().substring(11,19);
+      logEl.textContent += `[${ts}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function actualizarEstado(tipo, detalle){
+      switch(tipo){
+        case 'conectando':
+          estadoEl.innerHTML = '<span class="warn">Conectando...</span>';
+          break;
+        case 'conectado':
+          estadoEl.innerHTML = `<span class="ok">Conectado a ${detalle||'impresora'}</span>`;
+          break;
+        case 'desconectado':
+          estadoEl.innerHTML = '<span class="err">Desconectado</span>';
+          break;
+        case 'error':
+          estadoEl.innerHTML = `<span class="err">Error: ${detalle}</span>`;
+          break;
+        default:
+          estadoEl.textContent = detalle || tipo;
+      }
+    }
+
+    canal.onmessage = async (ev) => {
+      const data = ev.data || {};
+      if (data.tipo === 'imprimir' && printerClient && printerClient.isConnected){
+        log('Solicitud de impresión recibida: ' + data.url);
+        try {
+          await printerClient.printImage(data.url);
+          canal.postMessage({ tipo:'impreso', exito:true });
+          log('Impresión completada');
+        } catch(e){
+          canal.postMessage({ tipo:'impreso', exito:false, error:e.message });
+          log('Error imprimiendo: ' + e.message);
+        }
+      } else if (data.tipo === 'solicitar_estado'){
+        canal.postMessage({ tipo:'estado', conectado: !!(printerClient && printerClient.isConnected) });
+      }
+    };
+
+    async function conectar(){
+      try {
+        if (!printerClient) printerClient = new BluetoothPrinterClient();
+        actualizarEstado('conectando');
+        btnConectar.disabled = true;
+        const res = await printerClient.connect();
+        actualizarEstado('conectado', res.deviceName);
+        btnDesconectar.disabled = false;
+        canal.postMessage({ tipo:'estado', conectado:true, deviceName: res.deviceName });
+        log('Conectado a ' + res.deviceName);
+      } catch(e){
+        actualizarEstado('error', e.message);
+        btnConectar.disabled = false;
+        log('Error conexión: ' + e.message);
+        canal.postMessage({ tipo:'estado', conectado:false, error:e.message });
+      }
+    }
+
+    function desconectar(){
+      if (printerClient){
+        printerClient.disconnect();
+      }
+      actualizarEstado('desconectado');
+      btnConectar.disabled = false;
+      btnDesconectar.disabled = true;
+      canal.postMessage({ tipo:'estado', conectado:false });
+      log('Desconectado manualmente');
+    }
+
+    btnConectar.addEventListener('click', conectar);
+    btnDesconectar.addEventListener('click', desconectar);
+
+    // Avisar a la página principal que el hub está listo
+    canal.postMessage({ tipo:'hub_listo' });
+    log('Hub listo, esperando acción de conexión');
+  })();
+  </script>
+</body>
+</html>

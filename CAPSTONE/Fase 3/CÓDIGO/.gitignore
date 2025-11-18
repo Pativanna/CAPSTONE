@@ -74,13 +74,13 @@ eggs/
 .eggs/
 lib/
 lib64/
-parts/
 sdist/
 var/
 wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+# NOTE: 'parts/' in setuptools refers to buildout, not our Django app
 
 # Vosk models (large files - download separately)
 vosk-models/
@@ -98,4 +98,3 @@ aplicar_cambios.sh
 results.json
 *.tmp
 *.temp
-

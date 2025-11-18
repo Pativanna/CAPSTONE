@@ -1,0 +1,147 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block content %}
+<h2 id="page-title">{{ form.instance.pk|yesno:"Editar Pieza,Agregar Nueva Pieza" }}</h2>
+
+{% if not form.instance.pk %}
+<!-- FASE 1: Selección de taller y vehículo -->
+<div id="fase-seleccion" class="card mb-4 p-3">
+  <h5 class="mb-3">Fase 1: Seleccione taller y vehículo</h5>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Taller</label>
+      <select id="persistent-workshop-selector" class="form-select">
+        <option value="">-- Seleccione taller --</option>
+        {% for w in workshops %}
+        <option value="{{ w.id }}">{{ w.name }}</option>
+        {% endfor %}
+      </select>
+      <small id="workshop-status" class="text-muted"></small>
+    </div>
+    <div class="col-md-8">
+      <label class="form-label">Vehículo</label>
+      <div class="d-flex gap-2 mb-2">
+        <button type="button" id="mode-select-auto" class="btn btn-outline-primary btn-sm">Seleccionar Auto</button>
+        <a href="{% url 'parts:auto_list' %}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="app-frame">Ver Autos</a>
+        <button type="button" id="mode-single" class="btn btn-outline-info btn-sm">Ingreso Unitario</button>
+      </div>
+      <div id="select-auto-box" style="display:none;">
+        <select id="auto-selector" class="form-select mb-2">
+          <option value="">-- Seleccione un auto --</option>
+          {% for a in autos %}
+          <option value="{{ a.id }}">{{ a.brand_model }}, {{ a.year }}{% if a.license_plate %} - {{ a.license_plate }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        <div class="d-flex gap-2">
+          <button type="button" id="confirm-auto" class="btn btn-success btn-sm">Usar este vehículo</button>
+          <button type="button" id="clear-selection" class="btn btn-link text-danger btn-sm">Cancelar</button>
+        </div>
+      </div>
+      <div id="single-entry-box" style="display:none;">
+        <input id="single-model" class="form-control mb-2" placeholder="Modelo (ej: Toyota Yaris 2010)">
+        <input id="single-color" class="form-control mb-2" placeholder="Color (ej: blanco)">
+        <div class="d-flex gap-2">
+          <button type="button" id="use-single" class="btn btn-success btn-sm">Usar este vehículo</button>
+          <button type="button" id="cancel-single" class="btn btn-link text-danger btn-sm">Cancelar</button>
+        </div>
+      </div>
+      <div id="current-selection" class="mt-2" style="display:none;">
+        <strong>Vehículo seleccionado:</strong>
+        <span id="selected-display" class="ms-2"></span>
+        <button type="button" id="change-vehicle" class="btn btn-outline-secondary btn-sm ms-2">Cambiar</button>
+        <button type="button" id="use-previous" class="btn btn-success btn-sm ms-2" style="display:none;">Usar selección anterior</button>
+      </div>
+    </div>
+  </div>
+  <hr class="my-3">
+  <div class="d-flex justify-content-end">
+    <button id="continuar-a-fase-voz" type="button" class="btn btn-primary">Continuar a ingesta por voz</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- FASE 2: Interfaz de ingesta por voz -->
+<div id="voice-recording-interface" class="card mb-4 p-3" style="display:none;">
+  <h5 id="voice-title" class="mb-3">Fase 2: Ingesta por voz</h5>
+  <div class="mb-3">
+    <button id="btn-iniciar-sesion" type="button" class="btn btn-outline-success">Iniciar sesión de voz</button>
+    <button id="btn-iniciar-proceso" type="button" class="btn btn-primary" disabled>iniciar proceso</button>
+    <button id="btn-finalizar-proceso" type="button" class="btn btn-danger" disabled>finalizar proceso</button>
+    <button id="btn-confirmar-datos" type="button" class="btn btn-success" disabled>confirmar datos</button>
+    <button id="btn-repetir-proceso" type="button" class="btn btn-warning" disabled>repetir proceso</button>
+    <button id="btn-cancelar-proceso" type="button" class="btn btn-secondary" disabled>cancelar</button>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Transcripciones parciales</label>
+      <div id="transcripciones-parciales" class="border rounded p-2" style="height:220px; overflow:auto; background:#f8f9fa;"></div>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Transcripción final acumulada</label>
+      <textarea id="transcripcion-final" class="form-control" rows="10" readonly></textarea>
+    </div>
+  </div>
+  <input type="hidden" id="session-id-voz" value="">
+  <small class="text-muted d-block mt-2" id="estado-voz">Sesión no iniciada.</small>
+</div>
+
+<!-- FASE 3: Formulario manual (se muestra tras confirmar datos) -->
+<form method="post" {% if not form.instance.pk %}action="{% url 'parts:part_create' %}"{% endif %} enctype="multipart/form-data" class="mt-3" id="part-form" data-is-edit="{{ form.instance.pk|yesno:'true,false' }}" style="display:{{ form.instance.pk|yesno:'block,none' }}">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="mb-3">
+    <button type="button" id="clear-fields" class="btn btn-outline-warning btn-sm">Limpiar campos</button>
+  </div>
+  <button type="submit" class="btn btn-primary">Guardar Pieza</button>
+  <a href="{% url 'parts:part_list' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+<script>
+  // Limpieza rápida de campos del formulario
+  document.addEventListener('DOMContentLoaded', function(){
+    const btnLimpiar = document.getElementById('clear-fields');
+    if (btnLimpiar){
+      btnLimpiar.addEventListener('click', function(){
+        const f = document.getElementById('part-form');
+        ['name','details','max_value','min_value'].forEach(c => {
+          const el = f.querySelector('[name="'+c+'"]');
+          if (el) el.value='';
+        });
+      });
+    }
+  });
+</script>
+
+{% load static %}
+<!-- Scripts base existentes (grabación manual y handler legacy) -->
+<script src="{% static 'parts/recorder.js' %}"></script>
+<script src="{% static 'parts/voice-coordinator.js' %}"></script>
+<script src="{% static 'parts/voice-webrtc-hybrid.js' %}"></script>
+<!-- NUEVO Orquestador de ingesta por voz -->
+<script src="{% static 'parts/voice_ingesta.js' %}"></script>
+
+<!-- Fallback mínimo para activar el dropdown de autos si el orquestador no cargó -->
+<script>
+(function(){
+  function activarMinimo(){
+    var btn = document.getElementById('mode-select-auto');
+    var box = document.getElementById('select-auto-box');
+    var single = document.getElementById('single-entry-box');
+    if (btn && box){
+      btn.addEventListener('click', function(){
+        box.style.display = 'block';
+        if (single) single.style.display = 'none';
+      });
+    }
+  }
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', activarMinimo);
+  } else {
+    activarMinimo();
+  }
+  document.addEventListener('turbo:load', activarMinimo);
+})();
+</script>
+
+{% endblock %}

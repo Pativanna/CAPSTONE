@@ -1,0 +1,217 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-0">Logs de Voz</h2>
+      <p class="text-muted small mb-0">Monitorea eventos recientes de sesiones, comandos y errores.</p>
+    </div>
+    <button id="btn-refresh" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-repeat me-1"></i>Actualizar
+    </button>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end" id="logs-filter-form">
+        <div class="col-md-3">
+          <label class="form-label text-muted small">Session ID</label>
+          <input type="text" name="session_id" class="form-control" placeholder="2025..." value="{{ session_id }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label text-muted small">Nivel</label>
+          <input type="text" name="level" class="form-control" placeholder="INFO/WARN" value="{{ level }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label text-muted small">Módulo</label>
+          <input type="text" name="module" class="form-control" placeholder="parts.voice" value="{{ module }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label text-muted small">Usuario</label>
+          <input type="text" name="user_id" class="form-control" placeholder="ID usuario" value="{{ user_id }}">
+        </div>
+        <div class="col-md-1">
+          <label class="form-label text-muted small">Límite</label>
+          <input type="number" min="10" max="2000" name="limit" class="form-control" value="{{ limit|default:200 }}">
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button class="btn btn-primary w-100" type="submit">
+            <i class="bi bi-funnel me-1"></i>Filtrar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+          <span class="text-muted small d-block">Última actualización</span>
+          <span id="meta-info" class="fw-semibold">-</span>
+        </div>
+        <div class="text-end">
+          <span class="text-muted small d-block">Eventos mostrados</span>
+          <span class="badge bg-light text-dark" id="log-count">0</span>
+        </div>
+      </div>
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted small">Resúmen por tipo de evento</span>
+          <button class="btn btn-sm btn-outline-secondary" id="clear-event-filter" style="display:none;">
+            Limpiar filtro
+          </button>
+        </div>
+        <div id="event-chips" class="d-flex flex-wrap gap-2"></div>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Fecha / Hora</th>
+              <th>Nivel</th>
+              <th>Evento</th>
+              <th>Usuario</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody id="logs-body">
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4" id="logs-placeholder">Cargando eventos...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  (function(){
+    const bodyEl = document.getElementById('logs-body');
+    const placeholder = document.getElementById('logs-placeholder');
+    const meta = document.getElementById('meta-info');
+    const countBadge = document.getElementById('log-count');
+    const chipsContainer = document.getElementById('event-chips');
+    const clearFilterBtn = document.getElementById('clear-event-filter');
+    let cachedLogs = [];
+    let currentEventFilter = 'all';
+
+    function formatDate(asctime) {
+      if (!asctime) return '-';
+      // asctime: "2025-11-07 23:48:42,659"
+      const [datePart, timePartRaw] = asctime.split(' ');
+      if (!datePart || !timePartRaw) return asctime;
+      const [year, month, day] = datePart.split('-');
+      const timePart = timePartRaw.replace(',', ':');
+      return `${day}-${month}-${year} ${timePart.slice(0, 8)}`;
+    }
+
+    function buildEventKey(log) {
+      return (log.event || log.message || 'otros').toLowerCase();
+    }
+
+    function renderEventChips(logs) {
+      if (!chipsContainer) return;
+      const tally = logs.reduce((acc, log) => {
+        const key = buildEventKey(log);
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+      const sorted = Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      const chips = [
+        `<button class="btn btn-sm ${currentEventFilter === 'all' ? 'btn-primary' : 'btn-outline-secondary'}" data-event-filter="all">Todos (${logs.length})</button>`
+      ];
+      sorted.forEach(([key, count]) => {
+        const label = key.replace(/_/g, ' ');
+        const active = currentEventFilter === key;
+        chips.push(
+          `<button class="btn btn-sm ${active ? 'btn-primary' : 'btn-outline-secondary'}" data-event-filter="${key}">${label} (${count})</button>`
+        );
+      });
+      chipsContainer.innerHTML = chips.join('');
+      if (clearFilterBtn) {
+        clearFilterBtn.style.display = currentEventFilter !== 'all' ? 'inline-flex' : 'none';
+      }
+    }
+
+    function renderLogs(logs, filterKey = 'all') {
+      const filtered = filterKey === 'all'
+        ? logs
+        : logs.filter(log => buildEventKey(log) === filterKey);
+      if (countBadge) {
+        countBadge.textContent = `${filtered.length} / ${logs.length}`;
+      }
+      if (!filtered.length) {
+        bodyEl.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Sin registros</td></tr>';
+        return;
+      }
+      const rows = filtered.map((log) => {
+        const level = (log.levelname || '').toUpperCase();
+        const badgeClass = level === 'ERROR' ? 'bg-danger' :
+          level === 'WARNING' ? 'bg-warning text-dark' :
+          level === 'DEBUG' ? 'bg-secondary' :
+          'bg-success';
+        return `
+          <tr>
+            <td>
+              <div class="fw-semibold">${formatDate(log.asctime)}</div>
+              <div class="text-muted small">${log.session_id || '-'}</div>
+            </td>
+            <td><span class="badge ${badgeClass}">${level || 'INFO'}</span></td>
+            <td>
+              <div class="fw-semibold text-uppercase">${log.event || log.message || '-'}</div>
+              <div class="text-muted small">${log.module || ''}</div>
+            </td>
+            <td>
+              <div class="text-muted small">${log.user_id ?? '-'}</div>
+            </td>
+            <td>
+              <div class="text-break">${log.message || '-'}</div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      bodyEl.innerHTML = rows;
+      countBadge.textContent = `${filtered.length} / ${logs.length}`;
+    }
+
+    async function fetchLogs() {
+      const params = new URLSearchParams(window.location.search);
+      try {
+        const res = await fetch(`/api/logs/?${params.toString()}`);
+        if (!res.ok) throw new Error('Respuesta no válida');
+        const data = await res.json();
+        meta.textContent = new Date().toLocaleTimeString('es-CL', { hour12: false });
+        cachedLogs = data.logs || [];
+        renderEventChips(cachedLogs);
+        renderLogs(cachedLogs, currentEventFilter);
+      } catch (error) {
+        console.error(error);
+        bodyEl.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-4">Error cargando logs</td></tr>';
+      }
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', (e) => {
+      e.preventDefault();
+      fetchLogs();
+    });
+
+    chipsContainer?.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button[data-event-filter]');
+      if (!btn) return;
+      currentEventFilter = btn.dataset.eventFilter || 'all';
+      renderEventChips(cachedLogs);
+      renderLogs(cachedLogs, currentEventFilter);
+    });
+
+    clearFilterBtn?.addEventListener('click', () => {
+      currentEventFilter = 'all';
+      renderEventChips(cachedLogs);
+      renderLogs(cachedLogs, currentEventFilter);
+    });
+
+    fetchLogs();
+    setInterval(fetchLogs, 10000);
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,271 @@
+{% extends 'parts/base.html' %}
+{% load static humanize %}
+
+{% block content %}
+<section class="publish-helper">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      {% if previous_id %}
+      <a class="btn btn-outline-primary" href="{% url 'parts:part_publish' previous_id %}" data-turbo-frame="app-frame">
+        <i class="bi bi-chevron-left"></i> Anterior
+      </a>
+      {% else %}
+      <button class="btn btn-outline-secondary" disabled><i class="bi bi-chevron-left"></i> Anterior</button>
+      {% endif %}
+    </div>
+    <div class="text-center">
+      {% if part %}
+      <div class="fw-semibold text-uppercase small text-muted">Repuesto {{ current_index|add:1 }}/{{ total_parts }}</div>
+      <div class="fs-5">{{ part.name }}</div>
+      {% else %}
+      <div class="fs-5">No hay repuestos disponibles</div>
+      {% endif %}
+    </div>
+    <div>
+      {% if next_id %}
+      <a class="btn btn-outline-primary" href="{% url 'parts:part_publish' next_id %}" data-turbo-frame="app-frame">
+        Siguiente <i class="bi bi-chevron-right"></i>
+      </a>
+      {% else %}
+      <button class="btn btn-outline-secondary" disabled>Siguiente <i class="bi bi-chevron-right"></i></button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not part %}
+  <div class="card shadow-sm">
+    <div class="card-body text-center py-5">
+      <i class="bi bi-emoji-neutral fs-1 text-muted"></i>
+      <p class="mt-3 mb-0">Cuando agregues un repuesto, podrás preparar la publicación desde aquí.</p>
+    </div>
+  </div>
+  {% else %}
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title d-flex justify-content-between align-items-center">
+            Fotos y datos rápidos
+            {% if part.image %}
+            <span class="badge bg-success">Tiene foto</span>
+            {% else %}
+            <span class="badge bg-warning text-dark">Sin foto</span>
+            {% endif %}
+          </h5>
+          <div class="publish-gallery mb-3">
+            {% if part.image %}
+            <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid rounded shadow-sm">
+            {% else %}
+            <div class="placeholder border rounded d-flex align-items-center justify-content-center">
+              <div class="text-center text-muted">
+                <i class="bi bi-image fs-1 d-block mb-2"></i>
+                Sube al menos dos fotos antes de publicar
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          <dl class="row small mb-0">
+            <dt class="col-4 text-muted">Auto</dt>
+            <dd class="col-8">{{ auto_desc }}</dd>
+            <dt class="col-4 text-muted">Taller</dt>
+            <dd class="col-8">{{ workshop_line }}</dd>
+            <dt class="col-4 text-muted">Precio ref.</dt>
+            <dd class="col-8">{{ price_display }}</dd>
+            <dt class="col-4 text-muted">Estado</dt>
+            <dd class="col-8">{{ condition_text }}</dd>
+          </dl>
+        </div>
+      </div>
+      {% if missing_data %}
+      <div class="alert alert-warning mt-3">
+        <strong>Antes de pegar en Facebook:</strong>
+        <ul class="mb-0 ps-3">
+          {% for item in missing_data %}
+          <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Campos listos para copiar</h5>
+
+          <div class="copy-field">
+            <label class="form-label">Título</label>
+            <div class="copy-box" id="publish-title">{{ generated_title }}</div>
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="publish-title">
+              <i class="bi bi-clipboard"></i> Copiar
+            </button>
+          </div>
+
+          <div class="copy-field">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-control" rows="7" id="publish-description" readonly>{{ generated_description }}</textarea>
+            <button class="btn btn-sm btn-outline-secondary copy-btn mt-2" data-copy-target="publish-description">
+              <i class="bi bi-clipboard"></i> Copiar
+            </button>
+          </div>
+
+          <div class="copy-field">
+            <label class="form-label">Precio</label>
+            <div class="copy-box" id="publish-price">{{ price_display }}</div>
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="publish-price">
+              <i class="bi bi-clipboard"></i> Copiar
+            </button>
+          </div>
+
+          <div class="copy-field">
+            <label class="form-label">Categoría</label>
+            <div class="copy-box" id="publish-category">{{ category_label }}</div>
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="publish-category">
+              <i class="bi bi-clipboard"></i> Copiar
+            </button>
+          </div>
+
+          <div class="copy-field">
+            <label class="form-label">Tags</label>
+            <div class="copy-box" id="publish-tags">{{ tag_line }}</div>
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="publish-tags">
+              <i class="bi bi-clipboard"></i> Copiar
+            </button>
+          </div>
+
+          <div class="copy-field">
+            <label class="form-label">SKU (código)</label>
+            <div class="copy-box" id="publish-sku">{{ part.barcode|default:part.id }}</div>
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-copy-target="publish-sku">
+              <i class="bi bi-clipboard"></i> Copiar
+            </button>
+          </div>
+
+          <div class="d-grid gap-2 mt-3">
+            <button class="btn btn-primary btn-lg" id="copy-everything">
+              <i class="bi bi-clipboard-check"></i> Copiar todo
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h6 class="text-uppercase text-muted fw-bold small mb-2">Sugerencia para contacto</h6>
+          <p class="mb-0">{{ contact_line }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<style>
+.publish-helper .copy-field {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+.publish-helper .copy-box {
+  border: 1px solid var(--border-color);
+  border-radius: .5rem;
+  padding: .85rem;
+  background: var(--surface-muted);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.publish-helper .copy-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-card);
+  color: var(--brand-primary);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+}
+.publish-gallery .placeholder {
+  min-height: 240px;
+  background: var(--surface-muted);
+  border: 1px dashed var(--border-color);
+  border-radius: 1rem;
+}
+#copy-everything.copied,
+.copy-btn.copied {
+  background-color: #10a37f;
+  border-color: #0e8f6e;
+  color: #fff;
+}
+
+[data-theme="dark"] .publish-helper .copy-box {
+  background: var(--surface-card);
+}
+
+[data-theme="dark"] .publish-helper .copy-btn {
+  background: #242b38;
+  color: #a8c8f4;
+  border-color: #343c4a;
+}
+</style>
+
+<script>
+(function(){
+  function copyTextFromElement(el){
+    if (!el) return;
+    const isInput = el.tagName === 'TEXTAREA' || el.tagName === 'INPUT';
+    const text = isInput ? el.value : el.textContent;
+    if (!text) return;
+    navigator.clipboard.writeText(text.trim()).catch(function(){
+      const tmp = document.createElement('textarea');
+      tmp.value = text.trim();
+      tmp.style.position = 'fixed';
+      tmp.style.opacity = '0';
+      document.body.appendChild(tmp);
+      tmp.focus();
+      tmp.select();
+      try { document.execCommand('copy'); } catch (_) {}
+      document.body.removeChild(tmp);
+    });
+  }
+
+  function markCopied(btn){
+    btn.classList.add('copied');
+    const original = btn.dataset.originalText || btn.innerHTML;
+    btn.dataset.originalText = original;
+    btn.innerHTML = '<i class="bi bi-check-lg"></i> Copiado';
+    setTimeout(function(){
+      btn.classList.remove('copied');
+      btn.innerHTML = btn.dataset.originalText;
+    }, 2000);
+  }
+
+  function bindCopyButtons(){
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      if (btn.__copyInit) return;
+      btn.__copyInit = true;
+      btn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        const target = document.getElementById(btn.dataset.copyTarget);
+        copyTextFromElement(target);
+        markCopied(btn);
+      });
+    });
+
+    const copyAll = document.getElementById('copy-everything');
+    if (copyAll && !copyAll.__copyInit){
+      copyAll.__copyInit = true;
+      copyAll.addEventListener('click', function(ev){
+        ev.preventDefault();
+        const title = document.getElementById('publish-title')?.textContent || '';
+        const desc = document.getElementById('publish-description')?.value || '';
+        const price = document.getElementById('publish-price')?.textContent || '';
+        const tags = document.getElementById('publish-tags')?.textContent || '';
+        const bundle = [title, desc, price, tags].filter(Boolean).join('\n\n');
+        navigator.clipboard.writeText(bundle.trim()).then(function(){ markCopied(copyAll); });
+      });
+    }
+  }
+
+  document.addEventListener('page:ready', bindCopyButtons);
+})();
+</script>
+{% endblock %}
