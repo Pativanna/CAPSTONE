@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Pativanna/CAPSTONE/blob/main/CAPSTONE/assets/logos/Transervis_T_Texto.png" />
+  <img src="https://github.com/Pativanna/CAPSTONE/blob/main/CAPSTONE/assets/logos/Transervis_T_Texto.png" width="300"/>
   
 </p>
 
