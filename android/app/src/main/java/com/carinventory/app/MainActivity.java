@@ -15,9 +15,8 @@ public class MainActivity extends BridgeActivity {
         if (webView != null) {
             WebSettings webSettings = webView.getSettings();
             
-            // Deshabilitar todos los tipos de cache
+            // Deshabilitar cache de WebView (setAppCacheEnabled removido en API 33+)
             webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-            webSettings.setAppCacheEnabled(false);
             
             // Forzar recarga desde red
             webView.clearCache(true);
