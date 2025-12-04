@@ -1,0 +1,63 @@
+/* Dashboard metric cards */
+.metric-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+}
+
+.metric-card--primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.metric-card--primary .opacity-75 {
+  opacity: 0.9 !important;
+}
+
+.metric-card--success {
+  background: linear-gradient(135deg, #5cb85c 0%, #4cae4c 100%);
+  color: white;
+}
+
+.metric-card--success .opacity-75 {
+  opacity: 0.9 !important;
+}
+
+.metric-card--warning {
+  background: linear-gradient(135deg, #f0ad4e 0%, #ec971f 100%);
+  color: white;
+}
+
+.metric-card--warning .opacity-75 {
+  opacity: 0.9 !important;
+}
+
+.metric-card--danger {
+  background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
+  color: white;
+}
+
+.metric-card--danger .opacity-75 {
+  opacity: 0.9 !important;
+}
+
+.metric-card--info {
+  background: linear-gradient(135deg, #5bc0de 0%, #46b8da 100%);
+  color: white;
+}
+
+.metric-card--info .opacity-75 {
+  opacity: 0.9 !important;
+}
+
+.metric-card--violet {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: white;
+}
+
+.metric-card--violet .opacity-75 {
+  opacity: 0.9 !important;
+}

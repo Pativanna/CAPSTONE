@@ -1,0 +1,380 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet"
+        href="{% static 'parts/css/hands-free.css' %}"
+        nonce="{{ csp_nonce|default:'' }}"
+        data-style-watch="primary"
+        data-turbo-track="reload">
+{% endblock %}
+
+{% block content %}
+<!-- CSRF Token para JavaScript -->
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+<section class="container py-4 hands-free-section">
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+      
+      <!-- Tarjeta principal de Manos Libres -->
+      <div class="card shadow-lg border-0" id="hands-free-card"{% if user.is_authenticated %} data-user-id="{{ user.id }}"{% endif %}>
+        <div class="card-header bg-primary text-white text-center py-2">
+          <h4 class="mb-0 fs-5">&nbsp;</h4>
+        </div>
+        
+        <div class="card-body p-4">
+          
+            <div class="status-box mb-3 d-none" id="command-box">
+              <small class="text-muted d-block mb-1">Comando</small>
+              <div id="expected-command" class="command-badge badge-info">
+              ESPERANDO COMANDO: "INICIAR INGRESO"
+              </div>
+            </div>
+          <div id="current-status" class="visually-hidden" aria-live="polite">Inactivo</div>
+          <div id="audio-meter-wrapper" class="audio-meter-wrapper mb-4">
+            <small class="text-muted d-block">Nivel de audio</small>
+            <div class="audio-meter">
+              <div id="audio-level-bar" class="audio-meter-bar"></div>
+            </div>
+            <small id="audio-level-label" class="text-muted small d-block mt-1">Esperando audio...</small>
+            <div id="audio-quality-hint" class="audio-quality-hint text-muted small mt-1" aria-live="polite"></div>
+          </div>
+
+          <div id="voice-command-feedback" class="voice-command-feedback card mb-4">
+            <div class="card-body py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <small class="text-muted text-uppercase fw-semibold">Comando de voz</small>
+                <span id="voice-command-confidence" class="badge text-bg-secondary text-uppercase">--</span>
+              </div>
+              <div id="voice-command-feedback-text" class="fw-semibold small">Sin comandos detectados</div>
+              <small id="voice-command-feedback-detail" class="text-muted d-block mt-1">
+                Usa “Iniciar ingreso”, “Detener ingreso”, “Confirmar ingreso”, “Cancelar ingreso” o “Repetir ingreso”.
+              </small>
+              <div class="confidence-meter mt-2" aria-live="polite">
+                <div class="confidence-meter-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div id="voice-command-confidence-bar" class="confidence-meter-fill"></div>
+                </div>
+                <div id="voice-command-confidence-label" class="confidence-meter-label small text-muted mt-1">
+                  Confianza en vivo: --
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="voice-data-feedback" class="voice-command-feedback card mb-4 d-none" hidden>
+            <div class="card-body py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <small class="text-muted text-uppercase fw-semibold">Datos extraídos</small>
+                <span id="voice-data-status-pill" class="badge text-bg-secondary text-uppercase">--</span>
+              </div>
+              <div id="voice-data-summary" class="small text-muted">Aún no hay datos para mostrar.</div>
+              <ul class="mt-2 mb-0 list-unstyled small" id="voice-data-list">
+                <li class="text-muted">Sin resultados.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Botón Central Grande -->
+          <div id="hands-free-main-button-container" class="d-flex justify-content-center mb-4">
+            <button type="button" id="btn-hands-free" class="btn-main" data-state="inactive">
+              <i class="fas fa-microphone mb-2"></i>
+              <div class="btn-text">Iniciar Manos Libres</div>
+            </button>
+          </div>
+
+          <!-- Panel de Datos Capturados (oculto inicialmente) -->
+          <div id="data-panel" class="data-panel d-none">
+            <h6 class="mb-3">Datos Capturados</h6>
+            <div class="alert-hint d-flex align-items-center justify-content-between mb-3 d-none" id="confirm-hint">
+              <span>Diga "confirmar" para guardar.</span>
+              <button type="button" id="inline-cancel-btn" class="btn btn-outline-secondary btn-sm ms-2">Cancelar</button>
+            </div>
+            <div class="context-summary mb-3 d-none" id="context-summary">
+              <div class="text-muted small">Auto seleccionado: <strong id="summary-auto">-</strong></div>
+              <div class="text-muted small">Taller seleccionado: <strong id="summary-taller">-</strong></div>
+              <div class="text-muted small">Captura de fotos: <strong id="summary-photos">Sí</strong></div>
+            </div>
+            <div class="data-grid">
+              <div class="data-field">
+                <label>Nombre de Pieza</label>
+                <div class="data-value"
+                     data-field="parte"
+                     id="data-parte"
+                     role="textbox"
+                     tabindex="0"
+                     aria-label="Nombre de pieza capturado">-</div>
+              </div>
+              <div class="data-field">
+                <label>Precio normal</label>
+                <div class="data-value"
+                     data-field="valor"
+                     id="data-valor"
+                     role="textbox"
+                     tabindex="0"
+                     aria-label="Precio normal capturado">-</div>
+              </div>
+              <div class="data-field">
+                <label>Precio mínimo / oferta</label>
+                <div class="data-value"
+                     data-field="min_value"
+                     id="data-min-value"
+                     role="textbox"
+                     tabindex="0"
+                     aria-label="Precio mínimo capturado">-</div>
+              </div>
+              <div class="data-field full-width">
+                <label>Detalles</label>
+                <div class="data-value"
+                     data-field="detalles"
+                     id="data-detalles"
+                     role="textbox"
+                     tabindex="0"
+                     aria-label="Detalles capturados">-</div>
+              </div>
+            </div>
+            
+            <!-- Selectores de Auto y Taller -->
+            <div class="mt-3">
+              <div class="row">
+                <div class="col-md-6 mb-2">
+                  <label class="form-label fw-bold small">Auto</label>
+                  <select id="select-auto" class="form-select form-select-sm" required>
+                    <option value="">-- Seleccione --</option>
+                    {% for a in autos %}
+                    <option value="{{ a.id }}">{{ a.brand_model }}, {{ a.year }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-6 mb-2">
+                  <label class="form-label fw-bold small">Taller</label>
+                  <select id="select-workshop" class="form-select form-select-sm" required>
+                    <option value="">-- Seleccione --</option>
+                    {% for w in workshops %}
+                    <option value="{{ w.id }}">{{ w.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="mt-2">
+                <label class="form-label fw-bold small">Captura de fotos</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="capture-photos-switch" checked>
+                  <label class="form-check-label text-muted" for="capture-photos-switch">
+                    Tomar fotos inmediatamente después de guardar
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center mt-3">
+              <small class="text-muted">Doble click/tap en un campo para editar</small>
+            </div>
+
+            <!-- Botón Confirmar Datos (oculto hasta que se muestren datos) -->
+            <div class="text-center mt-3">
+              <button type="button" id="btn-confirm-data" class="btn btn-success btn-lg d-none">
+                <i class="fas fa-check"></i> Confirmar Datos
+              </button>
+            </div>
+          </div>
+
+          <!-- Animación de Éxito (oculta inicialmente) -->
+          <div id="success-animation" class="success-animation d-none">
+            <div class="success-checkmark">
+              <div class="check-icon">
+                <span class="icon-line line-tip"></span>
+                <span class="icon-line line-long"></span>
+                <div class="icon-circle"></div>
+                <div class="icon-fix"></div>
+              </div>
+            </div>
+            <h4 class="text-success mt-3">¡Pieza Ingresada!</h4>
+          </div>
+
+          <!-- Log de Transcripción (solo para debug) -->
+          <div id="transcription-log" class="mt-3 d-none">
+            <small class="text-muted">Transcripción:</small>
+            <div class="transcription-box" id="transcription-text"></div>
+          </div>
+
+        </div>
+
+        <!-- Botones en footer -->
+        <div class="card-footer hands-free-footer text-center py-3">
+          <div class="d-flex justify-content-center gap-2 flex-wrap">
+            <button type="button" id="btn-select-vehicle" class="btn btn-outline-primary hands-free-action-btn">
+              <i class="fas fa-car"></i> Seleccionar Vehículo
+            </button>
+            <button type="button" id="btn-manual-entry" class="btn btn-outline-secondary hands-free-action-btn">
+              <i class="fas fa-keyboard"></i> Ingreso Manual
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Modal para Selección de Vehículo -->
+<div class="modal fade" id="vehicleSelectModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Seleccionar Taller y Vehículo</h5>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">Por favor seleccione el taller y auto antes de continuar con la ingesta de piezas.</p>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Taller <span class="text-danger">*</span></label>
+          <select id="modal-workshop-select" class="form-select" required>
+            <option value="">-- Seleccione un taller --</option>
+            {% for w in workshops %}
+            <option value="{{ w.id }}">{{ w.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold">Auto <span class="text-danger">*</span></label>
+          <select id="modal-auto-select" class="form-select" required>
+            <option value="">-- Seleccione un auto --</option>
+            {% for a in autos %}
+            <option value="{{ a.id }}">{{ a.brand_model }}, {{ a.year }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3 form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="modal-capture-photos-switch" checked>
+          <label class="form-check-label" for="modal-capture-photos-switch">
+            Tomar fotos después de guardar
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn-confirm-vehicle" class="btn btn-primary">
+          <i class="fas fa-check"></i> Confirmar Selección
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Ingreso Manual -->
+<div class="modal fade" id="manualEntryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Ingreso Manual de Pieza</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="manual-form">
+          {% csrf_token %}
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Nombre de la Pieza</label>
+            <input type="text" name="name" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Detalles</label>
+            <textarea name="details" class="form-control" rows="3"></textarea>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Auto</label>
+              <select name="auto" class="form-select" required>
+                <option value="">-- Seleccione --</option>
+                {% for a in autos %}
+                <option value="{{ a.id }}">{{ a.brand_model }}, {{ a.year }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Taller</label>
+              <select name="workshop" class="form-select" required>
+                <option value="">-- Seleccione --</option>
+                {% for w in workshops %}
+                <option value="{{ w.id }}">{{ w.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Precio inicial / valor general</label>
+              <input type="number" name="max_value" class="form-control" value="0">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Último precio u oferta</label>
+              <input type="number" name="min_value" class="form-control" value="0">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="btn-use-manual" class="btn btn-primary">
+          <i class="fas fa-check"></i> Usar en el formulario
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay de captura de fotos -->
+<div id="photo-capture-overlay" class="photo-capture-overlay" hidden>
+  <div class="photo-capture-dialog">
+    <div class="photo-camera-frame">
+      <video id="photo-preview-video" autoplay playsinline muted></video>
+      <div class="photo-reticle"></div>
+      <div class="photo-camera-overlay">
+        <button type="button" class="btn btn-sm btn-dark" id="btn-start-photo-camera">
+          <i class="fas fa-video"></i> Activar cámara
+        </button>
+      </div>
+    </div>
+
+    <div class="photo-carousel-wrapper">
+      <div class="photo-panel-heading">
+        <div>
+          <strong class="mb-0 d-block">Galería</strong>
+          <small class="text-muted">Desliza y elimina las que no sirvan</small>
+        </div>
+        <div class="photo-counter-pill">
+          <span class="label">Fotos</span>
+          <strong id="photo-count">0</strong>
+        </div>
+      </div>
+      <div class="photo-carousel" id="photo-thumbnails">
+        <div class="photo-carousel-empty text-muted">Sin fotos capturadas.</div>
+      </div>
+    </div>
+
+    <div class="photo-shutter-row">
+      <button type="button" class="btn btn-outline-light photo-side-btn" id="btn-skip-photos">
+        <i class="fas fa-forward me-2"></i> Omitir fotos
+      </button>
+      <div class="photo-shutter-wrapper text-center">
+        <button type="button" class="photo-shutter-btn" id="btn-take-photo" disabled>
+          <span class="photo-shutter-icon"><i class="fas fa-camera"></i></span>
+          <span class="photo-shutter-label">Tomar foto</span>
+        </button>
+      </div>
+      <button type="button" class="btn btn-success photo-side-btn" id="btn-upload-photos">
+        <i class="fas fa-cloud-upload-alt me-2"></i> Subir fotos
+      </button>
+    </div>
+  </div>
+</div>
+<canvas id="photo-capture-canvas" class="d-none"></canvas>
+
+<script src="{% static 'parts/hands-free-voice.js' %}?v=20251118a"
+        defer
+        data-page-script="parts:part-form-handsfree"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}"></script>
+{% endblock %}

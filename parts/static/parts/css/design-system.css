@@ -1,0 +1,128 @@
+/*!
+ * Design System Tokens & Accessibility Utilities
+ * - Complementa app-shell.css con reglas de tipografía,
+ *   espaciado y estados de enfoque consistentes.
+ * - Inspirado en ISO 9241-110 y WCAG 2.1 (contraste y focus).
+ */
+
+:root {
+  --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-size-3xl: clamp(2rem, 3vw, 2.5rem);
+  --font-size-2xl: clamp(1.5rem, 2vw, 1.875rem);
+  --font-size-xl: 1.375rem;
+  --font-size-lg: 1.125rem;
+  --font-size-md: 1rem;
+  --font-size-sm: 0.9375rem;
+  --font-size-xs: 0.8125rem;
+  --line-height-tight: 1.2;
+  --line-height-base: 1.6;
+  --line-height-loose: 1.9;
+  --radius-pill: 999px;
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 8px;
+  --focus-ring-color: color-mix(in srgb, var(--app-brand-accent) 75%, #ffffff);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--focus-ring-color) 50%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+body {
+  font-family: var(--font-family-sans);
+  line-height: var(--line-height-base);
+  font-size: var(--font-size-md);
+  letter-spacing: 0.01em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: var(--font-size-3xl); }
+h2 { font-size: var(--font-size-2xl); }
+h3 { font-size: var(--font-size-xl); }
+h4 { font-size: var(--font-size-lg); }
+h5 { font-size: var(--font-size-md); }
+h6 { font-size: var(--font-size-sm); text-transform: uppercase; letter-spacing: 0.08em; }
+
+p, li {
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+code,
+pre,
+.text-mono {
+  font-family: var(--font-family-mono);
+  font-size: 0.95em;
+}
+
+a,
+button,
+[role="button"] {
+  outline-offset: 2px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus-ring-color);
+  box-shadow: var(--focus-ring);
+}
+
+:is(button, .btn, .switch-tile, .log-toggle, .micro-dropdown-toggle):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+input,
+select,
+textarea {
+  border-radius: var(--radius-sm);
+  border-color: var(--border-color);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--app-brand-accent);
+  box-shadow: var(--focus-ring);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.4), rgba(255,255,255,0));
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.2s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

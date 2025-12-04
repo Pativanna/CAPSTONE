@@ -1,0 +1,134 @@
+.bluetooth-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  margin-left: 8px;
+  transition: all 0.3s ease;
+  cursor: default;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.bluetooth-status-badge .status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.bluetooth-status-badge .status-icon i {
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.bluetooth-status-badge .status-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.bluetooth-status-badge .status-title {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bluetooth-status-badge .status-message {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.bluetooth-status-badge.status-disconnected .status-icon {
+  background: rgba(108, 117, 125, 0.3);
+}
+
+.bluetooth-status-badge.status-disconnected .status-icon i {
+  color: #6c757d;
+}
+
+.bluetooth-status-badge.status-connecting .status-icon {
+  background: rgba(255, 193, 7, 0.3);
+  animation: bluetooth-status-pulse 1.5s ease-in-out infinite;
+}
+
+.bluetooth-status-badge.status-connecting .status-icon i {
+  color: #ffc107;
+}
+
+.bluetooth-status-badge.status-connected .status-icon {
+  background: rgba(40, 167, 69, 0.3);
+}
+
+.bluetooth-status-badge.status-connected .status-icon i {
+  color: #28a745;
+}
+
+.bluetooth-status-badge.status-reconnecting .status-icon {
+  background: rgba(23, 162, 184, 0.3);
+  animation: bluetooth-status-pulse 1s ease-in-out infinite;
+}
+
+.bluetooth-status-badge.status-reconnecting .status-icon i {
+  color: #17a2b8;
+  animation: bluetooth-status-spin 2s linear infinite;
+}
+
+.bluetooth-status-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.2);
+}
+
+.bluetooth-status-badge.status-connected .status-message {
+  color: rgba(40, 167, 69, 0.9);
+}
+
+.bluetooth-status-badge.status-connecting .status-message {
+  color: rgba(255, 193, 7, 0.9);
+}
+
+.bluetooth-status-badge.status-reconnecting .status-message {
+  color: rgba(23, 162, 184, 0.9);
+}
+
+.bluetooth-status-badge.status-error {
+  border-color: rgba(226, 71, 71, 0.5);
+  background: rgba(226, 71, 71, 0.08);
+}
+
+.bluetooth-status-badge.status-error .status-icon {
+  background: rgba(226, 71, 71, 0.3);
+}
+
+.bluetooth-status-badge.status-error .status-icon i {
+  color: #e24747;
+}
+
+@keyframes bluetooth-status-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.7;
+  }
+}
+
+@keyframes bluetooth-status-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

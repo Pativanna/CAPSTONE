@@ -1,0 +1,119 @@
+{% extends 'parts/base.html' %}
+{% load humanize %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card shadow-sm border-danger">
+      <div class="card-header bg-danger text-white">
+        <h4 class="mb-0">
+          <i class="fas fa-triangle-exclamation me-2"></i>
+          Confirmar eliminación
+        </h4>
+      </div>
+      <div class="card-body py-4">
+        <div class="text-center mb-4">
+          <i class="fas fa-trash-alt fa-4x text-danger mb-3"></i>
+          {% if object %}
+            {% with target=object %}
+              <h5 class="mb-2">¿Está seguro de eliminar esta {{ type|default:'pieza'|lower }}?</h5>
+              <p class="lead mb-0">
+                <strong class="text-danger">"{{ target.name|default:target }}"</strong>
+              </p>
+            {% endwith %}
+          {% elif part %}
+            {% with target=part %}
+              <h5 class="mb-2">¿Está seguro de eliminar esta {{ type|default:'pieza'|lower }}?</h5>
+              <p class="lead mb-0">
+                <strong class="text-danger">"{{ target.name|default:target }}"</strong>
+              </p>
+            {% endwith %}
+          {% else %}
+              <h5 class="mb-0">¿Está seguro de eliminar este registro?</h5>
+          {% endif %}
+          <p class="text-muted mt-2">Esta acción no se puede deshacer.</p>
+        </div>
+
+        {% if related_parts %}
+          <div class="alert alert-warning alert-related shadow-sm d-flex align-items-start gap-3">
+            <div class="alert-icon rounded-circle bg-warning-subtle text-warning-emphasis flex-shrink-0">
+              <i class="fas fa-link"></i>
+            </div>
+            <div>
+              <p class="mb-1 fw-semibold text-warning-emphasis">
+                Atención: se encontraron {{ related_parts|length }} piezas asociadas.
+              </p>
+              <p class="mb-0 text-body-secondary small">
+                Define qué hacer con ellas antes de eliminar para evitar inconsistencias en el inventario.
+              </p>
+            </div>
+          </div>
+          <div class="table-responsive delete-related-table mb-3">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Pieza</th>
+                  <th>Vehículo</th>
+                  <th>Taller</th>
+                  <th>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pieza in related_parts %}
+                <tr>
+                  <td>{{ pieza.name }}</td>
+                  <td>{{ pieza.auto }}</td>
+                  <td>{{ pieza.workshop }}</td>
+                  <td>${{ pieza.max_value|default_if_none:0|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="mb-3 text-start">
+            <label class="fw-semibold mb-2">Acción sobre las piezas relacionadas</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="part_action" id="reassignOption" value="reassign" checked>
+              <label class="form-check-label" for="reassignOption">
+                Mover las piezas a "{{ placeholder_label|default:'Sin asignar' }}"
+              </label>
+              <div class="text-muted small">{{ placeholder_description|default:'Las piezas continuarán activas hasta que se reasignen manualmente.' }}</div>
+            </div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="radio" name="part_action" id="deleteOption" value="delete">
+              <label class="form-check-label" for="deleteOption">
+                Eliminar también todas las piezas listadas
+              </label>
+              <div class="text-muted small">Sólo selecciona esta opción si estás seguro.</div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-light">
+        <form method="post" action="" data-turbo="false" class="d-flex gap-3 justify-content-center flex-wrap">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-lg">
+            <i class="fas fa-trash"></i> Sí, eliminar
+          </button>
+          <a href="{{ cancel_url|default:request.META.HTTP_REFERER|default:'/' }}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-times"></i> Cancelar
+          </a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<style nonce="{{ csp_nonce|default:'' }}">
+  .alert-related{
+    border: 1px solid var(--bs-warning-border-subtle, #ffe5b3);
+    background: linear-gradient(135deg, rgba(255, 249, 233, 0.95), rgba(255, 240, 207, 0.95));
+    color: #5a3600;
+    border-radius: 0.85rem;
+  }
+  .alert-related .alert-icon{
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+  }
+</style>
+{% endblock %}

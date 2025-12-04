@@ -1,0 +1,589 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Transervis - Sistema de Inventario{% endblock %}</title>
+  {% if csrf_token and csrf_token != 'NOTPROVIDED' %}
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  {% endif %}
+  <link rel="icon" href="{% static 'parts/favicon.svg' %}" type="image/svg+xml">
+  <meta name="csp-nonce" content="{{ csp_nonce|default:'' }}">
+  <script src="{% static 'parts/js/layout-init.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>
+  <script src="{% static 'parts/js/boot-logger.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>
+
+  <link rel="stylesheet"
+        href="{% static 'parts/vendor/bootstrap.min.css' %}"
+        data-style-watch="primary"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/app-shell.css' %}?v=20251203" 
+        rel="stylesheet" 
+        data-style-watch="primary"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/design-system.css' %}?v=20251203" 
+        rel="stylesheet" 
+        data-style-watch="primary"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="{% static 'parts/vendor/bootstrap-icons/bootstrap-icons.min.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-local-icons="true"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/vendor/fontawesome/css/all.min.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-local-fontawesome="true"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/bluetooth-indicator.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
+  <!-- CSS específicos de página - cargados antes para que Turbo los persista -->
+  <link href="{% static 'parts/css/inventory.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/scan-verify.css' %}?v=20250310f"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/hands-free.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/logs.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/dashboard.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/reports.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
+  <script nonce="{{ csp_nonce|default:'' }}">
+    document.documentElement.classList.add('app-loading');
+    window.__setAppLoadingProgress = function (value) {
+      var bar = document.querySelector('.app-loading-progress__bar');
+      if (!bar) return;
+      bar.style.width = Math.max(0, Math.min(100, value)) + '%';
+    };
+    window.__setAppLoadingProgress(5);
+  </script>
+  
+<script src="{% static 'parts/vendor/turbo.es2017-umd.js' %}"
+        data-turbo-track="reload"
+        id="turbo-local"
+        nonce="{{ csp_nonce|default:'' }}"></script>
+<script src="{% static 'parts/ui-utils.js' %}?v=20250115c" defer nonce="{{ csp_nonce|default:'' }}"></script>
+<script src="{% static 'parts/js/sw-register.js' %}" defer nonce="{{ csp_nonce|default:'' }}"></script>
+  {% block extra_head %}{% endblock extra_head %}
+</head>
+<body data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+<div id="app-loading-overlay" class="app-loading-overlay" aria-live="polite" aria-hidden="false">
+  <div class="app-loading-spinner" role="presentation"></div>
+  <p id="app-loading-message" class="mb-0 text-uppercase small fw-semibold">Preparando estilos…</p>
+  <div class="app-loading-progress mt-3" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div class="app-loading-progress__bar"></div>
+  </div>
+</div>
+
+<!-- Navbar fija superior -->
+{% block navbar %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow-sm">
+  <div class="container-fluid">
+  <a class="navbar-brand"
+     href="{% url 'parts:part_list' %}"
+     data-turbo-frame="app-frame">
+      <span class="brand-logo">T</span>
+      <span class="brand-text">TRANSERVIS</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarMain">
+      <ul class="navbar-nav mx-auto flex-lg-grow-0 primary-nav-list">
+        {% if user.is_authenticated %}
+          <!-- Navegación principal centrada -->
+          <li class="nav-item mx-2">
+            <a class="nav-link"
+               href="{% url 'parts:part_list' %}"
+               data-turbo-frame="app-frame">
+              <i class="fas fa-cogs"></i> Repuestos
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link"
+               href="{% url 'parts:auto_list' %}"
+               data-turbo-frame="app-frame">
+              <i class="fas fa-car"></i> Autos
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link"
+               href="{% url 'parts:workshop_list' %}"
+               data-turbo-frame="app-frame">
+              <i class="fas fa-wrench"></i> Talleres
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link"
+               href="{% url 'parts:dashboard' %}"
+               data-turbo-frame="app-frame">
+              <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link"
+               href="{% url 'parts:scan_verify' %}"
+               data-turbo-frame="app-frame">
+              <i class="fas fa-barcode"></i> Verificador
+            </a>
+          </li>
+          {% if user.profile.is_admin %}
+          <li class="nav-item mx-2">
+            <a class="nav-link"
+               href="{% url 'parts:part_publish_root' %}"
+               data-turbo-frame="app-frame">
+              <i class="bi bi-megaphone"></i> Publicar
+            </a>
+          </li>
+          {% endif %}
+        {% endif %}
+      </ul>
+      
+      <!-- Controles de usuario a la derecha -->
+      <ul class="navbar-nav ms-auto">
+        {% if user.is_authenticated %}
+          <li class="nav-item align-items-center theme-toggle-item">
+            <button type="button" id="theme-toggle" class="switch-tile" aria-pressed="false">
+              <span class="tile-icon"><i class="bi bi-sun-fill"></i></span>
+              <span class="label">Modo claro</span>
+            </button>
+            <span id="ai-model-switch" class="d-none" aria-hidden="true"></span>
+            <span id="beep-switch" class="d-none" aria-hidden="true"></span>
+          </li>
+          
+          <!-- Dropdown Más (configuraciones y herramientas) -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle"
+               href="#"
+               id="moreDropdown"
+               role="button"
+               data-bs-toggle="dropdown"
+               aria-controls="mobile-more-panel"
+               aria-expanded="false">
+              <i class="fas fa-ellipsis-h"></i> <span class="d-none d-lg-inline">Más</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end nav-pref-menu" aria-labelledby="moreDropdown" id="mobile-more-panel">
+              <li class="nav-pref-heading">Preferencias rápidas</li>
+              <li>
+                <div class="nav-pref-row nav-pref-row--compact" aria-live="polite">
+                  <span class="nav-pref-label">Modo de transcripción:</span>
+                  <button type="button"
+                          class="nav-pref-pill nav-pref-pill--toggle"
+                          id="transcription-mode-toggle"
+                          aria-pressed="false"
+                          title="Modo de transcripción">
+                    <i class="fas fa-cloud nav-pref-pill-icon" id="transcription-mode-icon"></i>
+                    <span id="transcription-mode-text">Nube</span>
+                  </button>
+                </div>
+              </li>
+              <li>
+                <button type="button" class="nav-pref-item" id="beep-toggle">
+                  <span class="nav-pref-icon">
+                    <i class="bi bi-broadcast-pin"></i>
+                  </span>
+                  <span class="nav-pref-text">
+                    <span class="nav-pref-title">Sonidos de dictado</span>
+                    <span class="nav-pref-meta">Alertas breves</span>
+                  </span>
+                  <span class="nav-pref-pill nav-pref-pill--ghost" id="beep-toggle-inline" aria-pressed="false">OFF</span>
+                </button>
+              </li>
+              <li>
+                <div class="nav-pref-row nav-pref-row--stacked" id="printer-pref-block">
+                  <div class="nav-pref-label printer-status-header">
+                    <span id="printer-status-label">Conectar impresora por:</span>
+                    <span id="printer-active-method" class="printer-active-method d-none"></span>
+                  </div>
+                  <div class="printer-connection-options" role="group" aria-label="Método de conexión">
+                    <button type="button"
+                            class="printer-connect-chip"
+                            id="printer-connect-btn"
+                            title="Conectar por Bluetooth directo">
+                      <i class="bi bi-bluetooth"></i>
+                      <span>Bluetooth</span>
+                    </button>
+                    <button type="button"
+                            class="printer-connect-chip printer-connect-chip--ghost"
+                            id="printer-open-hub"
+                            title="Abrir hub avanzado">
+                      <i class="bi bi-hdd-network"></i>
+                      <span>Hub</span>
+                    </button>
+                  </div>
+                  <div id="bluetooth-status-container"
+                       class="printer-status-inline bluetooth-status-badge bluetooth-status-badge--inline"
+                       data-inline-indicator="true">
+                    <div class="status-icon"><i class="fas fa-bluetooth-b"></i></div>
+                    <div class="status-text">
+                      <span class="status-title">Impresora</span>
+                      <span class="status-message">Desconectada</span>
+                    </div>
+                  </div>
+                  <button type="button"
+                          class="nav-pref-pill nav-pref-pill--danger d-none"
+                          id="printer-disconnect-btn">
+                    <i class="bi bi-plug"></i>
+                    <span>Desconectar</span>
+                  </button>
+                </div>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li class="nav-pref-heading">Atajos</li>
+              <li>
+                <div class="nav-quick-grid" role="group" aria-label="Accesos rápidos">
+                  <a class="nav-quick-icon" href="{% url 'parts:report_page' %}" data-turbo-frame="app-frame">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Reportes</span>
+                  </a>
+                  {% if user.profile.can_manage_users %}
+                  <a class="nav-quick-icon" href="{% url 'parts:user_list' %}" data-turbo-frame="app-frame">
+                    <i class="fas fa-users"></i>
+                    <span>Usuarios</span>
+                  </a>
+                  {% endif %}
+                  {% if user.profile.is_admin %}
+                  <a class="nav-quick-icon" href="{% url 'parts:logs_page' %}" data-turbo-frame="app-frame">
+                    <i class="bi bi-activity"></i>
+                    <span>Logs</span>
+                  </a>
+                  <a class="nav-quick-icon" href="{% url 'parts:synonym_manager' %}" data-turbo-frame="app-frame">
+                    <i class="bi bi-translate"></i>
+                    <span>Sinónimos</span>
+                  </a>
+                  {% endif %}
+                </div>
+              </li>
+            </ul>
+          </li>
+          
+          <!-- Dropdown de usuario -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-user-circle me-1"></i>
+              <span class="d-none d-lg-inline">{{ user.first_name|default:user.username }}</span>
+              <span class="badge bg-secondary ms-2">{{ user.profile.get_role_display }}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+              <li>
+                <span class="dropdown-item-text">
+                  <strong>{{ user.get_full_name|default:user.username }}</strong><br>
+                  <small class="text-muted">{{ user.email }}</small>
+                </span>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item text-danger" href="{% url 'parts:logout' %}">
+                  <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </a>
+              </li>
+            </ul>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+{% endblock navbar %}
+
+<div id="mobile-more-backdrop" class="mobile-more-backdrop" aria-hidden="true"></div>
+
+<!-- Contenido con padding-top para navbar fija -->
+<turbo-frame id="app-frame">
+  <main class="container py-4 app-shell-main">
+    {% block content %}{% endblock %}
+  </main>
+</turbo-frame>
+
+<!-- Toasts container -->
+<div class="position-fixed top-0 end-0 p-3 toast-region">
+  <div id="toast-container" class="toast-container"></div>
+  <!-- los toasts se inyectan aquí dinámicamente -->
+  
+</div>
+
+<!-- Bootstrap JS (sin jQuery) -->
+<script src="{% static 'parts/vendor/bootstrap.bundle.min.js' %}"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"></script>
+
+<!-- Bluetooth Printer System (Bridge Unificado) -->
+<script src="{% static 'parts/bluetooth-printer.js' %}" nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/printer-bridge.js' %}" nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/bluetooth-status-indicator.js' %}" nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/vendor/chart.umd.min.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/app-shell.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/theme-preferences.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/filter-panels.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/dashboard-summary.js' %}?v=20250305a" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/activity-logger.js' %}?v=20250220a" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/logs.js' %}?v=20250302c" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+
+{% block extra_scripts %}{% endblock extra_scripts %}
+
+<!-- Modal de configuración de impresora -->
+<div class="modal fade printer-modal" id="printerConfigModal" tabindex="-1" aria-labelledby="printerConfigModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="printerConfigModalLabel">
+          <i class="fas fa-print"></i>
+          Configuración de Impresora
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">
+          <i class="fas fa-info-circle"></i>
+          Selecciona cómo deseas imprimir las etiquetas de código de barras en tu GOOJPRT PT210.
+        </p>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Método de Conexión:</label>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="printerMethod" id="printerUSB" value="usb" checked>
+            <label class="btn btn-outline-primary" for="printerUSB">
+              <i class="fas fa-usb"></i> USB
+            </label>
+            
+            <input type="radio" class="btn-check" name="printerMethod" id="printerBluetooth" value="bluetooth">
+            <label class="btn btn-outline-success" for="printerBluetooth">
+              <i class="fas fa-bluetooth"></i> Bluetooth
+            </label>
+            
+            <input type="radio" class="btn-check" name="printerMethod" id="printerNetwork" value="network">
+            <label class="btn btn-outline-info" for="printerNetwork">
+              <i class="fas fa-network-wired"></i> Red
+            </label>
+          </div>
+        </div>
+        
+        <div id="bluetoothOptions" class="d-none">
+          <div class="alert alert-info">
+            <strong>Bluetooth Directo (Web Bluetooth API):</strong>
+            <ul class="mb-0 mt-2">
+              <li> Solo funciona en Chrome o Edge</li>
+              <li> Imprime directamente desde tu celular/PC</li>
+              <li> La impresora debe estar emparejada con tu dispositivo</li>
+              <li> No requiere configuración del servidor</li>
+            </ul>
+          </div>
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Importante:</strong> Al presionar "Ejecutar Test", se abrirá un diálogo
+            para seleccionar tu impresora Bluetooth. Asegúrate de que esté encendida.
+          </div>
+        </div>
+        
+        <div id="networkOptions" class="d-none">
+          <div class="mb-3">
+            <label class="form-label">Dirección IP:</label>
+            <input type="text" class="form-control" id="printerIP" placeholder="192.168.1.100">
+            <small class="text-muted">Dirección IP del servidor con la impresora compartida</small>
+          </div>
+        </div>
+        
+        <div id="usbOptions">
+          <div class="alert alert-success">
+            <strong>USB (Servidor):</strong>
+            <ul class="mb-0 mt-2">
+              <li>Funciona en todos los navegadores</li>
+              <li>Impresora conectada al servidor</li>
+              <li>Más confiable y estable</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div id="printerStatus" class="alert alert-secondary mt-3">
+          <i class="fas fa-info-circle"></i>
+          <span id="printerStatusText">Método actual: USB (Servidor)</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="savePrinterConfig">
+          <i class="fas fa-save"></i>
+          Guardar Configuración
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Test de Impresora -->
+<div class="modal fade printer-modal" id="printerTestModal" tabindex="-1" aria-labelledby="printerTestModalLabel" aria-hidden="true" data-test-url="{% url 'parts:impresora_test' %}">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="printerTestModalLabel">
+          <i class="fas fa-vial"></i>
+          Test de Impresora
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          <strong>Prueba rápida de conexión</strong><br>
+          Verifica que la impresora térmica esté conectada y funcionando correctamente.
+        </div>
+        
+        <div id="testResult" class="d-none"></div>
+        
+        <div id="testLog" class="mt-3 d-none">
+          <h6 class="text-muted">
+            <i class="fas fa-terminal"></i>
+            Diagnóstico:
+          </h6>
+          <pre id="testLogContent" class="bg-light p-3 rounded printer-log"></pre>
+        </div>
+        
+        <div id="testCommands" class="mt-3 d-none">
+          <h6 class="text-muted">
+            <i class="fas fa-code"></i>
+            Comandos sugeridos:
+          </h6>
+          <div id="testCommandsContent" class="bg-dark text-light p-3 rounded printer-code-block"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="runPrinterTest">
+          <i class="fas fa-play"></i>
+          <span id="testBtnText">Ejecutar Test</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce|default:'' }}">
+  (function () {
+    const overlay = document.getElementById('app-loading-overlay');
+    if (!overlay) return;
+    const statusText = document.getElementById('app-loading-message');
+    const logBoot = window.__logBoot || function () {};
+    const pending = new Set();
+    let hideTimeout = null;
+    let hasHidden = false;
+    const FALLBACK_NOTICE_MS = 5000;
+    const FAILSAFE_NOTICE_MS = 15000;
+
+    setTimeout(() => {
+      if (!hasHidden && pending.size) {
+        overlay.classList.add('app-loading-overlay--waiting');
+        if (statusText) {
+          statusText.textContent = 'Sincronizando estilos locales…';
+        }
+        logBoot('stylewatch:waiting-for-assets', { pending: pending.size });
+      }
+    }, FALLBACK_NOTICE_MS);
+
+    setTimeout(() => {
+      if (!hasHidden && pending.size) {
+        logBoot('stylewatch:failsafe-hold', { pending: pending.size });
+        if (statusText) {
+          statusText.textContent = 'Validando archivos…';
+        }
+      }
+    }, FAILSAFE_NOTICE_MS);
+    
+    document.querySelectorAll('link[data-style-watch]').forEach((link) => {
+      if (link.sheet && link.sheet.cssRules && link.sheet.cssRules.length) {
+        logBoot('stylewatch:preloaded', { href: link.href });
+        return;
+      }
+      pending.add(link);
+      logBoot('stylewatch:pending', { href: link.href });
+      const mark = () => {
+        pending.delete(link);
+        logBoot('stylewatch:loaded', { href: link.href, remaining: pending.size });
+        if (!pending.size) {
+          hide();
+        }
+      };
+      link.addEventListener('load', mark, { once: true });
+      link.addEventListener('error', mark, { once: true });
+    });
+
+    function stylesApplied() {
+      try {
+        return Array.from(document.styleSheets || []).some((sheet) => {
+          try {
+            return (sheet.cssRules && sheet.cssRules.length > 0);
+          } catch (err) {
+            return false;
+          }
+        });
+      } catch (_err) {
+        return false;
+      }
+    }
+
+    function hide() {
+      if (!overlay || hasHidden) return;
+      if (pending.size && !stylesApplied()) {
+        logBoot('stylewatch:defer-hide', { pending: pending.size });
+        return;
+      }
+      hasHidden = true;
+      logBoot('overlay:hide', { remaining: pending.size });
+      overlay.classList.add('is-hidden');
+      if (hideTimeout) clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(() => {
+        overlay.remove();
+        logBoot('overlay:removed', { ts: Date.now() });
+        document.dispatchEvent(new CustomEvent('page:ready', {
+          detail: { timestamp: Date.now(), reason: 'styles-loaded' }
+        }));
+        document.documentElement.classList.remove('app-loading');
+        if (window.__setAppLoadingProgress) {
+          window.__setAppLoadingProgress(100);
+        }
+      }, 600);
+    }
+
+    if (!pending.size) {
+      logBoot('stylewatch:ready', { pending: 0 });
+      hide();
+    } else {
+      logBoot('stylewatch:awaiting', { pending: pending.size });
+      
+      window.addEventListener('load', () => {
+        if (window.__setAppLoadingProgress) {
+          window.__setAppLoadingProgress(60);
+        }
+        logBoot('window:load-fired', { pending: pending.size });
+        hide();
+      }, { once: true });
+    }
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,128 @@
+{% extends 'parts/base.html' %}
+{% block title %}Sinónimos inteligentes · Transervis{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 synonym-console__header">
+  <div>
+    <h2 class="mb-1">Sinónimos inteligentes</h2>
+    <p class="text-muted mb-0">Gestiona vocabulario clave para búsquedas e ingestas de voz.</p>
+  </div>
+  <div class="text-end">
+    <span class="badge badge-soft-primary me-2">
+      <i class="fas fa-layer-group me-1"></i> {{ stats.group_count }} grupos
+    </span>
+    <span class="badge badge-soft-success">
+      <i class="fas fa-font me-1"></i> {{ stats.term_count }} sinónimos
+    </span>
+  </div>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="synonym-console">
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm h-100 synonym-panel">
+      <div class="card-body">
+        <h5 class="card-title mb-3 synonym-panel__title"><i class="bi bi-bookmark-plus text-primary me-2"></i>Nuevo grupo</h5>
+        <form method="post" class="needs-validation" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create_group">
+          {% for field in group_form %}
+            <div class="mb-3">
+              <label class="form-label text-muted small">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <div class="form-text">{{ field.help_text }}</div>
+              {% endif %}
+              {% for error in field.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-plus-circle me-1"></i> Crear grupo
+          </button>
+        </form>
+        <hr class="my-4">
+        <h5 class="card-title mb-3 synonym-panel__title"><i class="bi bi-pen text-success me-2"></i>Agregar sinónimo</h5>
+        <form method="post" class="needs-validation" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create_term">
+          {% for field in term_form %}
+            <div class="mb-3">
+              <label class="form-label text-muted small">{{ field.label }}</label>
+              {{ field }}
+              {% for error in field.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-success w-100">
+            <i class="fas fa-save me-1"></i> Guardar sinónimo
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm synonym-panel">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="card-title mb-0 synonym-panel__title"><i class="bi bi-collection me-2 text-primary"></i>Catálogo de grupos</h5>
+          <span class="text-muted small">Haz clic en un grupo para ver sus variantes</span>
+        </div>
+        {% if groups %}
+          <div class="accordion synonym-accordion" id="synonymAccordion">
+            {% for group in groups %}
+              <div class="accordion-item border-0 mb-2 shadow-sm rounded-3 synonym-group">
+                <h2 class="accordion-header" id="heading{{ group.id }}">
+                  <button class="accordion-button collapsed synonym-group__toggle" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ group.id }}" aria-expanded="false" aria-controls="collapse{{ group.id }}">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <strong>{{ group.name }}</strong>
+                      <span class="badge badge-soft-secondary">{{ group.get_category_display }}</span>
+                    </div>
+                  </button>
+                </h2>
+                <div id="collapse{{ group.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ group.id }}" data-bs-parent="#synonymAccordion">
+                  <div class="accordion-body synonym-group__body">
+                    {% if group.description %}
+                      <p class="text-muted small mb-3">{{ group.description }}</p>
+                    {% endif %}
+                    <div class="d-flex flex-wrap gap-2">
+                      {% for term in group.terms.all %}
+                        <span class="synonym-term-badge">
+                          {{ term.term }}
+                          {% if term.locale %}
+                            <span class="text-uppercase ms-1">({{ term.locale }})</span>
+                          {% endif %}
+                        </span>
+                      {% empty %}
+                        <span class="text-muted">Sin variantes aún.</span>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-5 text-muted">
+            <i class="bi bi-emoji-neutral display-5 d-block mb-3"></i>
+            Aún no hay sinónimos configurados. Crea tu primer grupo a la izquierda.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock %}

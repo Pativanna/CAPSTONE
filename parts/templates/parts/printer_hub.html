@@ -1,0 +1,194 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Hub Impresora Bluetooth</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="csp-nonce" content="{{ csp_nonce|default:'' }}">
+  <link rel="stylesheet" 
+        href="{% static 'parts/css/app-shell.css' %}"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link rel="stylesheet" 
+        href="{% static 'parts/css/design-system.css' %}"
+        nonce="{{ csp_nonce|default:'' }}">
+  <style nonce="{{ csp_nonce|default:'' }}">
+    body {
+      font-family: var(--font-family-sans, system-ui, sans-serif);
+      background: var(--surface-base);
+      color: var(--text-primary);
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+    }
+
+    .hub-shell {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      flex: 1;
+    }
+
+    header {
+      background: linear-gradient(120deg, var(--app-brand-primary), var(--app-brand-primary-soft));
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      border-radius: 1rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    header strong {
+      font-size: 1.1rem;
+      letter-spacing: 0.02em;
+    }
+
+    .status-line {
+      background: var(--surface-card);
+      border-radius: 0.85rem;
+      border: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      color: var(--chip-color);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .log-panel {
+      background: var(--surface-card);
+      border-radius: 1rem;
+      border: 1px solid var(--border-color);
+      padding: 1rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-height: 220px;
+    }
+
+    .log {
+      flex: 1;
+      font-family: var(--font-family-mono, 'SFMono-Regular', monospace);
+      border-radius: 0.75rem;
+      background: var(--surface-muted);
+      padding: 0.75rem;
+      overflow-y: auto;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      max-height: 260px;
+    }
+
+    .log-line {
+      margin: 0;
+      padding: 0.1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .ok { color: var(--brand-success); }
+    .warn { color: var(--brand-warning); }
+    .err { color: var(--brand-danger); }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 0.85rem;
+      padding: 0.65rem 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button.primary {
+      background: var(--app-brand-primary);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(15, 60, 127, 0.25);
+    }
+
+    button.primary:hover:enabled {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 20px rgba(15, 60, 127, 0.32);
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+    }
+
+    button.secondary:hover:enabled {
+      background: var(--surface-muted);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .helper {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="hub-shell">
+    <header>
+      <strong>Hub Bluetooth Transervis</strong>
+      <div class="actions">
+        <button id="btn-conectar" class="primary">Conectar</button>
+        <button id="btn-desconectar" class="secondary" disabled>Desconectar</button>
+      </div>
+    </header>
+
+    <section class="status-line">
+      <div><strong>Estado</strong></div>
+      <div class="status-chip" id="estado">Inicializando…</div>
+    </section>
+
+    <section class="log-panel">
+      <div class="text-muted small text-uppercase">Registro en tiempo real</div>
+      <div class="log" id="log" role="log" aria-live="polite"></div>
+    </section>
+
+    <p class="helper">Mantén esta ventana abierta para conservar el enlace con la impresora Bluetooth.</p>
+  </div>
+
+  <script src="{% static 'parts/bluetooth-printer.js' %}"
+          defer
+          data-page-script="parts:printer-hub-bluetooth"
+          nonce="{{ csp_nonce|default:'' }}"></script>
+  <script src="{% static 'parts/js/printer-hub-view.js' %}?v=20250305a"
+          defer
+          data-page-script="parts:printer-hub-view"
+          nonce="{{ csp_nonce|default:'' }}"></script>
+</body>
+</html>

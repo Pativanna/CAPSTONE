@@ -1,0 +1,249 @@
+{% extends 'parts/base.html' %}
+{% block title %}Generador de Reportes{% endblock %}
+
+{% block content %}
+<section class="report-page container-fluid container-xl py-4">
+  <div class="report-hero">
+    <h1 class="h2 mb-2">
+      <i class="fas fa-chart-line"></i> Generador de Reportes
+    </h1>
+    <p class="mb-0">Sistema de gestión de inventario Transervis</p>
+    <small class="d-block mt-2 opacity-75">{{ 'now'|date:'d/m/Y H:i' }}</small>
+  </div>
+
+  {% if message %}
+    <div class="alert alert-success alert-dismissible fade show report-alert" role="alert">
+      <i class="fas fa-check-circle me-2"></i>
+      <strong>{{ message }}</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+  {% endif %}
+
+  <section class="report-card card shadow-sm mb-5">
+    <div class="card-header text-center py-4">
+      <h3 class="mb-0 fw-bold">
+        <i class="fas fa-calendar-alt"></i> Selecciona el período del reporte
+      </h3>
+    </div>
+    <div class="card-body">
+      <div class="frequency-selector" role="radiogroup" aria-label="Frecuencia del reporte">
+        <button type="button"
+                class="frequency-btn"
+                data-frequency="daily"
+                aria-pressed="false">
+          <div class="frequency-icon-wrapper">
+            <i class="fas fa-calendar-day frequency-icon"></i>
+          </div>
+          <span class="frequency-title">Diario</span>
+          <span class="frequency-subtitle">Reporte del día actual</span>
+        </button>
+
+        <button type="button"
+                class="frequency-btn active"
+                data-frequency="weekly"
+                aria-pressed="true">
+          <span class="frequency-badge">Seleccionado</span>
+          <div class="frequency-icon-wrapper">
+            <i class="fas fa-calendar-week frequency-icon"></i>
+          </div>
+          <span class="frequency-title">Semanal</span>
+          <span class="frequency-subtitle">Últimos 7 días</span>
+        </button>
+
+        <button type="button"
+                class="frequency-btn"
+                data-frequency="monthly"
+                aria-pressed="false">
+          <div class="frequency-icon-wrapper">
+            <i class="fas fa-calendar-alt frequency-icon"></i>
+          </div>
+          <span class="frequency-title">Mensual</span>
+          <span class="frequency-subtitle">Últimos 30 días</span>
+        </button>
+      </div>
+
+      <div class="action-buttons mt-3">
+        <button type="button" id="previewBtn" class="btn-action btn-outline-secondary">
+          <i class="fas fa-eye me-2"></i> Vista previa
+        </button>
+        <button type="button" id="downloadBtn" class="btn-action btn-primary-custom">
+          <i class="fas fa-download me-2"></i> Descargar PDF
+        </button>
+        <button type="button"
+                id="sendBtn"
+                class="btn-action btn-success-custom"
+                data-bs-toggle="modal"
+                data-bs-target="#sendModal">
+          <i class="fas fa-paper-plane me-2"></i> Enviar por email
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section id="previewContainer" class="preview-container" hidden>
+    <div class="preview-header">
+      <h5 class="preview-title">
+        <i class="fas fa-file-pdf"></i> Vista previa del reporte
+      </h5>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="closePreview">
+        <i class="fas fa-times"></i> Cerrar
+      </button>
+    </div>
+    <div class="ratio ratio-4x3 preview-frame">
+      <iframe id="pdfPreview" title="Vista previa del reporte" loading="lazy"></iframe>
+    </div>
+  </section>
+
+  {% if schedules %}
+    <section class="report-history mt-5">
+      <h4 class="text-center mb-4">
+        <i class="fas fa-history"></i> Historial de reportes enviados
+      </h4>
+
+      {% for schedule in schedules %}
+        <article class="history-card card">
+          <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-file-alt"></i>
+              <strong>{{ schedule.name }}</strong>
+              <span class="badge badge-primary-custom">{{ schedule.frequency|capfirst }}</span>
+            </div>
+            {% if schedule.last_generated %}
+              <span class="badge badge-info-custom">
+                <i class="fas fa-clock"></i> Último: {{ schedule.last_generated|date:"d/m/Y H:i" }}
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-custom table-hover mb-0 align-middle">
+                <thead>
+                  <tr>
+                    <th scope="col"><i class="fas fa-calendar"></i> Fecha generado</th>
+                    <th scope="col"><i class="fas fa-file"></i> Archivo</th>
+                    <th scope="col" class="text-center"><i class="fas fa-cog"></i> Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for log in schedule.logs.all|slice:":5" %}
+                    <tr>
+                      <td>
+                        <i class="fas fa-calendar-check text-primary me-2"></i>
+                        {{ log.generated_at|date:"d/m/Y H:i" }}
+                      </td>
+                      <td>
+                        {% if log.file %}
+                          <i class="fas fa-file-pdf text-danger me-2"></i>
+                          report_{{ log.generated_at|date:"Ymd_His" }}.pdf
+                        {% else %}
+                          <span class="text-muted"><i class="fas fa-times-circle me-1"></i>No disponible</span>
+                        {% endif %}
+                      </td>
+                      <td class="text-center">
+                        {% if log.file %}
+                          <a href="{{ log.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary me-1">
+                            <i class="fas fa-eye"></i> Ver
+                          </a>
+                          <a href="{{ log.file.url }}" download class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-download"></i> Descargar
+                          </a>
+                        {% else %}
+                          <span class="text-muted">-</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr>
+                      <td colspan="3" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        No hay reportes generados aún
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+  {% endif %}
+</section>
+
+<div class="modal fade report-modal" id="sendModal" tabindex="-1" aria-labelledby="sendModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header modal-header-custom">
+        <h5 class="modal-title" id="sendModalLabel">
+          <i class="fas fa-paper-plane"></i> Enviar reporte por email
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="post" id="sendForm">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label for="reportName" class="form-label fw-bold">
+              <i class="fas fa-tag"></i> Nombre del reporte
+            </label>
+            <input type="text"
+                   class="form-control"
+                   id="reportName"
+                   name="name"
+                   value="Reporte {{ 'now'|date:'d/m/Y' }}"
+                   required>
+          </div>
+
+          <div class="mb-3">
+            <label for="reportFrequency" class="form-label fw-bold">
+              <i class="fas fa-calendar"></i> Frecuencia
+            </label>
+            <input type="text"
+                   class="form-control"
+                   id="reportFrequency"
+                   name="frequency"
+                   value="weekly"
+                   readonly>
+          </div>
+
+          <div class="mb-3">
+            <label for="reportRecipients" class="form-label fw-bold">
+              <i class="fas fa-users"></i> Destinatarios
+            </label>
+            <select class="form-select"
+                    id="reportRecipients"
+                    name="recipients"
+                    multiple
+                    required
+                    size="6">
+              {% for user in users %}
+                <option value="{{ user.id }}">
+                  {{ user.username }}{% if user.email %} ({{ user.email }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <small class="text-muted d-block mt-1">
+              <i class="fas fa-info-circle me-1"></i> Mantén presionado Ctrl/Cmd para seleccionar múltiples destinatarios
+            </small>
+          </div>
+        </div>
+
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+          <button type="submit" name="send_now" class="btn btn-success-custom">
+            <i class="fas fa-paper-plane"></i> Enviar ahora
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script src="{% static 'parts/js/report-page.js' %}?v=20250305a"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:report-page"
+        data-turbo-track="reload"></script>
+{% endblock %}

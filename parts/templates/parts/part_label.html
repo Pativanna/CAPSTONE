@@ -1,0 +1,105 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+{% block title %}Etiqueta - {{ part.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4 label-container">
+  <div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h5 class="mb-0">
+        <i class="bi bi-upc-scan"></i>
+        Etiqueta de Pieza
+      </h5>
+    </div>
+    <div class="card-body">
+      <!-- Información de la pieza -->
+      <div class="mb-3">
+        <p class="mb-1"><strong>Pieza:</strong> {{ part.name }}</p>
+        {% if part.auto %}
+        <p class="mb-1"><strong>Vehículo:</strong> {{ part.auto.brand_model }} {{ part.auto.year }}</p>
+        {% endif %}
+        {% if part.workshop %}
+        <p class="mb-1"><strong>Taller:</strong> {{ part.workshop.name }}</p>
+        {% endif %}
+      </div>
+
+      <!-- Etiqueta generada (vertical) -->
+      <div class="text-center mb-4">
+        <img id="label-image" 
+             src="{{ print_image_url }}" 
+             alt="Etiqueta para {{ part.name }}"
+             class="label-img">
+      </div>
+
+      <!-- Botón de impresión -->
+      <div class="d-grid gap-2">
+        <button id="btn-print-label" 
+                class="btn btn-success btn-lg"
+                data-label-url="{{ print_image_url }}"
+                data-escpos-url="{{ print_escpos_url }}"
+                data-part-id="{{ part.id }}">
+          <i class="bi bi-printer-fill"></i>
+          Imprimir Etiqueta
+        </button>
+        
+        <a href="{% url 'parts:part_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i>
+          Volver al Inventario
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensajes de estado -->
+  <div id="status-messages" class="mt-3"></div>
+</div>
+
+<!-- Modal de carga -->
+<div class="modal fade" id="loading-modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body text-center py-4">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p id="loading-text">Imprimiendo...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style nonce="{{ csp_nonce|default:'' }}">
+  .label-container {
+    max-width: 600px;
+  }
+  
+  .label-img {
+    max-height: 600px;
+    image-rendering: crisp-edges;
+    border: 1px solid #000;
+    background: #f8f9fa;
+    padding: 10px;
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .img-fluid.border {
+    background: #f8f9fa;
+    padding: 10px;
+  }
+  
+  #status-messages .alert {
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+<script src="{% static 'parts/js/part-label.js' %}?v=20251203b"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:part-label"
+        data-turbo-track="reload"></script>
+{% endblock %}

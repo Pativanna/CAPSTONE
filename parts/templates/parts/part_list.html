@@ -1,0 +1,360 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<section class="inventory-shell">
+  <header class="inventory-hero card border-0 shadow-sm mb-3">
+    <div class="card-body inventory-hero-body">
+      <div class="inventory-hero-copy">
+        <p class="eyebrow">Panel operativo</p>
+        <h1>Inventario de Piezas</h1>
+        <p>Controla disponibilidad, ventas y sanea datos críticos del inventario en un solo vistazo.</p>
+        <div class="inventory-hero-meta">
+          <span class="inventory-pill" id="inventory-sync-label">
+            <i class="bi bi-clock-history me-1"></i>
+            {% if last_updated %}
+              Actualizado <time datetime="{{ last_updated|date:'c' }}">{{ last_updated|date:"d/m/Y H:i" }}</time>
+            {% else %}
+              Sin registros recientes
+            {% endif %}
+          </span>
+          <span class="inventory-pill">
+            <i class="bi bi-box-seam me-1"></i> {{ total_piezas }} piezas registradas
+          </span>
+        </div>
+      </div>
+      <div class="inventory-hero-actions">
+        <a href="{% url 'parts:part_create' %}" class="btn btn-light btn-lg shadow-sm" data-turbo-frame="app-frame">
+          <i class="fas fa-plus me-2"></i> Agregar pieza
+        </a>
+        {% if user.is_superuser %}
+        <a href="{% url 'parts:logs_page' %}" class="btn btn-outline-light btn-lg shadow-sm" data-turbo-frame="app-frame">
+          <i class="bi bi-activity me-2"></i> Ver actividad
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="inventory-metrics-grid px-4 pb-4">
+      <article class="inventory-metric-card">
+        <small>Disponibles</small>
+        <strong>{{ inventory_stats.available|default:0|intcomma }}</strong>
+        <span>{{ inventory_stats.available_pct|default:0 }}% del total</span>
+      </article>
+      <article class="inventory-metric-card">
+        <small>Vendidas</small>
+        <strong>{{ inventory_stats.sold|default:0|intcomma }}</strong>
+        <span>{{ inventory_stats.sold_pct|default:0 }}% del total</span>
+      </article>
+      <article class="inventory-metric-card">
+        <small>Por completar</small>
+        <strong>{{ inventory_stats.incomplete|default:0|intcomma }}</strong>
+        <span>Revisar campos faltantes</span>
+      </article>
+    </div>
+  </header>
+
+<div id="parts-live-meta"
+     data-last-updated="{% if last_updated %}{{ last_updated|date:'c' }}{% endif %}"
+     data-refresh-url="{{ request.path }}{% if request.META.QUERY_STRING %}?{{ request.META.QUERY_STRING }}{% endif %}"
+     data-current-page="{{ page_obj.number|default:1 }}"
+     data-catalog-url="{% url 'parts:parts_catalog_cache' %}">
+</div>
+
+<!-- Filtros -->
+<section class="filter-surface card border-0 shadow-sm mb-4" id="parts-filter-shell">
+  <div class="card-body">
+    <form id="parts-filter-form" method="get" action="{% url 'parts:part_list' %}">
+      <div class="inventory-search-card mb-4">
+        <label for="global-part-search" class="form-label text-muted small mb-1">Búsqueda inteligente</label>
+        <div class="voice-search-shell d-flex flex-column flex-lg-row gap-3">
+          <div class="input-group input-group-lg shadow-sm rounded-pill global-search-with-voice">
+            <span class="input-group-text bg-transparent border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
+            <input type="search"
+                   id="global-part-search"
+                   name="q"
+                   class="form-control border-0"
+                   placeholder="Ej: volante en cuero, focos toyota, etc."
+                   aria-label="Buscar en todo el inventario"
+                   value="{{ busqueda_global }}"
+                   data-client-search="false">
+            <button type="button"
+                    class="btn btn-outline-primary text-nowrap voice-search-btn"
+                    id="global-part-voice-btn"
+                    aria-label="Dictar búsqueda"
+                    title="Dictar búsqueda por voz">
+              <i class="fas fa-microphone" id="voice-search-btn-icon"></i>
+              <span class="d-none d-md-inline ms-2" id="voice-search-mode-label">Voz (Nube)</span>
+            </button>
+          </div>
+        </div>
+        <div class="mt-2 d-flex align-items-center gap-2 text-muted small flex-wrap" id="global-part-voice-status">
+          <i class="fas fa-wave-square"></i>
+          <span>Dicta para buscar usando el modo seleccionado.</span>
+        </div>
+        <div id="catalog-cache-status" class="catalog-cache-status text-muted small mt-1" role="status">
+          Índice local: sincronizando…
+        </div>
+        <div id="catalog-quick-results" class="catalog-quick-results d-none" aria-live="polite"></div>
+      </div>
+
+      <div class="inventory-filter-header">
+        <div class="inventory-filter-summary small">
+          <span class="badge rounded-pill bg-body-secondary text-body fw-semibold">
+            <i class="fas fa-boxes-stacked me-1"></i> {{ total_piezas }} piezas
+        </span>
+        {% if modelo_filtrado %}
+          <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">
+            <i class="fas fa-car-side me-1"></i> Modelo: {{ modelo_filtrado }}
+          </span>
+        {% endif %}
+        {% if anio_filtrado %}
+          <span class="badge rounded-pill bg-info-subtle text-info-emphasis">
+            <i class="fas fa-calendar me-1"></i> Año: {{ anio_filtrado }}
+          </span>
+        {% endif %}
+        <span class="badge rounded-pill bg-dark-subtle text-dark-emphasis"
+              data-filter-count
+              role="status"
+              aria-live="polite"
+              aria-atomic="true">Filtros rápidos: 0</span>
+      </div>
+      <div class="d-flex flex-column flex-lg-row gap-2 w-100 w-lg-auto">
+        <button class="btn btn-outline-primary w-100 w-lg-auto {% if not filtros_partes_abiertos %}collapsed{% endif %}"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#parts-filter-panel"
+                aria-controls="parts-filter-panel"
+                aria-expanded="{{ filtros_partes_abiertos|yesno:'true,false' }}">
+          <i class="fas fa-sliders-h me-1"></i> Filtros avanzados
+        </button>
+        <button id="clear-filters-btn" type="button" class="btn btn-outline-secondary w-100 w-lg-auto">
+          <i class="fas fa-arrows-rotate"></i> Reiniciar todo
+        </button>
+      </div>
+    </div>
+
+      <div id="parts-filter-panel"
+         class="collapse {% if filtros_partes_abiertos %}show{% endif %} mt-4"
+         data-persist-key="partsFiltersPanel"
+         data-mobile-default="closed">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4 col-lg-3">
+          <label for="filter-model" class="form-label text-muted small mb-1">Modelo asociado</label>
+          <select id="filter-model" name="modelo" class="form-select">
+            <option value="">Todos</option>
+            {% for modelo in modelos_disponibles %}
+              <option value="{{ modelo }}" {% if modelo_filtrado == modelo %}selected{% endif %}>{{ modelo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label for="filter-year" class="form-label text-muted small mb-1">Año del vehículo</label>
+          <select id="filter-year" name="anio" class="form-select" {% if not modelo_filtrado %}data-placeholder="true"{% endif %}>
+            <option value="">Todos</option>
+            {% for anio in anios_disponibles %}
+              <option value="{{ anio }}" {% if anio_filtrado == anio|stringformat:"s" %}selected{% endif %}>{{ anio }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-4 col-lg-3">
+          <label for="filter-workshop" class="form-label text-muted small mb-1">Ubicación / taller</label>
+          <select id="filter-workshop" name="taller" class="form-select">
+            <option value="">Todos</option>
+            {% for taller in talleres_disponibles %}
+              <option value="{{ taller.id }}" {% if taller_filtrado|default:'' == taller.id|stringformat:'s' %}selected{% endif %}>{{ taller.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-4 col-lg-2">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-filter me-1"></i> Aplicar
+          </button>
+        </div>
+      </div>
+
+      <div class="row g-3 align-items-end mt-1">
+        <div class="col-12">
+          <label class="form-label text-muted small mb-1">Estado y disponibilidad</label>
+          <div class="filter-chip-group">
+            <button type="button"
+                    class="filter-chip active"
+                    data-filter-chip
+                    data-column="status"
+                    data-value=""
+                    aria-pressed="true">
+              <span class="filter-chip-dot filter-chip-dot--all" aria-hidden="true"></span>
+              Todos
+            </button>
+            <button type="button"
+                    class="filter-chip"
+                    data-filter-chip
+                    data-column="status"
+                    data-value="disponible"
+                    aria-pressed="false">
+              <span class="filter-chip-dot filter-chip-dot--available" aria-hidden="true"></span>
+              Disponibles
+            </button>
+            <button type="button"
+                    class="filter-chip"
+                    data-filter-chip
+                    data-column="status"
+                    data-value="vendido"
+                    aria-pressed="false">
+              <span class="filter-chip-dot filter-chip-dot--sold" aria-hidden="true"></span>
+              Vendidos
+            </button>
+            <button type="button"
+                    class="filter-chip"
+                    data-filter-chip
+                    data-column="status"
+                    data-value="no_disponible"
+                    aria-pressed="false">
+              <span class="filter-chip-dot filter-chip-dot--unavailable" aria-hidden="true"></span>
+              No disponibles
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</section>
+
+<div id="parts-table-wrapper" class="inventory-table-wrapper">
+  <div id="parts-skeleton" class="inventory-skeleton d-none" aria-hidden="true">
+    <div class="inventory-skeleton-row"></div>
+    <div class="inventory-skeleton-row"></div>
+    <div class="inventory-skeleton-row"></div>
+    <div class="inventory-skeleton-row"></div>
+    <div class="inventory-skeleton-row"></div>
+  </div>
+  <!-- Desktop Table View (≥992px) -->
+  <div class="table-responsive d-none d-lg-block">
+    <table class="table table-striped table-hover table-bordered align-middle" id="parts-table">
+    <thead class="thead-dark">
+      <tr>
+        <th class="sortable" data-column="name">
+          Nombre <i class="fas fa-sort"></i>
+          <input type="text" class="form-control form-control-sm column-filter mt-1" placeholder="Filtrar..." data-column="name">
+        </th>
+        <th class="sortable" data-column="status">
+          Estado <i class="fas fa-sort"></i>
+          <select class="form-select form-select-sm column-filter mt-1" data-column="status">
+            <option value="">Todos</option>
+            <option value="disponible">Disponible</option>
+            <option value="vendido">Vendido</option>
+            <option value="no_disponible">No disponible</option>
+          </select>
+        </th>
+        <th class="sortable" data-column="max_value">
+          Precio Inicial <i class="fas fa-sort"></i>
+        </th>
+        <th class="sortable" data-column="min_value">
+          Último Precio <i class="fas fa-sort"></i>
+        </th>
+        <th>
+          Descripción
+        </th>
+        <th class="text-center">
+          Fotos
+        </th>
+        <th>
+          Ubicación
+          <select class="form-select form-select-sm column-filter mt-1" data-column="workshop">
+            <option value="">Todos</option>
+            {% for taller in talleres_disponibles %}
+              <option value="{{ taller.name }}">{{ taller.name }}</option>
+            {% endfor %}
+          </select>
+        </th>
+        <th class="sortable" data-column="date_added">
+          Fecha Ingreso <i class="fas fa-sort"></i>
+          <input type="text" class="form-control form-control-sm column-filter mt-1" placeholder="Filtrar..." data-column="date_added">
+        </th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="parts-table-body" data-total="{{ total_piezas }}">
+      {% include 'parts/includes/part_table_rows.html' %}
+    </tbody>
+    </table>
+  </div>
+
+  <!-- Mobile Card View (<992px) -->
+  <div class="d-lg-none" id="parts-mobile-list">
+    {% include 'parts/includes/part_mobile_cards.html' %}
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-3" id="parts-pagination-card">
+  <div class="card-body text-center">
+    <p class="text-muted mb-3"
+       id="parts-display-counter"
+       role="status"
+       aria-live="polite"
+       data-start="{{ display_start }}"
+       data-current="{{ display_end }}"
+       data-total="{{ total_piezas }}">
+      Mostrando {{ display_start }} - {{ display_end }} de {{ total_piezas }} piezas
+    </p>
+    {% if load_more_url %}
+      <button type="button"
+              class="btn btn-outline-primary"
+              id="load-more-parts-btn"
+              data-next-url="{{ load_more_url }}"
+              data-batch-size="{{ per_page }}"
+              data-filter-pages="6">
+        <span class="default-text">
+          <i class="fas fa-plus-circle me-1"></i> Cargar más piezas
+        </span>
+        <span class="loading-text d-none">
+          <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          Cargando...
+        </span>
+      </button>
+      <div id="load-more-notice" class="alert alert-info d-none mt-3 small" role="status"></div>
+    {% else %}
+      <span class="text-body-secondary small d-block">
+        No hay más piezas para mostrar
+      </span>
+    {% endif %}
+  </div>
+</div>
+
+<input type="file"
+       id="photo-upload-input"
+       class="d-none"
+       accept="image/*"
+       multiple>
+
+</section>
+
+<!-- Modal eliminar pieza -->
+<div class="modal fade" id="deletePartModal" tabindex="-1" aria-labelledby="deletePartLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deletePartLabel"><i class="fas fa-triangle-exclamation text-danger me-2"></i> Confirmar eliminación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        ¿Quieres eliminar la pieza <strong id="deletePartName"></strong>? Esta acción no se puede deshacer.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn"><i class="fas fa-trash"></i> Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="{% static 'parts/table-functions-vanilla.js' %}?v=20250211a"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:table-utils"
+        data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/part-list.js' %}?v=20250305a"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:part-list"
+        data-turbo-track="reload"></script>
+{% endblock %}

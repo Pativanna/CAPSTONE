@@ -74,13 +74,18 @@ eggs/
 .eggs/
 lib/
 lib64/
-parts/
+# parts/ <- REMOVED: es nuestra app Django, NO un directorio de packaging
 sdist/
 var/
 wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Archivos temporales dentro de parts/
+parts/results.json
+parts/**/*.tmp
+parts/**/*.log
 
 # Vosk models (large files - download separately)
 vosk-models/

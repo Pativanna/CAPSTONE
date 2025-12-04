@@ -1,0 +1,288 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block extra_head %}
+<link rel="stylesheet" 
+      href="{% static 'parts/css/logs.css' %}"
+      data-style-watch="primary"
+      data-turbo-track="reload"
+      nonce="{{ csp_nonce|default:'' }}">
+{% endblock extra_head %}
+
+{% block content %}
+<div class="logs-page">
+<div id="logs-config"
+     class="visually-hidden"
+     data-api-url="{% url 'parts:logs_api' %}"
+     data-audit-url="{% url 'parts:logs_audit_api' %}"
+     data-refresh-interval="10000"
+     data-css-href="{% static 'parts/css/logs.css' %}"
+     aria-hidden="true"></div>
+<section class="logs-hero mb-4">
+  <div class="container py-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+      <div>
+        <p class="text-uppercase small fw-semibold text-light mb-2">Auditoría en tiempo real</p>
+        <h1 class="text-white fw-semibold mb-2">Panel Unificado de Logs</h1>
+        <p class="text-light opacity-75 mb-0">Monitorea cada acción del motor de voz y de la aplicación con contexto completo y trazabilidad inmediata.</p>
+      </div>
+      <div class="text-lg-end w-100 w-lg-auto">
+        <button id="btn-refresh" class="btn btn-light btn-lg shadow-sm w-100 w-lg-auto">
+          <i class="bi bi-arrow-repeat me-2"></i>Actualizar ahora
+        </button>
+        <div class="live-pill mt-3 d-inline-flex align-items-center">
+          <span class="live-dot"></span>
+          <span>Actualización automática cada 10s</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container pb-5">
+  <div class="card border-0 shadow-sm mb-4 logs-filter-card">
+    <div class="card-header bg-body-tertiary border-0 d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div>
+        <h5 class="mb-0">Filtros avanzados</h5>
+        <small class="text-muted">Refina por sesión, nivel, módulo o usuario.</small>
+      </div>
+      <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true">
+        Mostrar / Ocultar
+      </button>
+    </div>
+    <div class="collapse show" id="filterCollapse">
+      <div class="card-body">
+        <form method="get"
+              action="{% url 'parts:logs_page' %}"
+              class="row g-3"
+              id="logs-filter-form"
+              data-turbo="false"
+              novalidate>
+          <div class="col-md-3">
+            <label class="form-label text-muted small" for="session-filter">Session ID</label>
+            <input type="text"
+                   id="session-filter"
+                   name="session_id"
+                   class="form-control"
+                   placeholder="Busca una sesión (auto-completa)"
+                   value="{{ session_id }}"
+                   list="session-options"
+                   autocomplete="off"
+                   aria-describedby="session-filter-help">
+            <datalist id="session-options">
+              {% for sess in session_options %}
+              <option value="{{ sess.value }}" {% if sess.label %}label="{{ sess.label }}"{% endif %}></option>
+              {% endfor %}
+            </datalist>
+            <small id="session-filter-help" class="text-muted d-block small mt-1">Incluye hora, usuario y origen para ubicar rápido una sesión.</small>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-muted small">Nivel</label>
+            <select name="level" class="form-select">
+              <option value="">Todos</option>
+              {% for lvl in level_options %}
+              <option value="{{ lvl }}" {% if level == lvl %}selected{% endif %}>{{ lvl }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-muted small" for="module-filter">Módulo</label>
+            <input type="text"
+                   id="module-filter"
+                   name="module"
+                   class="form-control"
+                   placeholder="Inventario, Voz, Impresora..."
+                   value="{{ module }}"
+                   list="module-options"
+                   autocomplete="off"
+                   aria-describedby="module-filter-help">
+            <datalist id="module-options">
+              {% for mod in module_options %}
+              <option value="{{ mod.value }}" {% if mod.label %}label="{{ mod.label }}"{% endif %}></option>
+              {% endfor %}
+            </datalist>
+            <small id="module-filter-help" class="text-muted d-block small mt-1">Los nombres se muestran en español para facilitar la búsqueda.</small>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-muted small">Usuario</label>
+            <input type="text"
+                   name="user_id"
+                   class="form-control"
+                   placeholder="ID o nombre"
+                   value="{{ user_id }}"
+                   list="user-options"
+                   autocomplete="off">
+            <datalist id="user-options">
+              {% for opt in user_options %}
+              <option value="{{ opt.id }}" label="{{ opt.label }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label text-muted small">Fuente</label>
+            <select name="source" class="form-select">
+              <option value="">Todas</option>
+              <option value="voice" {% if source == 'voice' %}selected{% endif %}>Motor de voz</option>
+              <option value="app" {% if source == 'app' %}selected{% endif %}>Aplicación / Django</option>
+              <option value="bluetooth" {% if source == 'bluetooth' %}selected{% endif %}>Impresora Bluetooth</option>
+            </select>
+            <small class="text-muted d-block small mt-1">Incluye logs del motor de voz, backend y la impresora.</small>
+          </div>
+          <div class="col-md-1">
+            <label class="form-label text-muted small">Límite</label>
+            <input type="number" min="10" max="2000" name="limit" class="form-control" value="{{ limit|default:200 }}">
+          </div>
+          <div class="col-12 text-end">
+            <button class="btn btn-primary px-4" type="submit"><i class="bi bi-funnel me-1"></i>Aplicar filtros</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4" id="logs-summary">
+    <div class="col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">Eventos filtrados</div>
+        <div class="metric-value" id="metric-total">--</div>
+        <div class="metric-note" id="metric-total-extra">Incluye voz, app e impresora</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">Alertas / errores</div>
+        <div class="metric-value text-danger" id="metric-errors">--</div>
+        <div class="metric-note">Warnings + errores en el rango</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="metric-card">
+        <div class="metric-label">Último evento</div>
+        <div class="metric-value" id="metric-last">--</div>
+        <div class="metric-note" id="metric-last-source">-</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+          <span class="text-muted small d-block">Última actualización</span>
+          <span id="meta-info" class="fw-semibold">-</span>
+        </div>
+        <div class="text-end">
+          <span class="text-muted small d-block">Eventos mostrados</span>
+          <span class="badge bg-primary-subtle text-primary-emphasis" id="log-count">0</span>
+        </div>
+      </div>
+      <div class="viewer-log-panel border rounded-3 p-3 mb-4" id="viewer-log-panel" aria-live="polite">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong class="text-uppercase small text-muted">Actividad del visor</strong>
+          <span class="badge bg-light text-muted" id="viewer-log-count">0</span>
+        </div>
+        <ul class="list-unstyled small mb-0" id="viewer-log-list">
+          <li class="text-muted">Sin actividad registrada.</li>
+        </ul>
+      </div>
+      <div class="aggregation-panel mb-4 d-none" id="aggregation-panel">
+        <div class="aggregation-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div>
+            <h6 class="mb-0">Eventos agrupados automáticamente</h6>
+            <small class="text-muted">Secuencias repetitivas y acciones idénticas se compactan para resaltar lo importante.</small>
+          </div>
+          <span class="badge bg-primary-subtle text-primary-emphasis" id="aggregation-count">0 agrupaciones</span>
+        </div>
+        <div class="aggregation-body" id="aggregation-list">
+          <div class="text-muted small">Sin agrupaciones detectadas.</div>
+        </div>
+      </div>
+
+      <div class="alert logs-info-message" id="logs-info-message" role="status" aria-live="polite"></div>
+      <div id="logs-timeline" class="log-timeline position-relative" data-current-user="{{ user_filter|default:'' }}">
+        <div class="timeline-axis d-none d-md-block"></div>
+        <div class="text-center text-muted py-4" id="logs-placeholder">Cargando eventos...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-body-tertiary border-0">
+          <h6 class="mb-0">Resumen por usuario</h6>
+        </div>
+        <div class="card-body" id="user-summary-list">
+          <div class="text-muted small">Sin datos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-body-tertiary border-0">
+          <h6 class="mb-0">Resumen por tipo</h6>
+        </div>
+        <div class="card-body" id="type-summary-list">
+          <div class="text-muted small">Sin datos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mt-4" id="audit-card">
+    <div class="card-header bg-body-tertiary border-0">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h5 class="mb-0">Auditoría estructurada (BD)</h5>
+          <small class="text-muted">Eventos provenientes de la tabla `EventoSistema` con correlación completa.</small>
+        </div>
+        <span class="badge bg-primary-subtle text-primary-emphasis" id="audit-status">Sin consultar</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <form id="audit-filter-form" class="row g-3 align-items-end mb-4">
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label text-muted small">Correlation ID</label>
+          <input type="text" name="correlation_id" class="form-control" placeholder="corr-..." />
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label text-muted small">Request ID</label>
+          <input type="text" name="request_id" class="form-control" placeholder="req-..." />
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label text-muted small">Categoría</label>
+          <select name="categoria" class="form-select">
+            <option value="">Todas</option>
+            {% for key, label in audit_categories %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label text-muted small">Usuario ID</label>
+          <input type="text" name="user_id" class="form-control" placeholder="ID usuario" />
+        </div>
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label text-muted small">Pieza ID</label>
+          <input type="text" name="pieza_id" class="form-control" placeholder="ID pieza" />
+        </div>
+        <div class="col-sm-6 col-lg-1">
+          <label class="form-label text-muted small">Límite</label>
+          <input type="number" name="limit" class="form-control" min="10" max="1000" value="100" />
+        </div>
+        <div class="col-sm-6 col-lg-1 d-grid">
+          <button class="btn btn-outline-primary" type="submit">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </form>
+      <div id="audit-timeline" class="log-timeline position-relative">
+        <div class="text-center text-muted py-4">Usa los filtros para cargar eventos.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}{% endblock extra_scripts %}

@@ -1,0 +1,324 @@
+{% extends 'parts/base.html' %}
+{% load humanize static %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="container mt-4"
+     data-dashboard-config
+     data-stats-url="{% url 'parts:dashboard_stats' %}"
+     data-chart-selector="#summaryChart"
+     data-selector-row="#summarySelectorRow"
+     data-description-selector="#chartDescription"
+     data-special-toolbar="#specialKindToolbar">
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <h2 class="mb-2">Dashboard integral</h2>
+    <span class="text-muted small">Actualizado al {{ now|date:"d/m/Y H:i" }}</span>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card metric-card metric-card--primary shadow-sm border-0">
+        <div class="card-body text-center py-3">
+          <div class="small text-uppercase opacity-75">Piezas totales</div>
+          <div class="display-6 fw-bold">{{ total_parts|intcomma }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card metric-card--success shadow-sm border-0">
+        <div class="card-body text-center py-3">
+          <div class="small text-uppercase opacity-75">Disponibles</div>
+          <div class="display-6 fw-bold">{{ available_parts|intcomma }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card metric-card--danger shadow-sm border-0">
+        <div class="card-body text-center py-3">
+          <div class="small text-uppercase opacity-75">Vendidas</div>
+          <div class="display-6 fw-bold">{{ sold_parts|intcomma }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card metric-card--violet shadow-sm border-0">
+        <div class="card-body text-center py-3">
+          <div class="small text-uppercase opacity-75">Autos registrados</div>
+          <div class="display-6 fw-bold">{{ total_autos|intcomma }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Ingresos últimos {{ period_days }} días</div>
+          <div class="h3 fw-bold mb-0">${{ revenue_period|floatformat:0|intcomma }}</div>
+          <p class="text-muted small mb-0">Basado en piezas con fecha de venta registrada.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Ticket promedio</div>
+          <div class="h3 fw-bold mb-0">${{ avg_ticket|floatformat:0|intcomma }}</div>
+          <p class="text-muted small mb-0">Promedio del valor de venta por pieza durante el período.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Sell-through</div>
+          <div class="h3 fw-bold mb-0">{{ sell_through_ratio }}%</div>
+          <p class="text-muted small mb-0">Relación entre piezas vendidas y totales.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="dashboard-summary-header mb-3">
+            <div>
+              <h5 class="card-title mb-1">Resumen interactivo</h5>
+              <p class="text-muted small mb-0">Explora el pulso diario, semanal, mensual y especial del inventario.</p>
+            </div>
+            <div id="summaryModeGroup" class="dashboard-mode-pills" role="toolbar" aria-label="Modo de resumen">
+              <button type="button" class="dashboard-pill" data-summary-mode="daily" aria-pressed="false">
+                <i class="bi bi-calendar-day"></i>
+                <span>Diario</span>
+              </button>
+              <button type="button" class="dashboard-pill" data-summary-mode="weekly" aria-pressed="false">
+                <i class="bi bi-calendar-week"></i>
+                <span>Semanal</span>
+              </button>
+              <button type="button" class="dashboard-pill dashboard-pill--active" data-summary-mode="monthly" aria-pressed="true">
+                <i class="bi bi-calendar-month"></i>
+                <span>Mensual</span>
+              </button>
+              <button type="button" class="dashboard-pill" data-summary-mode="yearly" aria-pressed="false">
+                <i class="bi bi-calendar3"></i>
+                <span>Anual</span>
+              </button>
+              <button type="button" class="dashboard-pill" data-summary-mode="special" aria-pressed="false">
+                <i class="bi bi-stars"></i>
+                <span>Especial</span>
+              </button>
+            </div>
+          </div>
+          <div id="specialKindToolbar" class="dashboard-mode-pills dashboard-mode-pills--ghost mb-3" role="toolbar" aria-label="Resumen especial" hidden>
+            <button type="button" class="dashboard-pill dashboard-pill--ghost dashboard-pill--active" data-special-kind="available_by_workshop" aria-pressed="true">
+              <span>Disponibles por taller</span>
+            </button>
+            <button type="button" class="dashboard-pill dashboard-pill--ghost" data-special-kind="parts_by_model" aria-pressed="false">
+              <span>Piezas por modelo</span>
+            </button>
+            <button type="button" class="dashboard-pill dashboard-pill--ghost" data-special-kind="model_value_sum" aria-pressed="false">
+              <span>Valor por modelo</span>
+            </button>
+            <button type="button" class="dashboard-pill dashboard-pill--ghost" data-special-kind="recent_sales_by_workshop" aria-pressed="false">
+              <span>Ventas recientes</span>
+            </button>
+            <button type="button" class="dashboard-pill dashboard-pill--ghost" data-special-kind="sales_all_time" aria-pressed="false">
+              <span>Ventas históricas</span>
+            </button>
+          </div>
+          <div id="summarySelectorRow" class="dashboard-chip-row mb-3"></div>
+          <div class="dashboard-panel dashboard-panel--summary mb-3">
+            <div class="text-muted small text-uppercase fw-semibold">Descripción</div>
+            <span id="chartDescription" class="dashboard-panel__text"></span>
+          </div>
+          <div class="dashboard-chart-shell">
+            <canvas id="summaryChart" class="w-100" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Top talleres por valor disponible</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Taller</th>
+                  <th class="text-end">Piezas</th>
+                  <th class="text-end">Valor estimado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for workshop in top_workshops %}
+                  <tr>
+                    <td>{{ workshop.name }}</td>
+                    <td class="text-end">{{ workshop.count|intcomma }}</td>
+                    <td class="text-end">${{ workshop.total|floatformat:0|intcomma }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="3" class="text-center text-muted py-3">Sin datos</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Modelos que concentran mayor valor</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Modelo</th>
+                  <th class="text-end">Piezas</th>
+                  <th class="text-end">Valor estimado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for model in top_models %}
+                  <tr>
+                    <td>{{ model.name }}</td>
+                    <td class="text-end">{{ model.count|intcomma }}</td>
+                    <td class="text-end">${{ model.total|floatformat:0|intcomma }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="3" class="text-center text-muted py-3">Sin datos</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Piezas premium pendientes</h5>
+          <p class="text-muted small">Top 5 piezas disponibles con mayor valor estimado.</p>
+          <ul class="list-group list-group-flush">
+            {% for part in high_value_parts %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">{{ part.name }}</div>
+                  <small class="text-muted">{{ part.auto }} · {{ part.workshop }}</small>
+                </div>
+                <span class="badge bg-primary rounded-pill">${{ part.max_value|floatformat:0|intcomma }}</span>
+              </li>
+            {% empty %}
+              <li class="list-group-item text-muted text-center">Sin datos</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Piezas con baja rotación</h5>
+          <p class="text-muted small">Revisa piezas con más de 60 días en inventario.</p>
+          <ul class="list-group list-group-flush">
+            {% for part in slow_moving_parts %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">{{ part.name }}</div>
+                  <small class="text-muted">{{ part.auto }} · {{ part.date_added|date:"d M Y" }}</small>
+                </div>
+                <span class="badge bg-warning text-dark rounded-pill">{{ part.workshop }}</span>
+              </li>
+            {% empty %}
+              <li class="list-group-item text-muted text-center">Inventario al día</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-5">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Sesiones de voz recientes</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Sesión</th>
+                  <th class="text-end">Parciales</th>
+                  <th class="text-end">Finales</th>
+                  <th class="text-end">Comandos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for sess in recent_voice_sessions %}
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">{{ sess.session_id }}</div>
+                      <small class="text-muted">{{ sess.started_at|date:"d/m H:i" }} · {{ sess.status }}</small>
+                    </td>
+                    <td class="text-end">{{ sess.partial_count|default:0 }}</td>
+                    <td class="text-end">{{ sess.final_count|default:0 }}</td>
+                    <td class="text-end">{{ sess.command_count|default:0 }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="4" class="text-center text-muted py-3">Sin sesiones recientes</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Indicadores de voz</h5>
+          <div class="row g-3">
+            <div class="col-6">
+              <div class="border rounded p-3 text-center">
+                <div class="text-muted small">Sesiones</div>
+                <div class="h4 mb-0">{{ voice_sessions_last|intcomma }}</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="border rounded p-3 text-center">
+                <div class="text-muted small">Ingestas confirmadas</div>
+                <div class="h4 mb-0">{{ ingests_last|intcomma }}</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="border rounded p-3 text-center">
+                <div class="text-muted small">Mic configs registradas</div>
+                <div class="h4 mb-0">{{ mic_configs_count|intcomma }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="{% static 'parts/vendor/chart.umd.min.js' %}"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:chartjs"
+        data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/dashboard-summary.js' %}?v=20250305a"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:dashboard"
+        data-turbo-track="reload"></script>
+{% endblock %}

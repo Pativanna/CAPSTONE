@@ -1,0 +1,59 @@
+{% extends 'parts/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">{{ form.instance.pk|yesno:"Editar Auto,Agregar Auto" }}</h2>
+  <a href="{% url 'parts:auto_list' %}" class="btn btn-outline-secondary"><i class="fas fa-list"></i> Volver al listado</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" action="" novalidate data-turbo="false">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="id_brand_model">{{ form.brand_model.label }}</label>
+          {{ form.brand_model }}
+          {% if form.brand_model.errors %}
+            <div class="invalid-feedback d-block">{{ form.brand_model.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-2">
+          <label class="form-label" for="id_year">{{ form.year.label }}</label>
+          {{ form.year }}
+          {% if form.year.errors %}
+            <div class="invalid-feedback d-block">{{ form.year.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="id_color">{{ form.color.label }}</label>
+          {{ form.color }}
+          {% if form.color.errors %}
+            <div class="invalid-feedback d-block">{{ form.color.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label" for="id_license_plate">{{ form.license_plate.label }}</label>
+          {{ form.license_plate }}
+          {% if form.license_plate.errors %}
+            <div class="invalid-feedback d-block">{{ form.license_plate.errors|striptags }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label" for="id_notes">{{ form.notes.label }}</label>
+        {{ form.notes }}
+        <div class="form-text">Máximo 400 caracteres. Útil para anotar estado mecánico, pendientes o advertencias.</div>
+        {% if form.notes.errors %}
+          <div class="invalid-feedback d-block">{{ form.notes.errors|striptags }}</div>
+        {% endif %}
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+        <a href="{% url 'parts:auto_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

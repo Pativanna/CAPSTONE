@@ -1,0 +1,171 @@
+{% load humanize %}
+{% for pieza in piezas %}
+  <div class="card mb-3 shadow-sm part-row-mobile {% if pieza.sold %}sold-row{% endif %}"
+       data-part-id="{{ pieza.id }}"
+       data-status="{{ pieza.availability_status }}"
+       data-incomplete="{{ pieza.is_incomplete|yesno:'true,false' }}"
+       data-missing-fields="{{ pieza.missing_required_fields|join:'|' }}"
+       data-missing-labels="{{ pieza.missing_required_fields_labels|join:'|' }}"
+       data-auto-search="{{ pieza.auto.brand_model|default_if_none:''|lower }} {{ pieza.auto.year|default_if_none:'' }}">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <h5 class="card-title mb-0 flex-grow-1">
+          <i class="fas fa-cog text-primary me-2"></i>
+          <span class="editable-mobile part-name-text" data-field="name">
+            {{ pieza.name }}
+            {% if pieza.position %}
+              <span class="part-position-label ms-1">{{ pieza.position }}</span>
+            {% endif %}
+          </span>
+          <span class="part-name-meta text-muted d-block">
+            <i class="fas fa-car-side me-1 text-primary"></i>
+            {{ pieza.auto.brand_model|default:"-" }} <span class="text-body-secondary ms-1">{{ pieza.auto.year|default:"" }}</span>
+          </span>
+        </h5>
+        {% with status=pieza.availability_status %}
+          {% if status == 'vendido' %}
+            <button class="btn btn-sm btn-success toggle-sold-btn ms-2"
+                    data-part-id="{{ pieza.id }}"
+                    data-status="{{ status }}"
+                    data-sold="true">
+              <i class="fas fa-check-circle"></i> Vendido
+            </button>
+          {% elif status == 'no_disponible' %}
+            <button class="btn btn-sm btn-warning text-dark toggle-sold-btn ms-2"
+                    data-part-id="{{ pieza.id }}"
+                    data-status="{{ status }}"
+                    data-sold="false"
+                    data-missing-label="{{ pieza.next_missing_label }}">
+              <i class="fas fa-triangle-exclamation"></i>
+              {% if pieza.next_missing_label %}
+                Falta {{ pieza.next_missing_label|lower }}
+              {% else %}
+                No disponible
+              {% endif %}
+            </button>
+          {% else %}
+            <button class="btn btn-sm btn-outline-success toggle-sold-btn ms-2"
+                    data-part-id="{{ pieza.id }}"
+                    data-status="{{ status }}"
+                    data-sold="false">
+              <i class="far fa-circle"></i> Disponible
+            </button>
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <small class="text-muted d-block">
+            <i class="fas fa-dollar-sign me-1"></i> Precio Inicial
+          </small>
+          <strong class="editable-mobile" data-field="max_value">
+            {% if pieza.max_value %}${{ pieza.max_value|floatformat:0|intcomma }}{% else %}-{% endif %}
+          </strong>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">
+            <i class="fas fa-tag me-1"></i> Último Precio
+          </small>
+          <strong class="editable-mobile" data-field="min_value">
+            {% if pieza.min_value %}${{ pieza.min_value|floatformat:0|intcomma }}{% else %}-{% endif %}
+          </strong>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">
+            <i class="fas fa-map-marker-alt me-1"></i> Ubicación
+          </small>
+          <span class="badge bg-secondary">{{ pieza.workshop.name }}</span>
+        </div>
+        <div class="col-6">
+          <small class="text-muted d-block">
+            <i class="fas fa-calendar me-1"></i> Fecha Ingreso
+          </small>
+          <span class="fw-semibold d-block">{{ pieza.date_added|date:"d/m/Y" }}</span>
+          <small class="text-muted">{{ pieza.date_added|date:"H:i" }} hrs</small>
+        </div>
+      </div>
+
+
+      <div class="mb-3">
+        <small class="text-muted d-block">
+          <i class="fas fa-file-text me-1"></i> Descripción
+        </small>
+        <div class="editable-mobile part-description"
+             data-field="details"
+             data-original-name="{{ pieza.catalog_name|default_if_none:'' }}"
+             data-raw-details="{{ pieza.details_serialized|default_if_none:''|escape }}">
+          {% if pieza.detail_sections %}
+            <div class="description-shell" data-description-shell>
+              <div class="description-toggle" data-description-toggle aria-expanded="false">
+                <div class="description-text">
+                  {% for block in pieza.detail_sections %}
+                    <div class="description-section">
+                      {% if block.label %}
+                        <span class="description-label">{{ block.label }}:</span>
+                      {% endif %}
+                      <span class="description-value">{{ block.value }}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+              <button type="button" class="description-more-btn btn btn-link btn-sm px-0" data-description-toggle-btn>
+                <span class="label-more">Mostrar todo</span>
+                <span class="label-less d-none">Contraer</span>
+              </button>
+            </div>
+          {% else %}
+            <span class="text-muted">-</span>
+          {% endif %}
+        </div>
+      </div>
+
+
+      <div class="mb-3">
+        <button type="button"
+                class="btn btn-outline-primary btn-sm w-100 view-photos-btn"
+                data-view-mode="mobile"
+                data-part-id="{{ pieza.id }}">
+          <i class="fas fa-image"></i> Ver fotos
+        </button>
+        <div class="part-photo-card-mobile mt-3" data-part-id="{{ pieza.id }}" hidden>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Galería</strong>
+            <div class="d-flex align-items-center gap-2">
+              <button type="button"
+                      class="btn btn-sm btn-success add-photos-btn"
+                      data-part-id="{{ pieza.id }}">
+                <i class="fas fa-plus"></i>
+              </button>
+              <button type="button"
+                      class="btn btn-link text-decoration-none collapse-photo-btn p-0"
+                      data-part-id="{{ pieza.id }}">
+                Ocultar
+              </button>
+            </div>
+          </div>
+          <div class="photo-gallery" data-photo-gallery>
+            <div class="text-muted small py-2">Cargando fotos...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-column flex-sm-row gap-2">
+        <a href="{% url 'parts:part_label' pieza.id %}?auto=1"
+           class="btn btn-outline-primary flex-fill">
+          <i class="bi bi-upc"></i> Etiqueta
+        </a>
+        <button class="btn btn-danger flex-fill delete-part-btn" data-part-id="{{ pieza.id }}">
+          <i class="fas fa-trash"></i> Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+{% empty %}
+  <div class="card">
+    <div class="card-body text-center text-muted py-5">
+      <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+      <p class="mb-0">No hay piezas registradas</p>
+    </div>
+  </div>
+{% endfor %}

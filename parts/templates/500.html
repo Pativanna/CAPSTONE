@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ocurrió un problema</title>
+    <link rel="stylesheet" href="{% static 'parts/css/app-shell.css' %}">
+    <link rel="stylesheet" href="{% static 'parts/css/design-system.css' %}">
+  </head>
+  <body class="bg-light">
+    <turbo-frame id="app-frame">
+      <main class="container py-5">
+        <section class="card border-0 shadow-sm mx-auto max-w-640">
+          <div class="card-body text-center">
+            <div class="mb-3 fs-emoji-xl" aria-hidden="true">⚠️</div>
+            <h1 class="h4 mb-3">Estamos teniendo dificultades</h1>
+            <p class="text-muted mb-4">
+              El módulo que intentaste abrir no respondió correctamente. Nuestro equipo ha sido notificado.
+              Intenta nuevamente en unos instantes o vuelve al dashboard.
+            </p>
+            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+              <a href="{% url 'parts:home' %}" class="btn btn-primary">
+                Ir al dashboard
+              </a>
+              <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()">
+                Reintentar
+              </button>
+            </div>
+          </div>
+          <div class="card-footer text-center text-muted small">
+            Seguimos buenas prácticas ISO/IEC 27001 y registramos este evento en nuestros monitores.
+          </div>
+        </section>
+      </main>
+    </turbo-frame>
+  </body>
+</html>

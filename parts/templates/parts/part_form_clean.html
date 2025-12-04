@@ -1,0 +1,183 @@
+{% extends 'parts/base.html' %}
+{% load static %}
+
+{% block extra_head %}
+  <link rel="stylesheet"
+        href="{% static 'parts/css/hands-free.css' %}"
+        nonce="{{ csp_nonce|default:'' }}"
+        data-style-watch="primary"
+        data-turbo-track="reload">
+{% endblock %}
+
+{% block content %}
+<h2 id="page-title">{{ form.instance.pk|yesno:"Editar Pieza,Agregar Nueva Pieza" }}</h2>
+
+{% if not form.instance.pk %}
+<!-- FASE 1: Selección de taller y vehículo -->
+<div id="fase-seleccion" class="card mb-4 p-3">
+  <h5 class="mb-3">Fase 1: Seleccione taller y vehículo</h5>
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Taller</label>
+      <select id="persistent-workshop-selector" class="form-select">
+        <option value="">-- Seleccione taller --</option>
+        {% for w in workshops %}
+        <option value="{{ w.id }}">{{ w.name }}</option>
+        {% endfor %}
+      </select>
+      <small id="workshop-status" class="text-muted"></small>
+    </div>
+    <div class="col-md-8">
+      <label class="form-label">Vehículo</label>
+      <div class="d-flex gap-2 mb-2">
+        <button type="button" id="mode-select-auto" class="btn btn-outline-primary btn-sm">Seleccionar Auto</button>
+        <a href="{% url 'parts:auto_list' %}" class="btn btn-outline-secondary btn-sm" data-turbo-frame="app-frame">Ver Autos</a>
+        <button type="button" id="mode-single" class="btn btn-outline-info btn-sm">Ingreso Unitario</button>
+      </div>
+      <div id="select-auto-box" class="d-none" hidden>
+        <select id="auto-selector" class="form-select mb-2">
+          <option value="">-- Seleccione un auto --</option>
+          {% for a in autos %}
+          <option value="{{ a.id }}">{{ a.brand_model }}, {{ a.year }}{% if a.license_plate %} - {{ a.license_plate }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        <div class="d-flex gap-2">
+          <button type="button" id="confirm-auto" class="btn btn-success btn-sm">Usar este vehículo</button>
+          <button type="button" id="clear-selection" class="btn btn-link text-danger btn-sm">Cancelar</button>
+        </div>
+      </div>
+      <div id="single-entry-box" class="d-none" hidden>
+        <input id="single-model" class="form-control mb-2" placeholder="Modelo (ej: Toyota Yaris 2010)">
+        <input id="single-color" class="form-control mb-2" placeholder="Color (ej: blanco)">
+        <div class="d-flex gap-2">
+          <button type="button" id="use-single" class="btn btn-success btn-sm">Usar este vehículo</button>
+          <button type="button" id="cancel-single" class="btn btn-link text-danger btn-sm">Cancelar</button>
+        </div>
+      </div>
+      <div id="current-selection" class="mt-2 d-none" hidden>
+        <strong>Vehículo seleccionado:</strong>
+        <span id="selected-display" class="ms-2"></span>
+        <button type="button" id="change-vehicle" class="btn btn-outline-secondary btn-sm ms-2">Cambiar</button>
+        <button type="button" id="use-previous" class="btn btn-success btn-sm ms-2 d-none" hidden>Usar selección anterior</button>
+      </div>
+    </div>
+  </div>
+  <hr class="my-3">
+  <div class="d-flex justify-content-end">
+    <button id="continuar-a-fase-voz" type="button" class="btn btn-primary">Continuar a ingesta por voz</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- FASE 2: Interfaz de ingesta por voz -->
+<div id="voice-recording-interface" class="card mb-4 p-3 d-none" hidden aria-describedby="voice-status-live">
+  <h5 id="voice-title" class="mb-3">Fase 2: Ingesta por voz</h5>
+  <div class="mb-3">
+    <button id="btn-iniciar-sesion" type="button" class="btn btn-outline-success">Iniciar sesión de voz</button>
+    <button id="btn-iniciar-proceso" type="button" class="btn btn-primary" disabled>Iniciar ingreso</button>
+    <button id="btn-finalizar-proceso" type="button" class="btn btn-danger" disabled>Detener ingreso</button>
+    <button id="btn-confirmar-datos" type="button" class="btn btn-success" disabled>Confirmar ingreso</button>
+    <button id="btn-repetir-proceso" type="button" class="btn btn-warning" disabled>Repetir ingreso</button>
+    <button id="btn-cancelar-proceso" type="button" class="btn btn-secondary" disabled>Cancelar ingreso</button>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Transcripciones parciales</label>
+      <div id="transcripciones-parciales"
+           class="border rounded p-2 voice-transcript-box"
+           role="log"
+           aria-live="polite"
+           aria-label="Transcripciones parciales en tiempo real"></div>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Transcripción final acumulada</label>
+      <textarea id="transcripcion-final"
+                class="form-control"
+                rows="10"
+                readonly
+                aria-live="polite"
+                aria-label="Transcripción final confirmada"></textarea>
+    </div>
+  </div>
+  <input type="hidden" id="session-id-voz" value="">
+  <small class="text-muted d-block mt-2" id="estado-voz" role="status" aria-live="assertive">Sesión no iniciada.</small>
+  <span id="voice-status-live" class="sr-only" aria-live="assertive">Sesión no iniciada.</span>
+
+  <div id="extracted-data-card" class="card mt-3 d-none" hidden aria-live="polite">
+    <div class="card-header py-2">
+      <strong>Datos extraídos</strong>
+    </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <small class="text-muted d-block text-uppercase fw-semibold">Nombre normalizado</small>
+        <p id="extracted-parte" class="fw-bold mb-0">--</p>
+      </div>
+        <div class="col-md-6">
+          <small class="text-muted d-block text-uppercase fw-semibold">Posición</small>
+          <p id="extracted-posicion" class="fw-bold mb-0">--</p>
+        </div>
+        <div class="col-md-6">
+          <small class="text-muted d-block text-uppercase fw-semibold">Precio inicial</small>
+          <p id="extracted-valor" class="mb-0">--</p>
+        </div>
+        <div class="col-md-6">
+          <small class="text-muted d-block text-uppercase fw-semibold">Precio oferta</small>
+          <p id="extracted-min-value" class="mb-0">--</p>
+        </div>
+      <div class="col-12">
+        <small class="text-muted d-block text-uppercase fw-semibold">Detalles</small>
+        <p id="extracted-detalles" class="mb-0">--</p>
+      </div>
+    </div>
+    <div id="extracted-data-status" class="alert alert-info mt-3 d-none" role="status" aria-live="polite">
+      Preparando datos extraídos…
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- FASE 3: Formulario manual (se muestra tras confirmar datos) -->
+<form
+  method="post"
+  {% if not form.instance.pk %}action="{% url 'parts:part_create' %}"{% endif %}
+  enctype="multipart/form-data"
+  class="mt-3 {% if not form.instance.pk %}d-none{% endif %}"
+  id="part-form"
+  data-is-edit="{{ form.instance.pk|yesno:'true,false' }}"
+  {% if not form.instance.pk %}hidden{% endif %}>
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="mb-3">
+    <button type="button" id="clear-fields" class="btn btn-outline-warning btn-sm">Limpiar campos</button>
+  </div>
+  <button type="submit" class="btn btn-primary">Guardar Pieza</button>
+  <a href="{% url 'parts:part_list' %}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+<script src="{% static 'parts/recorder.js' %}"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:recorder"
+        data-turbo-track="reload"></script>
+<script src="{% static 'parts/voice-coordinator.js' %}"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:voice-coordinator"
+        data-turbo-track="reload"></script>
+<script src="{% static 'parts/voice-webrtc-hybrid.js' %}"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:voice-webrtc"
+        data-turbo-track="reload"></script>
+<script src="{% static 'parts/voice_ingesta.js' %}"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:voice-ingesta"
+        data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/part-form-clean.js' %}?v=20250305a"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:part-form-clean"
+        data-turbo-track="reload"></script>
+{% endblock %}
