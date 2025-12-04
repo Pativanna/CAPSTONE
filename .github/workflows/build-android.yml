@@ -44,6 +44,7 @@ jobs:
         DEBUG: 'true'
         ALLOW_DEV_SECRET: 'true'
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
+        PYTHONPATH: ${{ github.workspace }}
       run: |
         python manage.py collectstatic --noinput
         
