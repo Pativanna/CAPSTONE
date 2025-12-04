@@ -3,9 +3,9 @@
   "appName": "Car Inventory",
   "webDir": "staticfiles",
   "server": {
-    "url": "http://localhost:8000",
-    "cleartext": true,
-    "androidScheme": "http"
+    "url": "https://www.transervis.cl",
+    "cleartext": false,
+    "androidScheme": "https"
   },
   "plugins": {
     "SplashScreen": {
