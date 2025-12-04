@@ -292,6 +292,12 @@ function setupZxingReader(retries = 5) {
     // Obtener bootlog actual
     const bootLog = typeof window.__getBootLog === 'function' ? window.__getBootLog() : [];
     
+    // Obtener diagnóstico completo de ML Kit
+    let mlkitDiagnostics = null;
+    if (mlKitScanner && typeof mlKitScanner.getDiagnostics === 'function') {
+      mlkitDiagnostics = mlKitScanner.getDiagnostics();
+    }
+    
     // Limpiar bootlog en memoria para la próxima exportación
     if (typeof window.__clearBootLog === 'function') {
       window.__clearBootLog();
@@ -311,6 +317,7 @@ function setupZxingReader(retries = 5) {
       scanner_log: scannerLog,
       session_log_snapshot: storedSnapshot,
       bootlog: bootLog,
+      mlkit_diagnostics: mlkitDiagnostics,
     };
   }
 
@@ -761,29 +768,46 @@ function setupZxingReader(retries = 5) {
   }
 
   async function startCamera() {
-    // Diagnóstico detallado
-    console.log('[scanner:startCamera] Debug Info:');
-    console.log('  - isNativePlatform:', isNativePlatform);
-    console.log('  - window.Capacitor:', typeof window.Capacitor);
-    console.log('  - window.MLKitNativeScanner:', typeof window.MLKitNativeScanner);
-    console.log('  - mlKitScanner:', mlKitScanner);
+    // Diagnóstico detallado PRE-inicio
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('[scanner:startCamera] INICIO DE DIAGNÓSTICO COMPLETO');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('1. PLATAFORMA:');
+    console.log('   - isNativePlatform:', isNativePlatform);
+    console.log('   - window.Capacitor exists:', typeof window.Capacitor !== 'undefined');
+    console.log('   - window.Capacitor.isNativePlatform():', window.Capacitor?.isNativePlatform?.());
+    console.log('   - window.Capacitor.getPlatform():', window.Capacitor?.getPlatform?.());
+    console.log('');
+    console.log('2. MLKIT:');
+    console.log('   - window.MLKitNativeScanner class exists:', typeof window.MLKitNativeScanner !== 'undefined');
+    console.log('   - mlKitScanner instance:', mlKitScanner);
+    console.log('   - mlKitScanner.isSupported (BEFORE ensureReady):', mlKitScanner?.isSupported);
+    console.log('   - mlKitScanner._initPromise exists:', mlKitScanner?._initPromise ? 'YES' : 'NO');
+    console.log('');
     
     appendDebugLog('camera:start-debug', {
       isNativePlatform,
       hasCapacitor: typeof window.Capacitor !== 'undefined',
       hasMLKitClass: typeof window.MLKitNativeScanner !== 'undefined',
-      hasMLKitInstance: !!mlKitScanner
+      hasMLKitInstance: !!mlKitScanner,
+      mlkitIsSupportedBeforeReady: mlKitScanner?.isSupported || false
     });
     
     // Si estamos en app móvil nativa, usar ML Kit directamente
     if (isNativePlatform && mlKitScanner) {
-      console.log('[scanner] Ensuring ML Kit is ready...');
+      console.log('3. ESPERANDO INICIALIZACIÓN DE MLKIT:');
+      console.log('   - Calling mlKitScanner.ensureReady()...');
       
       // Esperar a que ML Kit termine de inicializarse
       const isReady = await mlKitScanner.ensureReady();
-      console.log('[scanner] ML Kit ready:', isReady);
+      
+      console.log('   - ensureReady() returned:', isReady);
+      console.log('   - mlKitScanner.isSupported (AFTER ensureReady):', mlKitScanner.isSupported);
+      console.log('');
       
       if (isReady) {
+        console.log('4. MLKIT LISTO - INICIANDO ESCÁNER NATIVO');
+        console.log('═══════════════════════════════════════════════════════');
         console.log('[scanner] Using ML Kit Native Scanner');
         setCameraStatus('Preparando escáner nativo...');
       
@@ -824,7 +848,23 @@ function setupZxingReader(retries = 5) {
           });
         }
       } catch (error) {
-        console.error('[scanner] ML Kit error:', error);
+        console.error('════════════════════════════════════════════════════════');
+        console.error('[scanner] ❌ ERROR EN MLKIT NATIVE SCANNER');
+        console.error('════════════════════════════════════════════════════════');
+        console.error('Error object:', error);
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.code);
+        console.error('Error stack:', error.stack);
+        console.error('════════════════════════════════════════════════════════');
+        
+        appendDebugLog('camera:mlkit-error', {
+          errorName: error.name,
+          errorMessage: error.message,
+          errorCode: error.code,
+          errorStack: error.stack
+        });
+        
         setCameraStatus('Error en escáner nativo: ' + error.message);
         appendLog('Error en escáner nativo', 'danger', {
           title: 'Error',
@@ -841,11 +881,32 @@ function setupZxingReader(retries = 5) {
       }
       return;
       } else {
-        console.log('[scanner] ML Kit not ready, falling back to web camera');
+        console.log('════════════════════════════════════════════════════════');
+        console.log('[scanner] ⚠️  MLKIT NO ESTÁ LISTO');
+        console.log('════════════════════════════════════════════════════════');
+        console.log('   - isReady:', false);
+        console.log('   - Falling back to web camera');
+        console.log('════════════════════════════════════════════════════════');
+        
+        appendDebugLog('camera:mlkit-not-ready', {
+          isReady: false,
+          fallbackToWeb: true
+        });
       }
+    } else {
+      console.log('════════════════════════════════════════════════════════');
+      console.log('[scanner] ℹ️  CONDICIÓN NO CUMPLIDA PARA MLKIT');
+      console.log('════════════════════════════════════════════════════════');
+      console.log('   - isNativePlatform:', isNativePlatform);
+      console.log('   - mlKitScanner:', !!mlKitScanner);
+      console.log('   - Usando escáner web tradicional');
+      console.log('════════════════════════════════════════════════════════');
     }
     
     // Navegador web: usar escáner web tradicional
+    console.log('');
+    console.log('5. INICIANDO ESCÁNER WEB (FALLBACK O DEFAULT)');
+    console.log('════════════════════════════════════════════════════════');
     await startWebCamera();
   }
 
