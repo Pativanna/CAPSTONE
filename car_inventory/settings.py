@@ -155,6 +155,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'parts.middleware.SecurityHeadersMiddleware',
+    'parts.middleware_capacitor.CapacitorNoCacheMiddleware',  # Deshabilita cache para apps Capacitor
     'parts.middleware.RequestContextMiddleware',
     'parts.middleware.SessionExpiryMiddleware',
     'parts.middleware.AjaxErrorMiddleware',  # Convierte errores a JSON para AJAX

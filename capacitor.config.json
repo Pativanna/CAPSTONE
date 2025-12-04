@@ -5,11 +5,24 @@
   "server": {
     "url": "https://www.transervis.cl",
     "cleartext": false,
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "allowNavigation": [
+      "https://www.transervis.cl"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true,
+    "overrideUserAgent": "CarInventoryApp/1.0 Capacitor",
+    "appendUserAgent": " DevMode"
   },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 0
+    },
+    "CapacitorHttp": {
+      "enabled": true
     }
   }
 }
