@@ -145,7 +145,7 @@
 
 <!-- Scripts de la página (DEBEN estar dentro de {% block content %} para Turbo) -->
 <!-- Los plugins nativos se cargan SIN defer para estar disponibles antes del script principal -->
-<script src="{% static 'parts/js/zxing-native-scanner.js' %}?v=20251204g"
+<script src="{% static 'parts/js/zxing-native-scanner.js' %}?v=20251204h"
         data-page-script="parts:zxing-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
@@ -163,7 +163,7 @@
         nonce="{{ csp_nonce|default:'' }}"></script>
         
 <!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251204g"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251204h"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"

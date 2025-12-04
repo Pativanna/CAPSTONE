@@ -32,6 +32,38 @@ class ZxingNativeScanner {
     return !!this.plugin;
   }
   
+  async checkPermissions() {
+    if (!this.plugin) {
+      return { camera: 'denied' };
+    }
+    
+    try {
+      console.log('[ZXing] Checking permissions...');
+      const result = await this.plugin.checkPermissions();
+      console.log('[ZXing] Permissions status:', result);
+      return result;
+    } catch (error) {
+      console.error('[ZXing] Error checking permissions:', error);
+      return { camera: 'denied' };
+    }
+  }
+  
+  async requestPermissions() {
+    if (!this.plugin) {
+      throw new Error('ZXing plugin not available');
+    }
+    
+    try {
+      console.log('[ZXing] Requesting camera permissions...');
+      const result = await this.plugin.requestPermissions();
+      console.log('[ZXing] Permission request result:', result);
+      return result;
+    } catch (error) {
+      console.error('[ZXing] Error requesting permissions:', error);
+      throw error;
+    }
+  }
+  
   async startScan(callback) {
     if (!this.plugin) {
       throw new Error('ZXing plugin not available');
@@ -40,6 +72,19 @@ class ZxingNativeScanner {
     if (this.isScanning) {
       console.warn('[ZXing] Already scanning');
       return;
+    }
+    
+    // Verificar permisos antes de iniciar
+    const permissions = await this.checkPermissions();
+    console.log('[ZXing] Pre-scan permissions check:', permissions);
+    
+    if (permissions.camera !== 'granted') {
+      console.log('[ZXing] Camera permission not granted, requesting...');
+      const requestResult = await this.requestPermissions();
+      
+      if (requestResult.camera !== 'granted') {
+        throw new Error('Camera permission denied');
+      }
     }
     
     this.onBarcodeDetected = callback;

@@ -93,6 +93,30 @@ public class ZxingScannerPlugin extends Plugin {
     }
     
     @PluginMethod
+    public void checkPermissions(PluginCall call) {
+        JSObject result = new JSObject();
+        
+        if (hasRequiredPermissions()) {
+            result.put("camera", "granted");
+        } else {
+            result.put("camera", "prompt");
+        }
+        
+        call.resolve(result);
+    }
+    
+    @PluginMethod
+    public void requestPermissions(PluginCall call) {
+        if (hasRequiredPermissions()) {
+            JSObject result = new JSObject();
+            result.put("camera", "granted");
+            call.resolve(result);
+        } else {
+            requestAllPermissions(call, "permissionsCallback");
+        }
+    }
+    
+    @PluginMethod
     public void startScan(PluginCall call) {
         if (isScanning) {
             call.reject("Scanner already active");
@@ -100,7 +124,7 @@ public class ZxingScannerPlugin extends Plugin {
         }
         
         if (!hasRequiredPermissions()) {
-            requestAllPermissions(call, "cameraPermissionCallback");
+            call.reject("Camera permission not granted");
             return;
         }
         
