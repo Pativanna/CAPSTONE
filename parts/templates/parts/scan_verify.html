@@ -143,17 +143,17 @@
 
 {{ initial_parts_payload|safe }}
 
-<script src="{% static 'parts/js/zxing-native-scanner.js' %}?v=20251204f"
+<!-- Scripts de la página (DEBEN estar dentro de {% block content %} para Turbo) -->
+<!-- Los plugins nativos se cargan SIN defer para estar disponibles antes del script principal -->
+<script src="{% static 'parts/js/zxing-native-scanner.js' %}?v=20251204g"
         data-page-script="parts:zxing-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
-<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251204f"
-        data-page-script="parts:mlkit-scanner"
-        data-turbo-track="reload"
-        nonce="{{ csp_nonce|default:'' }}"></script>
+        
+<!-- Bibliotecas de escaneo web (con defer, cargan después) -->
 <script src="{% static 'parts/vendor/zxing-index.min.js' %}?v=20250315a"
         defer
-        data-page-script="parts:zxing"
+        data-page-script="parts:zxing-vendor"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
 <script src="{% static 'parts/vendor/jsQR.min.js' %}?v=20250310f"
@@ -161,7 +161,9 @@
         data-page-script="parts:jsqr"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251204f"
+        
+<!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251204g"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"
