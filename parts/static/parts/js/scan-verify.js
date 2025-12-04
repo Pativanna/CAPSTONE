@@ -10,11 +10,16 @@
     console.log('[scanner] Platform Details:', window.Capacitor.getPlatform());
   }
 
-  // Inicializar ML Kit Native Scanner si estamos en plataforma nativa
-  let mlKitScanner = null;
-  if (isNativePlatform && window.MLKitNativeScanner) {
-    mlKitScanner = new window.MLKitNativeScanner();
-    console.log('[scanner] ML Kit Native Scanner initialized');
+  // Inicializar ZXing Native Scanner (escaneo continuo con overlay)
+  let zxingScanner = null;
+  if (isNativePlatform && window.ZxingNativeScanner) {
+    zxingScanner = new window.ZxingNativeScanner();
+    if (zxingScanner.isSupported()) {
+      console.log('[scanner] ZXing Native Scanner initialized and ready');
+    } else {
+      console.log('[scanner] ZXing plugin not available, using web scanner');
+      zxingScanner = null;
+    }
   }
 
   const LOW_LIGHT_THRESHOLD = 0.24;
@@ -768,48 +773,48 @@ function setupZxingReader(retries = 5) {
   }
 
   async function startCamera() {
-    // Diagnóstico detallado PRE-inicio
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('[scanner:startCamera] INICIO DE DIAGNÓSTICO COMPLETO');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('1. PLATAFORMA:');
-    console.log('   - isNativePlatform:', isNativePlatform);
-    console.log('   - window.Capacitor exists:', typeof window.Capacitor !== 'undefined');
-    console.log('   - window.Capacitor.isNativePlatform():', window.Capacitor?.isNativePlatform?.());
-    console.log('   - window.Capacitor.getPlatform():', window.Capacitor?.getPlatform?.());
-    console.log('');
-    console.log('2. MLKIT:');
-    console.log('   - window.MLKitNativeScanner class exists:', typeof window.MLKitNativeScanner !== 'undefined');
-    console.log('   - mlKitScanner instance:', mlKitScanner);
-    console.log('   - mlKitScanner.isSupported (BEFORE ensureReady):', mlKitScanner?.isSupported);
-    console.log('   - mlKitScanner._initPromise exists:', mlKitScanner?._initPromise ? 'YES' : 'NO');
-    console.log('');
+    console.log('[scanner:startCamera] Starting...');
     
-    appendDebugLog('camera:start-debug', {
-      isNativePlatform,
-      hasCapacitor: typeof window.Capacitor !== 'undefined',
-      hasMLKitClass: typeof window.MLKitNativeScanner !== 'undefined',
-      hasMLKitInstance: !!mlKitScanner,
-      mlkitIsSupportedBeforeReady: mlKitScanner?.isSupported || false
-    });
+    // Si estamos en Android con ZXing nativo, usar escaneo continuo nativo
+    if (isNativePlatform && zxingScanner) {
+      console.log('[scanner] Using ZXing Native Scanner (continuous mode)');
+      
+      if (els.toggleCameraBtn) {
+        els.toggleCameraBtn.disabled = true;
+        els.toggleCameraBtn.setAttribute('aria-busy', 'true');
+      }
+      
+      try {
+        setCameraStatus('Iniciando escáner nativo...');
+        
+        // Iniciar escaneo continuo con callback
+        await zxingScanner.startScan((result) => {
+          console.log('[scanner] ZXing detected:', result);
+          // Procesar código detectado
+          handleDecodedValue(result.value, null, 'zxing-native', result.cornerPoints || null);
+        });
+        
+        setCameraStatus('Escáner activo - Apunta al código de barras');
+        
+      } catch (error) {
+        console.error('[scanner] ZXing error:', error);
+        setCameraStatus('Error en escáner nativo: ' + error.message);
+        // Fallback a escáner web
+        console.warn('[scanner] Falling back to web scanner');
+        await startWebCamera();
+      }
+      
+      if (els.toggleCameraBtn) {
+        els.toggleCameraBtn.disabled = false;
+        els.toggleCameraBtn.removeAttribute('aria-busy');
+      }
+      return;
+    }
     
-    // Si estamos en app móvil nativa, usar ML Kit directamente
-    if (isNativePlatform && mlKitScanner) {
-      console.log('3. ESPERANDO INICIALIZACIÓN DE MLKIT:');
-      console.log('   - Calling mlKitScanner.ensureReady()...');
-      
-      // Esperar a que ML Kit termine de inicializarse
-      const isReady = await mlKitScanner.ensureReady();
-      
-      console.log('   - ensureReady() returned:', isReady);
-      console.log('   - mlKitScanner.isSupported (AFTER ensureReady):', mlKitScanner.isSupported);
-      console.log('');
-      
-      if (isReady) {
-        console.log('4. MLKIT LISTO - INICIANDO ESCÁNER NATIVO');
-        console.log('═══════════════════════════════════════════════════════');
-        console.log('[scanner] Using ML Kit Native Scanner');
-        setCameraStatus('Preparando escáner nativo...');
+    // Navegador web o fallback: usar escáner web tradicional
+    console.log('[scanner] Using web camera scanner');
+    await startWebCamera();
+  }
       
       if (els.toggleCameraBtn) {
         els.toggleCameraBtn.disabled = true;
@@ -833,18 +838,47 @@ function setupZxingReader(retries = 5) {
         
         setCameraStatus('Escáner nativo activo - Apunta al código de barras');
         
+        appendDebugLog('camera:mlkit-starting-scan', {
+          hasSelectedPart: !!state.selectedPart,
+          partId: state.selectedPart?.id
+        });
+        
         // Iniciar escáner nativo (bloquea UI hasta detectar o cancelar)
+        console.log('[scanner] Calling mlKitScanner.startScan()...');
         const result = await mlKitScanner.startScan();
+        console.log('[scanner] startScan() returned:', result);
+        
+        appendDebugLog('camera:mlkit-scan-returned', {
+          hasResult: !!result,
+          hasValue: !!result?.value,
+          value: result?.value,
+          format: result?.format
+        });
         
         if (result && result.value) {
-          console.log('[scanner] ML Kit detected:', result);
+          console.log('[scanner] ✅ ML Kit detected barcode:', result.value);
+          setCameraStatus('Código detectado: ' + result.value);
+          
+          appendDebugLog('camera:mlkit-barcode-detected', {
+            value: result.value,
+            format: result.format,
+            source: result.source
+          });
+          
           // Procesar el código detectado usando el flujo existente
+          console.log('[scanner] Calling handleDecodedValue()...');
           handleDecodedValue(result.value, null, 'mlkit-native', result.cornerPoints || null);
+          console.log('[scanner] handleDecodedValue() completed');
         } else {
+          console.log('[scanner] ⚠️  No barcode detected or scan cancelled');
           setCameraStatus('Escaneo cancelado');
           appendLog('Escaneo cancelado', 'info', {
             title: 'Escaneo cancelado',
             description: 'No se detectó ningún código'
+          });
+          
+          appendDebugLog('camera:mlkit-no-result', {
+            result: result
           });
         }
       } catch (error) {
@@ -1049,6 +1083,13 @@ function setupZxingReader(retries = 5) {
   }
 
   function stopCamera() {
+    // Detener escáner nativo ZXing si está activo
+    if (zxingScanner) {
+      zxingScanner.stopScan().catch(err => {
+        console.warn('[scanner] Error stopping ZXing:', err);
+      });
+    }
+    
     if (state.stream) {
       state.stream.getTracks().forEach((track) => track.stop());
       state.stream = null;
