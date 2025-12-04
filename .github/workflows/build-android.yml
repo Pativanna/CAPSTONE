@@ -26,6 +26,17 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '21'
+
+    - name: Configure Android SDK path
+      shell: bash
+      run: |
+        SDK_PATH="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+        if [ -z "$SDK_PATH" ]; then
+          echo "Android SDK path not found in ANDROID_SDK_ROOT/ANDROID_HOME" >&2
+          exit 1
+        fi
+        echo "sdk.dir=${SDK_PATH}" > android/local.properties
+        cat android/local.properties
         
     - name: Install dependencies
       run: npm ci
