@@ -40,6 +40,10 @@ jobs:
         pip install -r requirements.txt
         
     - name: Collect static files
+      env:
+        DEBUG: 'true'
+        ALLOW_DEV_SECRET: 'true'
+        ALLOWED_HOSTS: 'localhost,127.0.0.1'
       run: |
         python manage.py collectstatic --noinput
         
