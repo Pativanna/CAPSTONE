@@ -46,7 +46,12 @@ jobs:
         ALLOWED_HOSTS: 'localhost,127.0.0.1'
         PYTHONPATH: ${{ github.workspace }}
       run: |
-        python manage.py collectstatic --noinput
+        python manage.py collectstatic --noinput --clear
+        
+    - name: Remove compressed duplicates
+      run: |
+        find staticfiles -name "*.gz" -type f -delete
+        echo "Removed compressed files to prevent duplicate assets"
         
     - name: Sync Capacitor
       run: |
