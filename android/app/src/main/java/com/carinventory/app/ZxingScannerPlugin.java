@@ -52,6 +52,7 @@ import java.util.concurrent.Executors;
         )
     }
 )
+@SuppressWarnings({"unused", "RedundantSuppression"})
 public class ZxingScannerPlugin extends Plugin {
     
     private PreviewView previewView;
@@ -204,8 +205,10 @@ public class ZxingScannerPlugin extends Plugin {
         
         try {
             cameraProvider.unbindAll();
+            // BridgeActivity extends AppCompatActivity que implementa LifecycleOwner
+            LifecycleOwner lifecycleOwner = (LifecycleOwner) getActivity();
             camera = cameraProvider.bindToLifecycle(
-                (LifecycleOwner) getActivity(),
+                lifecycleOwner,
                 cameraSelector,
                 preview,
                 imageAnalysis

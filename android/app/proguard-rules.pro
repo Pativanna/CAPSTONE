@@ -19,3 +19,17 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ZXing barcode scanning library
+-keep class com.google.zxing.** { *; }
+-dontwarn com.google.zxing.**
+
+# CameraX library
+-keep class androidx.camera.** { *; }
+-dontwarn androidx.camera.**
+
+# Capacitor plugins
+-keep class com.carinventory.app.ZxingScannerPlugin { *; }
+-keepclassmembers class com.carinventory.app.ZxingScannerPlugin {
+    @com.getcapacitor.PluginMethod *;
+}
