@@ -1,0 +1,18 @@
+{
+  "name": "car_inventory",
+  "version": "1.0.0",
+  "description": "Sistema de inventario con reconocimiento de voz, WebRTC, impresión térmica Bluetooth y API REST. Desarrollado con Django Channels, Vosk, OpenAI Whisper y WebSocket.",
+  "main": "debug_scanner.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^7.4.0",
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4"
+  }
+}

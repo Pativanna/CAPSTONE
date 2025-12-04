@@ -12,21 +12,107 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 import logging
+import warnings
+import secrets
+from urllib.parse import urlparse, parse_qs, unquote
 from logging.config import dictConfig
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# ------------------------------------------------------------------
+# Vosk model path auto-discovery (works both locally and in Docker)
+
+
+def _resolve_vosk_model_path() -> str:
+    """Return a valid Vosk model directory, preferring env + local copies."""
+    env_path = os.environ.get('VOSK_MODEL_PATH')
+    candidate_paths = []
+
+    if env_path:
+        candidate_paths.append(Path(env_path).expanduser())
+
+    local_models_root = BASE_DIR / 'vosk-models'
+    if local_models_root.exists():
+        candidate_paths.append(local_models_root / 'vosk-model-small-es-0.42')
+        candidate_paths.append(local_models_root / 'vosk-model-es-0.42')
+        candidate_paths.append(local_models_root)
+
+    candidate_paths.append(Path('/app/vosk-models/vosk-model-small-es-0.42'))
+    candidate_paths.append(Path('/app/vosk-models/vosk-model-es-0.42'))
+
+    for candidate in candidate_paths:
+        if candidate and candidate.is_dir():
+            resolved = str(candidate)
+            os.environ['VOSK_MODEL_PATH'] = resolved
+            return resolved
+
+    if env_path:
+        warnings.warn(
+            f"VOSK_MODEL_PATH '{env_path}' no existe. "
+            "Falling back to /app/vosk-models/vosk-model-es-0.42"
+        )
+
+    default_path = '/app/vosk-models/vosk-model-es-0.42'
+    os.environ.setdefault('VOSK_MODEL_PATH', default_path)
+    return default_path
+
+
+VOSK_MODEL_PATH = _resolve_vosk_model_path()
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dlqt!)6jey7e!6d$w-kdc(haol$ry-#^(1@#!50()#&qskm%2e')
+
+
+def _get_secret_key() -> str:
+    key = os.environ.get('SECRET_KEY')
+    if key:
+        return key
+
+    running_tests = 'test' in sys.argv
+    allow_ephemeral = os.environ.get('ALLOW_DEV_SECRET', 'false').lower() == 'true'
+    debug_env = os.environ.get('DEBUG', 'false').lower() == 'true'
+
+    if running_tests:
+        warnings.warn(
+            "SECRET_KEY no configurada. Se generará un valor aleatorio temporal únicamente para tests.",
+            RuntimeWarning
+        )
+        return secrets.token_urlsafe(64)
+
+    if allow_ephemeral and debug_env:
+        warnings.warn(
+            "SECRET_KEY no configurada. Se generará un valor aleatorio temporal únicamente para desarrollo local "
+            "con DEBUG=True; configura SECRET_KEY en variables de entorno para ambientes reales.",
+            RuntimeWarning
+        )
+        return secrets.token_urlsafe(64)
+
+    if allow_ephemeral and not debug_env:
+        raise RuntimeError(
+            "ALLOW_DEV_SECRET solo se admite con DEBUG=True. Configura SECRET_KEY en el entorno para ejecutar en "
+            "modo producción."
+        )
+
+    raise RuntimeError(
+        "SECRET_KEY no configurada. Define la variable de entorno SECRET_KEY o habilita ALLOW_DEV_SECRET=true y DEBUG=True "
+        "para entornos locales controlados."
+    )
+
+
+SECRET_KEY = _get_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+if 'test' in sys.argv:
+    DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -48,6 +134,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'axes',
     'channels',  # WebSocket support
     'rest_framework',  # Django REST Framework
     'rest_framework.authtoken',  # Token authentication
@@ -64,8 +151,12 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'parts.middleware.SecurityHeadersMiddleware',
+    'parts.middleware.RequestContextMiddleware',
+    'parts.middleware.SessionExpiryMiddleware',
     'parts.middleware.AjaxErrorMiddleware',  # Convierte errores a JSON para AJAX
 ]
 
@@ -74,13 +165,17 @@ ROOT_URLCONF = 'car_inventory.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'parts.context_processors.security',
+            ],
+            'builtins': [
+                'django.templatetags.static',
             ],
         },
     },
@@ -89,18 +184,103 @@ TEMPLATES = [
 WSGI_APPLICATION = 'car_inventory.wsgi.application'
 
 
+def _bool_env(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _sqlite_config(name: str = 'db.sqlite3') -> dict:
+    sqlite_name = name if name == ':memory:' else BASE_DIR / name
+    timeout = int(os.environ.get('SQLITE_TIMEOUT', '20'))
+    return {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': sqlite_name,
+        'OPTIONS': {
+            'timeout': timeout,
+        },
+    }
+
+
+def _postgres_config_from_parts(*, name: str, user: str, password: str, host: str,
+                                port: int | str | None = None, options: dict | None = None) -> dict:
+    conn_max_age = int(os.environ.get('POSTGRES_CONN_MAX_AGE', '60'))
+    cfg = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': name,
+        'USER': user or '',
+        'PASSWORD': password or '',
+        'HOST': host or '',
+        'PORT': port or os.environ.get('POSTGRES_PORT', os.environ.get('PGPORT', '5432')),
+        'CONN_MAX_AGE': conn_max_age,
+        'ATOMIC_REQUESTS': True,
+    }
+    ssl_mode = os.environ.get('POSTGRES_SSL_MODE')
+    db_options = options.copy() if options else {}
+    if ssl_mode:
+        db_options.setdefault('sslmode', ssl_mode)
+    if db_options:
+        cfg['OPTIONS'] = db_options
+    return cfg
+
+
+def _postgres_config_from_url(url: str) -> dict:
+    parsed = urlparse(url)
+    if parsed.scheme not in {'postgres', 'postgresql'}:
+        raise ValueError(f"Esquema de DATABASE_URL no soportado: {parsed.scheme}")
+    query = parse_qs(parsed.query)
+    options = {}
+    if 'sslmode' in query:
+        options['sslmode'] = query['sslmode'][-1]
+    return _postgres_config_from_parts(
+        name=(parsed.path or '').lstrip('/') or os.environ.get('POSTGRES_DB', 'car_inventory'),
+        user=unquote(parsed.username) if parsed.username else '',
+        password=unquote(parsed.password) if parsed.password else '',
+        host=parsed.hostname or '',
+        port=parsed.port,
+        options=options
+    )
+
+
+def _database_settings() -> dict:
+    running_tests = 'test' in sys.argv
+    forced_sqlite = _bool_env('FORCE_SQLITE', False)
+
+    if running_tests:
+        test_url = os.environ.get('TEST_DATABASE_URL')
+        if test_url:
+            return _postgres_config_from_url(test_url)
+        if not _bool_env('USE_POSTGRES_FOR_TESTS', False):
+            return _sqlite_config(':memory:')
+
+    if forced_sqlite:
+        return _sqlite_config()
+
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        return _postgres_config_from_url(database_url)
+
+    pg_host = os.environ.get('POSTGRES_HOST') or os.environ.get('PGHOST')
+    if pg_host:
+        db_name = os.environ.get('POSTGRES_DB') or os.environ.get('PGDATABASE') or 'car_inventory'
+        db_user = os.environ.get('POSTGRES_USER') or os.environ.get('PGUSER') or ''
+        db_password = os.environ.get('POSTGRES_PASSWORD') or os.environ.get('PGPASSWORD') or ''
+        return _postgres_config_from_parts(
+            name=db_name,
+            user=db_user,
+            password=db_password,
+            host=pg_host,
+        )
+
+    return _sqlite_config()
+
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            # Tiempo de espera ante bloqueos (segundos)
-            'timeout': 20,
-        }
-    }
+    'default': _database_settings()
 }
 
 
@@ -138,6 +318,15 @@ USE_TZ = True
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/parts/'
 LOGOUT_REDIRECT_URL = '/login/'
+SESSION_COOKIE_SAMESITE = os.environ.get('SESSION_COOKIE_SAMESITE', 'Lax')
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', str(not DEBUG)).lower() in {'1', 'true', 'yes'}
+CSRF_COOKIE_SAMESITE = os.environ.get('CSRF_COOKIE_SAMESITE', 'Lax')
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -171,16 +360,27 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOG_DIR = BASE_DIR / 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
+VOICE_LOG_DIR = BASE_DIR / 'voice_logs'
+os.makedirs(VOICE_LOG_DIR, exist_ok=True)
+
+LOG_RETENTION_DAYS = int(os.environ.get('LOG_RETENTION_DAYS', '30'))
+VOICE_LOG_RETENTION_DAYS = int(os.environ.get('VOICE_LOG_RETENTION_DAYS', '14'))
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'request_context': {
+            '()': 'parts.logging_context.LoggingContextFilter',
+        },
+    },
     'formatters': {
         'json': {
             '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
-            'fmt': '%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(process)d %(thread)d',
+            'fmt': '%(asctime)s %(levelname)s %(name)s %(message)s %(module)s %(process)d %(thread)d %(request_id)s %(correlation_id)s %(session_id)s %(user_id)s',
         },
         'simple': {
-            'format': '[%(asctime)s] %(levelname)s %(name)s: %(message)s'
+            'format': '[%(asctime)s] %(levelname)s %(name)s [req=%(request_id)s corr=%(correlation_id)s]: %(message)s'
         },
     },
     'handlers': {
@@ -188,6 +388,7 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
             'level': 'INFO',
+            'filters': ['request_context'],
         },
         'app_file': {
             'class': 'logging.handlers.RotatingFileHandler',
@@ -197,6 +398,7 @@ LOGGING = {
             'encoding': 'utf-8',
             'formatter': 'json',
             'level': 'INFO',
+            'filters': ['request_context'],
         },
         'voice_file': {
             'class': 'logging.handlers.RotatingFileHandler',
@@ -206,6 +408,7 @@ LOGGING = {
             'encoding': 'utf-8',
             'formatter': 'json',
             'level': 'INFO',
+            'filters': ['request_context'],
         },
         'bluetooth_file': {
             'class': 'logging.handlers.RotatingFileHandler',
@@ -215,6 +418,7 @@ LOGGING = {
             'encoding': 'utf-8',
             'formatter': 'json',
             'level': 'INFO',
+            'filters': ['request_context'],
         },
     },
     'loggers': {
@@ -264,6 +468,15 @@ WINDOWS_PATHS = {
 # OpenAI API configuration (for GPT-4o)
 # Get your API key from https://platform.openai.com/api-keys
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
+OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "60"))
+OPENAI_MAX_RETRIES = int(os.environ.get("OPENAI_MAX_RETRIES", "2"))
+
+# Firebase ML Kit (barcode) proxy configuration
+FIREBASE_MLKIT_BARCODE_URL = os.environ.get('FIREBASE_MLKIT_BARCODE_URL', '').strip()
+FIREBASE_MLKIT_API_KEY = os.environ.get('FIREBASE_MLKIT_API_KEY', '').strip()
+FIREBASE_MLKIT_TIMEOUT = int(os.environ.get('FIREBASE_MLKIT_TIMEOUT', '12'))
+FIREBASE_MLKIT_MIN_CONFIDENCE = float(os.environ.get('FIREBASE_MLKIT_MIN_CONFIDENCE', '0.7'))
+FIREBASE_MLKIT_ENABLED = bool(FIREBASE_MLKIT_BARCODE_URL and FIREBASE_MLKIT_API_KEY)
 
 # Voice normalization strategy
 # Prefer delegating artifact correction to the LLM; also enable manual rules as a safety net
@@ -360,3 +573,14 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     # Permitir iframes del mismo origen para preview de reportes PDF
     X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+SECURE_CROSS_ORIGIN_EMBEDDER_POLICY = 'same-origin'
+
+RUNNING_TESTS = 'test' in sys.argv
+AXES_ENABLED = not RUNNING_TESTS
+AXES_FAILURE_LIMIT = int(os.environ.get('AXES_FAILURE_LIMIT', '5'))
+AXES_COOLOFF_TIME = timedelta(minutes=int(os.environ.get('AXES_COOLOFF_MINUTES', '15')))
+AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
+AXES_RESET_COOL_OFF_ON_SUCCESS = True

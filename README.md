@@ -67,6 +67,8 @@ Sistema de inventario con reconocimiento de voz, WebRTC, impresión térmica Blu
 - Docker & Docker Compose
 - Nginx (reverse proxy)
 - Let's Encrypt (SSL/TLS)
+- PostgreSQL 15 (contenedor dedicado)
+- Redis 7 (channel layer + cache)
 
 ## Instalación
 
@@ -97,6 +99,12 @@ DEBUG=False
 ALLOWED_HOSTS=tu-dominio.com
 OPENAI_API_KEY=tu-api-key
 PUBLIC_IP=tu-ip-publica
+POSTGRES_DB=car_inventory
+POSTGRES_USER=car_inventory
+POSTGRES_PASSWORD=super-segura
+POSTGRES_HOST=localhost        # Usa 'postgres' dentro de los contenedores
+POSTGRES_PORT=5432
+DATABASE_URL=postgresql://car_inventory:super-segura@localhost:5432/car_inventory
 ```
 
 3. **Descargar modelo Vosk**
@@ -135,6 +143,12 @@ docker compose logs -f web
 docker compose logs -f redis
 docker compose logs -f nginx
 ```
+
+### Limpieza y configuración rápida
+- `LOG_RETENTION_DAYS` y `VOICE_LOG_RETENTION_DAYS` controlan cuántos días se guardan `logs/` y `voice_logs/` (30 y 14 por defecto).
+- Ejecuta `python manage.py cleanup_logs` para borrar archivos vencidos (`--dry-run` solo muestra lo que se eliminaría).
+- `OPENAI_TIMEOUT_SECONDS` y `OPENAI_MAX_RETRIES` ajustan el tiempo máximo y los reintentos cuando se llama a OpenAI.
+- PostgreSQL es el motor por defecto (usa `POSTGRES_*`/`DATABASE_URL` para apuntar a tu instancia). Sólo define `FORCE_SQLITE=true` si necesitas volver temporalmente a SQLite para pruebas locales.
 
 ### Verificar Estado de Redis
 ```bash
@@ -193,6 +207,31 @@ car_inventory/
 - SSL/TLS en producción
 - Redis con contraseña (configurar en producción)
 - Logs de auditoría completos
+
+### Monitoreo / Healthcheck
+
+Ejecuta el smoke-test incluido para validar que `/parts/` y `/workshops/` se sirven correctamente (incluido el `<turbo-frame id="app-frame">`) antes y después de cada despliegue:
+
+```bash
+BASE_URL=https://www.transervis.cl scripts/healthcheck.sh
+```
+
+Integra este script en tu pipeline (GitHub Actions, Jenkins, cron) para detectar regresiones antes de que impacten a los usuarios.
+
+## Normas ISO de referencia
+
+- **ISO/IEC 27001 y 27002:** Middleware de seguridad dedicado aplica CSP/Permissions-Policy, cookies `Secure/SameSite`, Axes limita intentos de login y todas las vistas sensibles (voz/WebRTC incluidos) exigen autenticación.
+- **ISO/IEC 27701:** Los eventos de auditoría anonimizan IP (parts/utils/privacy.py), los logs quedan estructurados con request/correlation-id y las variables `LOG_RETENTION_DAYS` / `VOICE_LOG_RETENTION_DAYS` acotan retención configurable.
+- **ISO/IEC 25010:** La suite de pruebas (`parts/tests.py`) y el smoke-test `scripts/healthcheck.sh` validan navegación, reportes y filtros para preservar fiabilidad tras cada despliegue.
+- **ISO/IEC 20000-1:** `docker-manage.ps1`, `verificar_redis.sh` y los healthchecks formalizan tareas operativas (deploy, backup, verificación de dependencias) como procedimientos repetibles.
+- **ISO 9001:** `parts/auditoria.py` y `parts/audit_alerts.py` mantienen trazabilidad completa de piezas, reportes y sesiones de voz, habilitando métricas y mejora continua.
+- **ISO 9241-171:** El design system (`parts/static/parts/css/design-system.css`) define focus rings y tokens de contraste mientras las vistas clave (`part_list.html`, `auto_list.html`) usan `aria-live`, badges semánticos y layouts responsivos.
+- **ISO 22301:** El comando `Backup-Database` en `docker-manage.ps1` y los artefactos en `/backups` proporcionan snapshots rápidos de `db.sqlite3`; se recomienda programar su ejecución y probar restauraciones periódicas.
+
+## Backups y retención
+
+- `scripts/backup_db.sh` crea copias versionadas de `db.sqlite3` (opcionalmente comprimidas) para entornos Linux/cron.
+- `scripts/purge_logs.sh` ejecuta `manage.py cleanup_logs`, eliminando `logs/` y `voice_logs/` que excedan `LOG_RETENTION_DAYS` y `VOICE_LOG_RETENTION_DAYS`.
 
 ## Arquitectura de Procesamiento de Voz
 

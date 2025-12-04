@@ -1,0 +1,376 @@
+{
+  "timestamp_procesamiento": "2025-11-24T02:14:49.300663",
+  "metadata_archivo": {
+    "file_size_mb": 1.0169315338134766,
+    "file_modified": "2025-11-23 22:12:50",
+    "file_created": "2025-11-23 22:13:13.754690",
+    "excel_created": "2025-11-24 02:14:41.423113",
+    "excel_modified": "2025-11-24 02:14:41.423113",
+    "excel_creator": "openpyxl",
+    "total_sheets": 49,
+    "sheet_names": [
+      "OTROS",
+      "116I 2006",
+      "2008 2015",
+      "207 2010",
+      "307 2003",
+      "320 2014",
+      "A3 2017",
+      "ALTIMA 2014",
+      "ARRIZO 3 2020",
+      "BORA 2012",
+      "C200 2015",
+      "C30 2008",
+      "COMBO 2009",
+      "CX70 2020",
+      "DOKKER 2021",
+      "ECOSPORT 2019",
+      "ELANTRA 2006",
+      "FABIA 2021",
+      "FOCUS 2012",
+      "GOLF 2004",
+      "IQ 2019",
+      "JOYEAR X3 2019",
+      "KICKS 2019",
+      "KWID 2021",
+      "MAZDA 3 2021",
+      "MEGANE II 2007",
+      "NEW BALENO 2021",
+      "NEW SAIL 2021",
+      "OPTRA 2009",
+      "OUTLANDER 2014",
+      "PASSAT 2003",
+      "QASHQAI 2021",
+      "RCZ 2010",
+      "S2 2019",
+      "S3 2017",
+      "S40 2008",
+      "S60 2012",
+      "SM3 2011",
+      "SOUL 2013",
+      "TIIDA 2014",
+      "TIIGO 2019",
+      "TRACKER",
+      "UNO WAY 20149",
+      "VERNA 2021",
+      "VERSA 2022",
+      "XTRAIL 2016",
+      "ZS 2021",
+      "NOTAS",
+      "INVENTARIOS"
+    ]
+  },
+  "resumen": {
+    "total_filas": 7302,
+    "total_vehiculos": 47,
+    "calidad_promedio": "85.9%",
+    "requieren_revision": 926,
+    "porcentaje_revision": "12.7%"
+  },
+  "ingesta_temporal": {
+    "fecha_estimada_minima": "2025-04-28 02:14:41",
+    "fecha_estimada_maxima": "2025-11-24 02:14:41",
+    "rango_dias": 210
+  },
+  "vehiculos_procesados": [
+    {
+      "vehiculo": "OTROS",
+      "filas": 31,
+      "fecha_ingesta_estimada_promedio": "2025-04-28 02:14:41"
+    },
+    {
+      "vehiculo": "116I 2006",
+      "filas": 276,
+      "fecha_ingesta_estimada_promedio": "2025-06-01 02:14:41"
+    },
+    {
+      "vehiculo": "2008 2015",
+      "filas": 84,
+      "fecha_ingesta_estimada_promedio": "2025-06-05 02:14:41"
+    },
+    {
+      "vehiculo": "207 2010",
+      "filas": 211,
+      "fecha_ingesta_estimada_promedio": "2025-06-09 02:14:41"
+    },
+    {
+      "vehiculo": "307 2003",
+      "filas": 56,
+      "fecha_ingesta_estimada_promedio": "2025-06-13 02:14:41"
+    },
+    {
+      "vehiculo": "320 2014",
+      "filas": 232,
+      "fecha_ingesta_estimada_promedio": "2025-06-17 02:14:41"
+    },
+    {
+      "vehiculo": "A3 2017",
+      "filas": 62,
+      "fecha_ingesta_estimada_promedio": "2025-06-21 02:14:41"
+    },
+    {
+      "vehiculo": "ALTIMA 2014",
+      "filas": 194,
+      "fecha_ingesta_estimada_promedio": "2025-05-26 02:14:41"
+    },
+    {
+      "vehiculo": "ARRIZO 3 2020",
+      "filas": 73,
+      "fecha_ingesta_estimada_promedio": "2025-06-29 02:14:41"
+    },
+    {
+      "vehiculo": "BORA 2012",
+      "filas": 197,
+      "fecha_ingesta_estimada_promedio": "2025-06-03 02:14:41"
+    },
+    {
+      "vehiculo": "C200 2015",
+      "filas": 110,
+      "fecha_ingesta_estimada_promedio": "2025-07-07 02:14:41"
+    },
+    {
+      "vehiculo": "C30 2008",
+      "filas": 204,
+      "fecha_ingesta_estimada_promedio": "2025-07-11 02:14:41"
+    },
+    {
+      "vehiculo": "COMBO 2009",
+      "filas": 112,
+      "fecha_ingesta_estimada_promedio": "2025-07-14 02:14:41"
+    },
+    {
+      "vehiculo": "CX70 2020",
+      "filas": 75,
+      "fecha_ingesta_estimada_promedio": "2025-07-18 02:14:41"
+    },
+    {
+      "vehiculo": "DOKKER 2021",
+      "filas": 61,
+      "fecha_ingesta_estimada_promedio": "2025-06-22 02:14:41"
+    },
+    {
+      "vehiculo": "ECOSPORT 2019",
+      "filas": 87,
+      "fecha_ingesta_estimada_promedio": "2025-07-26 02:14:41"
+    },
+    {
+      "vehiculo": "ELANTRA 2006",
+      "filas": 76,
+      "fecha_ingesta_estimada_promedio": "2025-07-30 02:14:41"
+    },
+    {
+      "vehiculo": "FABIA 2021",
+      "filas": 222,
+      "fecha_ingesta_estimada_promedio": "2025-07-04 02:14:41"
+    },
+    {
+      "vehiculo": "FOCUS 2012",
+      "filas": 162,
+      "fecha_ingesta_estimada_promedio": "2025-07-08 02:14:41"
+    },
+    {
+      "vehiculo": "GOLF 2004",
+      "filas": 207,
+      "fecha_ingesta_estimada_promedio": "2025-07-12 02:14:41"
+    },
+    {
+      "vehiculo": "IQ 2019",
+      "filas": 249,
+      "fecha_ingesta_estimada_promedio": "2025-07-16 02:14:41"
+    },
+    {
+      "vehiculo": "JOYEAR X3 2019",
+      "filas": 73,
+      "fecha_ingesta_estimada_promedio": "2025-08-19 02:14:41"
+    },
+    {
+      "vehiculo": "KICKS 2019",
+      "filas": 240,
+      "fecha_ingesta_estimada_promedio": "2025-08-23 02:14:41"
+    },
+    {
+      "vehiculo": "KWID 2021",
+      "filas": 62,
+      "fecha_ingesta_estimada_promedio": "2025-08-26 02:14:41"
+    },
+    {
+      "vehiculo": "MAZDA 3 2021",
+      "filas": 212,
+      "fecha_ingesta_estimada_promedio": "2025-08-30 02:14:41"
+    },
+    {
+      "vehiculo": "MEGANE II 2007",
+      "filas": 44,
+      "fecha_ingesta_estimada_promedio": "2025-09-03 02:14:41"
+    },
+    {
+      "vehiculo": "NEW BALENO 2021",
+      "filas": 75,
+      "fecha_ingesta_estimada_promedio": "2025-09-07 02:14:41"
+    },
+    {
+      "vehiculo": "NEW SAIL 2021",
+      "filas": 396,
+      "fecha_ingesta_estimada_promedio": "2025-08-12 02:14:41"
+    },
+    {
+      "vehiculo": "OPTRA 2009",
+      "filas": 47,
+      "fecha_ingesta_estimada_promedio": "2025-09-15 02:14:41"
+    },
+    {
+      "vehiculo": "OUTLANDER 2014",
+      "filas": 284,
+      "fecha_ingesta_estimada_promedio": "2025-09-19 02:14:41"
+    },
+    {
+      "vehiculo": "PASSAT 2003",
+      "filas": 253,
+      "fecha_ingesta_estimada_promedio": "2025-08-24 02:14:41"
+    },
+    {
+      "vehiculo": "QASHQAI 2021",
+      "filas": 278,
+      "fecha_ingesta_estimada_promedio": "2025-08-28 02:14:41"
+    },
+    {
+      "vehiculo": "RCZ 2010",
+      "filas": 197,
+      "fecha_ingesta_estimada_promedio": "2025-10-01 02:14:41"
+    },
+    {
+      "vehiculo": "S2 2019",
+      "filas": 61,
+      "fecha_ingesta_estimada_promedio": "2025-10-05 02:14:41"
+    },
+    {
+      "vehiculo": "S3 2017",
+      "filas": 66,
+      "fecha_ingesta_estimada_promedio": "2025-10-09 02:14:41"
+    },
+    {
+      "vehiculo": "S40 2008",
+      "filas": 219,
+      "fecha_ingesta_estimada_promedio": "2025-10-12 02:14:41"
+    },
+    {
+      "vehiculo": "S60 2012",
+      "filas": 265,
+      "fecha_ingesta_estimada_promedio": "2025-10-16 02:14:41"
+    },
+    {
+      "vehiculo": "SM3 2011",
+      "filas": 121,
+      "fecha_ingesta_estimada_promedio": "2025-10-20 02:14:41"
+    },
+    {
+      "vehiculo": "SOUL 2013",
+      "filas": 188,
+      "fecha_ingesta_estimada_promedio": "2025-10-24 02:14:41"
+    },
+    {
+      "vehiculo": "TIIDA 2014",
+      "filas": 155,
+      "fecha_ingesta_estimada_promedio": "2025-10-28 02:14:41"
+    },
+    {
+      "vehiculo": "TIIGO 2019",
+      "filas": 275,
+      "fecha_ingesta_estimada_promedio": "2025-10-02 02:14:41"
+    },
+    {
+      "vehiculo": "TRACKER",
+      "filas": 52,
+      "fecha_ingesta_estimada_promedio": "2025-10-06 02:14:41"
+    },
+    {
+      "vehiculo": "UNO WAY 20149",
+      "filas": 95,
+      "fecha_ingesta_estimada_promedio": "2025-11-09 02:14:41"
+    },
+    {
+      "vehiculo": "VERNA 2021",
+      "filas": 165,
+      "fecha_ingesta_estimada_promedio": "2025-10-14 02:14:41"
+    },
+    {
+      "vehiculo": "VERSA 2022",
+      "filas": 184,
+      "fecha_ingesta_estimada_promedio": "2025-11-17 02:14:41"
+    },
+    {
+      "vehiculo": "XTRAIL 2016",
+      "filas": 268,
+      "fecha_ingesta_estimada_promedio": "2025-10-22 02:14:41"
+    },
+    {
+      "vehiculo": "ZS 2021",
+      "filas": 46,
+      "fecha_ingesta_estimada_promedio": "2025-11-24 02:14:41"
+    }
+  ],
+  "estadisticas_normalizacion": {
+    "correcciones_ortografia": 3545,
+    "top_errores": {
+      "FRENO": 246,
+      "SENSOR": 207,
+      "AIRE": 196,
+      "CAPOT": 184,
+      "CAPO": 184,
+      "AMORTIGUADOR": 181,
+      "CREMALLERA": 172,
+      "BOMBA": 170,
+      "PARACHOQUE": 152,
+      "LIMPIAPARABRISA": 137,
+      "SOPORTE": 129,
+      "BANDEJA": 128,
+      "LLANTA": 127,
+      "BRAZO": 123,
+      "RADIADOR": 119,
+      "BOBINA": 118,
+      "DISCO": 114,
+      "FILTRO": 75,
+      "CONTROL": 68,
+      "VOLANTE": 64
+    },
+    "nombres_personas": {
+      "CARLOS": 3,
+      "NICO": 8,
+      "IVÁN": 1
+    },
+    "estados_anomalos": {
+      "MALO": 4,
+      "CON DETALLE": 54,
+      "DETALLE": 62,
+      "ROTO": 2,
+      "ROTA": 2,
+      "MALA": 2,
+      "DETALLES": 2
+    },
+    "posiciones_extraidas": {
+      "LH": 1561,
+      "RH": 1565,
+      "DERECHO": 66,
+      "IZQUIERDO": 66,
+      "R": 2,
+      "DERECHA": 36,
+      "L": 2,
+      "IZQUIERDA": 39,
+      "DER": 1,
+      "IZQ": 1
+    },
+    "piezas_multiples": 64,
+    "anomalias_precio": 2,
+    "sin_ubicacion": 959,
+    "duplicados": 3
+  },
+  "distribucion_calidad": {
+    "excelente_90_100": 4153,
+    "buena_70_89": 2223,
+    "regular_50_69": 919,
+    "mala_0_49": 7
+  },
+  "errores_procesamiento": [
+    "Error en S60 2012 fila 133: 'float' object has no attribute 'upper'"
+  ]
+}

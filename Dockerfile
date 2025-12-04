@@ -75,9 +75,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiamos sólo wheels y las instalamos (sin compilar nada aquí)
+# Copiamos el archivo de dependencias y las wheels para instalarlas localmente
+COPY requirements.txt ./
 COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
+RUN pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt && rm -rf /wheels
 
 # Copiamos código y staticfiles ya recolectados
 COPY --from=builder /app /app

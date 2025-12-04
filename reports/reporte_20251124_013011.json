@@ -1,0 +1,274 @@
+{
+  "timestamp": "2025-11-24T01:30:11.234913",
+  "resumen": {
+    "total_filas": 7302,
+    "total_vehiculos": 47,
+    "filas_con_observaciones": 6520,
+    "porcentaje_con_observaciones": "89.3%"
+  },
+  "stock": {
+    "VENDIDO": 1815,
+    "DISPONIBLE": 4911,
+    "NO DISPONIBLE": 324,
+    "POR CONFIRMAR": 112,
+    "": 138,
+    "CONFIRMAR": 2
+  },
+  "precios": {
+    "con_precio": 4455,
+    "con_ultimo_precio": 4456,
+    "sin_precio": 2847,
+    "porcentaje_con_precio": "61.0%"
+  },
+  "posiciones": {
+    "con_posicion": 3894,
+    "sin_posicion": 3408,
+    "porcentaje_con_posicion": "53.3%"
+  },
+  "errores_ortograficos": {
+    "total_correcciones": 3545,
+    "top_10": {
+      "FRENO": 246,
+      "SENSOR": 207,
+      "AIRE": 196,
+      "CAPOT": 184,
+      "CAPO": 184,
+      "AMORTIGUADOR": 181,
+      "CREMALLERA": 172,
+      "BOMBA": 170,
+      "PARACHOQUE": 152,
+      "LIMPIAPARABRISA": 137
+    }
+  },
+  "nombres_personas": {
+    "total_detectados": 12,
+    "nombres": {
+      "CARLOS": 3,
+      "NICO": 8,
+      "IVÁN": 1
+    }
+  },
+  "estados_piezas": {
+    "total_detectados": 128,
+    "estados": {
+      "MALO": 4,
+      "DETALLE": 62,
+      "CON DETALLE": 54,
+      "ROTO": 2,
+      "ROTA": 2,
+      "MALA": 2,
+      "DETALLES": 2
+    }
+  },
+  "posiciones_extraidas": {
+    "LH": 1561,
+    "RH": 1565,
+    "DERECHO": 66,
+    "IZQUIERDO": 66,
+    "R": 2,
+    "DERECHA": 36,
+    "L": 2,
+    "IZQUIERDA": 39,
+    "DER": 1,
+    "IZQ": 1
+  },
+  "anomalias": {
+    "piezas_multiples": 64,
+    "anomalias_precio": 2,
+    "sin_ubicacion": 959,
+    "duplicados_detectados": 3
+  },
+  "vehiculos_procesados": [
+    {
+      "vehiculo": "OTROS",
+      "filas": 31
+    },
+    {
+      "vehiculo": "116I 2006",
+      "filas": 276
+    },
+    {
+      "vehiculo": "2008 2015",
+      "filas": 84
+    },
+    {
+      "vehiculo": "207 2010",
+      "filas": 211
+    },
+    {
+      "vehiculo": "307 2003",
+      "filas": 56
+    },
+    {
+      "vehiculo": "320 2014",
+      "filas": 232
+    },
+    {
+      "vehiculo": "A3 2017",
+      "filas": 62
+    },
+    {
+      "vehiculo": "ALTIMA 2014",
+      "filas": 194
+    },
+    {
+      "vehiculo": "ARRIZO 3 2020",
+      "filas": 73
+    },
+    {
+      "vehiculo": "BORA 2012",
+      "filas": 197
+    },
+    {
+      "vehiculo": "C200 2015",
+      "filas": 110
+    },
+    {
+      "vehiculo": "C30 2008",
+      "filas": 204
+    },
+    {
+      "vehiculo": "COMBO 2009",
+      "filas": 112
+    },
+    {
+      "vehiculo": "CX70 2020",
+      "filas": 75
+    },
+    {
+      "vehiculo": "DOKKER 2021",
+      "filas": 61
+    },
+    {
+      "vehiculo": "ECOSPORT 2019",
+      "filas": 87
+    },
+    {
+      "vehiculo": "ELANTRA 2006",
+      "filas": 76
+    },
+    {
+      "vehiculo": "FABIA 2021",
+      "filas": 222
+    },
+    {
+      "vehiculo": "FOCUS 2012",
+      "filas": 162
+    },
+    {
+      "vehiculo": "GOLF 2004",
+      "filas": 207
+    },
+    {
+      "vehiculo": "IQ 2019",
+      "filas": 249
+    },
+    {
+      "vehiculo": "JOYEAR X3 2019",
+      "filas": 73
+    },
+    {
+      "vehiculo": "KICKS 2019",
+      "filas": 240
+    },
+    {
+      "vehiculo": "KWID 2021",
+      "filas": 62
+    },
+    {
+      "vehiculo": "MAZDA 3 2021",
+      "filas": 212
+    },
+    {
+      "vehiculo": "MEGANE II 2007",
+      "filas": 44
+    },
+    {
+      "vehiculo": "NEW BALENO 2021",
+      "filas": 75
+    },
+    {
+      "vehiculo": "NEW SAIL 2021",
+      "filas": 396
+    },
+    {
+      "vehiculo": "OPTRA 2009",
+      "filas": 47
+    },
+    {
+      "vehiculo": "OUTLANDER 2014",
+      "filas": 284
+    },
+    {
+      "vehiculo": "PASSAT 2003",
+      "filas": 253
+    },
+    {
+      "vehiculo": "QASHQAI 2021",
+      "filas": 278
+    },
+    {
+      "vehiculo": "RCZ 2010",
+      "filas": 197
+    },
+    {
+      "vehiculo": "S2 2019",
+      "filas": 61
+    },
+    {
+      "vehiculo": "S3 2017",
+      "filas": 66
+    },
+    {
+      "vehiculo": "S40 2008",
+      "filas": 219
+    },
+    {
+      "vehiculo": "S60 2012",
+      "filas": 265
+    },
+    {
+      "vehiculo": "SM3 2011",
+      "filas": 121
+    },
+    {
+      "vehiculo": "SOUL 2013",
+      "filas": 188
+    },
+    {
+      "vehiculo": "TIIDA 2014",
+      "filas": 155
+    },
+    {
+      "vehiculo": "TIIGO 2019",
+      "filas": 275
+    },
+    {
+      "vehiculo": "TRACKER",
+      "filas": 52
+    },
+    {
+      "vehiculo": "UNO WAY 20149",
+      "filas": 95
+    },
+    {
+      "vehiculo": "VERNA 2021",
+      "filas": 165
+    },
+    {
+      "vehiculo": "VERSA 2022",
+      "filas": 184
+    },
+    {
+      "vehiculo": "XTRAIL 2016",
+      "filas": 268
+    },
+    {
+      "vehiculo": "ZS 2021",
+      "filas": 46
+    }
+  ],
+  "errores_procesamiento": [
+    "Error en S60 2012 fila 133: 'float' object has no attribute 'upper'"
+  ]
+}

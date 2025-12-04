@@ -1,0 +1,16 @@
+{
+  "appId": "com.carinventory.app",
+  "appName": "Car Inventory",
+  "webDir": "staticfiles",
+  "server": {
+    "url": "http://localhost:8000",
+    "cleartext": true,
+    "androidScheme": "http"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}
+

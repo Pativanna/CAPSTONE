@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework.authtoken.views import obtain_auth_token
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from parts.api_views import PartViewSet, WorkshopViewSet, AutoViewSet, ReportScheduleViewSet
+from django.views.generic import TemplateView
 
 # Router para API REST
 router = DefaultRouter()
@@ -16,6 +17,10 @@ router.register(r'report-schedules', ReportScheduleViewSet, basename='reportsche
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('service-worker.js', TemplateView.as_view(
+        template_name='service-worker.js',
+        content_type='application/javascript'
+    ), name='service-worker'),
     
     # API REST
     path('api/', include(router.urls)),

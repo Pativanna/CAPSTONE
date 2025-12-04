@@ -1,0 +1,195 @@
+vehiculo,nombre_original,nombre,posicion,stock,ubicacion,precio,ultimo_precio,venta,nota,observaciones
+ALTIMA 2014,ALTERNADOR,Alternador,,VENDIDO,SANTIAGO,110000,100000,,,
+ALTIMA 2014,AMORTIGUADOR DELANTERO LH,Amortiguador Delantero,Delantera Izquierda,VENDIDO,SANTIAGO,90000,80000,,,
+ALTIMA 2014,AMORTIGUADOR DELANTERO RH,Amortiguador Delantero,Delantera Derecha,VENDIDO,SANTIAGO,90000,80000,,,
+ALTIMA 2014,AMORTIGUADOR TRASERO LH  ,Amortiguador Trasero  ,Trasera Izquierda,NO DISPONIBLE,SANTIAGO,,,,,
+ALTIMA 2014,AMORTIGUADOR TRASERO RH,Amortiguador Trasero,Trasera Derecha,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,BANDEJA TRASERA LH,Bandeja Trasera,Trasera Izquierda,VENDIDO,SANTIAGO,70000,65000,,,
+ALTIMA 2014,BASE PLÁSTICA DE DISTRIBUCIÓN DE AGUA,Base Plástica De Distribución De Agua,,,,,,,,Sin ubicación
+ALTIMA 2014,BASE SOPORTE ALTERNADOR,Base Soporte Alternador,,,SANTIAGO,,,,,
+ALTIMA 2014,BASE SOPORTE DE MOTOR RH,Base Soporte De Motor,Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,BASE SOPORTE LH CÍRCULO AL MEDIO,Base Soporte Círculo Al Medio,Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,BASE SOPORTE LH TRIANGULAR,Base Soporte Triangular,Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,BASE SOPORTE RH,Base Soporte,Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,BASE TERMOSTATO PLÁSTICO,Base Termostato Plástico,,VENDIDO,SANTIAGO,60000,60000,,,
+ALTIMA 2014,BCM O MÓDULO DE CONTROL,Bcm O Módulo De Control,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,BISAGRA CAPOT LH,Bisagra Capot,Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,BISAGRA CAPOT RH,Bisagra Capot,Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,BISAGRA DE MALETERO,Bisagra De Maletero,,,SANTIAGO,,,,,
+ALTIMA 2014,BISAGRAS PUERTA DELANTERA LH,Bisagras Puerta Delantera,Delantera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,BISAGRAS PUERTA DELANTERA RH,Bisagras Puerta Delantera,Delantera Derecha,VENDIDO,SANTIAGO,25000,20000,,,
+ALTIMA 2014,BISAGRAS PUERTA TRASERA LH,Bisagras Puerta Trasera,Trasera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,BISAGRAS PUERTA TRASERA RH,Bisagras Puerta Trasera,Trasera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,BOBINA 1,Bobina 1,,,SANTIAGO,,,,,
+ALTIMA 2014,BOBINA 2,Bobina 2,,,SANTIAGO,,,,,
+ALTIMA 2014,BOBINA 3,Bobina 3,,,SANTIAGO,,,,,
+ALTIMA 2014,BOBINA 4,Bobina 4,,,SANTIAGO,,,,,
+ALTIMA 2014,BOCINA,Bocina,,,SANTIAGO,,,,,
+ALTIMA 2014,BOMBA DE AGUA,Bomba De Agua,,,,,,,,Sin ubicación
+ALTIMA 2014,BOMBA HIDRÁULICA ELECTRÓNICA,Bomba Hidráulica Electrónica,,,,,,,,Sin ubicación
+ALTIMA 2014,BORNER NEGATIVO,Borner Negativo,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,BOTÓN DE ALZAVIDRIOS PUERTA DELANTERA RH,Botón De Alzavidrios Puerta Delantera,Delantera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,BOTÓN DE ALZAVIDRIOS PUERTA TRASERA LH,Botón De Alzavidrios Puerta Trasera,Trasera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,BOTÓN DE ALZAVIDRIOS PUERTA TRASERA RH,Botón De Alzavidrios Puerta Trasera,Trasera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,BOTÓN DE ENCENDIDO,Botón De Encendido,,VENDIDO,,,,,,Sin ubicación
+ALTIMA 2014,BOTÓN HAZARD (GATOS),Botón Hazard (Gatos),,,SANTIAGO,,,,,
+ALTIMA 2014,BOTONERA DE ALZAVIDRIOS PUERTA DELANTERA LH,Botonera De Alzavidrios Puerta Delantera,Delantera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,BSI,Bsi,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,CAJETÍN,Cajetín,,,,,,,,Sin ubicación
+ALTIMA 2014,CALIPER DELANTERO RH,Caliper Delantero,Delantera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,CALIPER TRASERO LH,Caliper Trasero,Trasera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,CALIPER TRASERO RH,Caliper Trasero,Trasera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,CANISTER,Canister,,,SANTIAGO,,,,,
+ALTIMA 2014,CAÑERÍA BOMBA DE FRENO,Cañería Bomba De Freno,,,SANTIAGO,,,,,
+ALTIMA 2014,CAÑERÍAS AIRE ACONDICIONADO,Cañerías Aire Acondicionado,,DISPONIBLE,SANTIAGO,130000,120000,,,
+ALTIMA 2014,CATALÍTICO,Catalítico,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,CHAPA CAPOT,Chapa Capot,,,SANTIAGO,,,,,
+ALTIMA 2014,CHAPA MALETA ,Chapa Maleta ,,,,,,,,Sin ubicación
+ALTIMA 2014,CHAPA PUERTA DELANTERA LH,Chapa Puerta Delantera,Delantera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,CHAPA PUERTA DELANTERA RH,Chapa Puerta Delantera,Delantera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,CHAPA PUERTA TRASERA LH,Chapa Puerta Trasera,Trasera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,CHAPA PUERTA TRASERA RH,Chapa Puerta Trasera,Trasera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,CINTA DE AIRBAG,Cinta De Airbag,,,SANTIAGO,,,,,
+ALTIMA 2014,CINTURÓN TRASERO CENTRAL,Cinturón Trasero Central,Central,,SANTIAGO,,,,,
+ALTIMA 2014,CINTURÓN TRASERO LH,Cinturón Trasero,Trasera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,CINTURÓN TRASERO RH,Cinturón Trasero,Trasera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,COLUMNA DE DIRECCIÓN,Columna De Dirección,,,,,,,,Sin ubicación
+ALTIMA 2014,COMPRESOR DE AIRE ACONDICIONADO,Compresor De Aire Acondicionado,,,,,,,,Sin ubicación
+ALTIMA 2014,COMPUTADOR CAJA,Computador Caja,,,,,,,,Sin ubicación
+ALTIMA 2014,CONECTOR CINTA DE AIRBAG,Conector Cinta De Airbag,,VENDIDO,SANTIAGO,25000,25000,,,
+ALTIMA 2014,CONTROL DE CALEFACCIÓN,Control De Calefacción,,,,,,,,Sin ubicación
+ALTIMA 2014,CREMALLERA DE ALZAVIDRIOS DELANTERA LH,Cremallera De Alzavidrios Delantera,Delantera Izquierda,VENDIDO,,80000,75000,,,Sin ubicación
+ALTIMA 2014,CREMALLERA DE ALZAVIDRIOS DELANTERA RH,Cremallera De Alzavidrios Delantera,Delantera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,CREMALLERA DE ALZAVIDRIOS TRASERA LH,Cremallera De Alzavidrios Trasera,Trasera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,CREMALLERA DE ALZAVIDRIOS TRASERA RH,Cremallera De Alzavidrios Trasera,Trasera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,CREMALLERA DE DIRECCIÓN,Cremallera De Dirección,,VENDIDO,SANTIAGO,100000,100000,,,
+ALTIMA 2014,CUBRE ZÓCALO LH,Cubre Zócalo,Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,CUBRE ZÓCALO RH,Cubre Zócalo,Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,CUERPO DE ACELERACIÓN,Cuerpo De Aceleración,,,,,,,,Sin ubicación
+ALTIMA 2014,CUNA,Cuna,,NO DISPONIBLE,SANTIAGO,,,,,
+ALTIMA 2014,DEPÓSITO DE AGUA CON TAPA,Depósito De Agua Con Tapa,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,DISCO DE FRENO TRASERO LH,Disco De Freno Trasero,Trasera Izquierda,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,DISCO DE FRENO TRASERP RH,Disco De Freno Traserp,Derecha,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,ECU MOTOR,Ecu Motor,,VENDIDO,SANTIAGO,150000,140000,,,
+ALTIMA 2014,EMBELLECEDOR SINÓPTICO,Embellecedor Sinóptico,,,SANTIAGO,,,,,
+ALTIMA 2014,ENFRIADOR DE ACEITE,Enfriador De Aceite,,,SANTIAGO,,,,,
+ALTIMA 2014,ENFRIADOR DE ACEITE DE CAJA,Enfriador De Aceite De Caja,,,,,,,,Sin ubicación
+ALTIMA 2014,ESCAPE LH,Escape,Izquierda,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,ESCAPE RH,Escape,Derecha,VENDIDO,SANTIAGO,45000,40000,,,
+ALTIMA 2014,ESPEJO LH,Espejo,Izquierda,VENDIDO,,,,,,Sin ubicación
+ALTIMA 2014,ESPEJO RH,Espejo,Derecha,VENDIDO,,95000,90000,,,Sin ubicación
+ALTIMA 2014,FOCO TRASERO LH,Foco Trasero,Trasera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,FOCO TRASERO RH,Foco Trasero,Trasera Derecha,VENDIDO,,,,,,Sin ubicación
+ALTIMA 2014,FUNDA DE PARACHOQUE DELANTERO,Funda De Parachoque Delantero,Delantera,NO DISPONIBLE,SANTIAGO,,,,,
+ALTIMA 2014,FUNDA DE PARACHOQUE TRASERO,Funda De Parachoque Trasero,Trasera,VENDIDO,,,,,,Sin ubicación
+ALTIMA 2014,FUSILERA INTERIOR,Fusilera Interior,,,SANTIAGO,,,,,
+ALTIMA 2014,GOMA PORTALÓN,Goma Portalón,,,SANTIAGO,,,,,
+ALTIMA 2014,GOMA PUERTA DELANTERA LH,Goma Puerta Delantera,Delantera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,GOMA PUERTA DELANTERA RH,Goma Puerta Delantera,Delantera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,GOMA PUERTA TRASERA LH,Goma Puerta Trasera,Trasera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,GOMA PUERTA TRASERA RH,Goma Puerta Trasera,Trasera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,GOMA RADIADOR,Goma Radiador,,,SANTIAGO,,,,,
+ALTIMA 2014,GUANTERA,Guantera,,,,,,,,Sin ubicación
+ALTIMA 2014,GUARDAFANGO TRASERO LH,Guardafango Trasero,Trasera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,GUARDAFANGO TRASERO RH,Guardafango Trasero,Trasera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,KIT DE ENCENDIDO,Kit De Encendido,,VENDIDO,SANTIAGO,,,,,Múltiples piezas
+ALTIMA 2014,LLANTA 1,Llanta 1,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,LLANTA 2,Llanta 2,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,LLANTA 3,Llanta 3,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,LLANTA 4,Llanta 4,,VENDIDO,SANTIAGO,80000,75000,,,
+ALTIMA 2014,LLAVE,Llave,,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,LUZ INTERMITENTE LH (VAN EN LA PARTE DEL NEBLINERO),Luz Intermitente (Van En La Parte Del Neblinero),Izquierda,VENDIDO,SANTIAGO,30000,40000,,,
+ALTIMA 2014,LUZ INTERMITENTE RH (VAN EN LA PARTE DEL NEBLINERO),Luz Intermitente (Van En La Parte Del Neblinero),Derecha,VENDIDO,SANTIAGO,30000,25000,,,
+ALTIMA 2014,MALETA,Maleta,,DISPONIBLE,SANTIAGO,120000,115000,,,
+ALTIMA 2014,MANGUERA CODO CORTO,Manguera Codo Corto,,,,,,,,Sin ubicación
+ALTIMA 2014,MANGUERA CON TERMOSTATODE ENFRIADOR DE CAJA DE CAMBIO,Manguera Con Termostatode Enfriador De Caja De Cambio,,VENDIDO,SANTIAGO,40000,40000,,,
+ALTIMA 2014,MANGUERA LARGA DE AGUA,Manguera Larga De Agua,,,,,,,,Sin ubicación
+ALTIMA 2014,MANILLA EXTERIOR PUERTA DELANTERA LH,Manilla Exterior Puerta Delantera,Delantera Izquierda,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,MANILLA EXTERIOR PUERTA DELANTERA RH,Manilla Exterior Puerta Delantera,Delantera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,MANILLA EXTERIOR PUERTA TRASERA LH,Manilla Exterior Puerta Trasera,Trasera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,MANILLA EXTERIOR PUERTA TRASERA RH,Manilla Exterior Puerta Trasera,Trasera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,MANILLA INTERIOR PUERTA DELANTERA LH,Manilla Interior Puerta Delantera,Delantera Izquierda,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,MANILLA INTERIOR PUERTA DELANTERA LH,Manilla Interior Puerta Delantera,Delantera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,MANILLA INTERIOR PUERTA TRASERA LH,Manilla Interior Puerta Trasera,Trasera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,MANILLA INTERIOR PUERTA TRASERA RH,Manilla Interior Puerta Trasera,Trasera Derecha,VENDIDO,SANTIAGO,,,,,
+ALTIMA 2014,MÉNSULA TRASERA LH,Ménsula Trasera,Trasera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,MÉNSULA TRASERA RH,Ménsula Trasera,Trasera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,MOTOR DE CALEFACCIÓN,Motor De Calefacción,,VENDIDO,SANTIAGO,50000,50000,,,
+ALTIMA 2014,MOTOR DE LIMPIAPARABRISAS,Motor De Limpiaparabrisas,,,SANTIAGO,,,,,
+ALTIMA 2014,MOTOR DE PARTIDA,Motor De Partida,,,,,,,,Sin ubicación
+ALTIMA 2014,MÚLTIPLE DE ESCAPE CON CATALÍTICO,Múltiple De Escape Con Catalítico,,VENDIDO,,80000,80000,,,Sin ubicación
+ALTIMA 2014,MUÑÓN DELANTERO CON MAZA LH,Muñón Delantero Con Maza,Delantera Izquierda,DISPONIBLE,SANTIAGO,,,,,
+ALTIMA 2014,MUÑÓN DELANTERO CON MAZA RH ,Muñón Delantero Con Maza ,Delantera Derecha,DISPONIBLE,SANTIAGO,,,,RODAMIENTO MALO,
+ALTIMA 2014,MUÑÓN TRASERO CON MAZA LH,Muñón Trasero Con Maza,Trasera Izquierda,DISPONIBLE,SANTIAGO,,,,,
+ALTIMA 2014,MUÑÓN TRASERO CON MAZA RH,Muñón Trasero Con Maza,Trasera Derecha,DISPONIBLE,SANTIAGO,,,,,
+ALTIMA 2014,NEBLINERO DELANTERO LH,Neblinero Delantero,Delantera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,NEBLINERO DELANTERO RH,Neblinero Delantero,Delantera Derecha,VENDIDO,,30000,30000,,,Sin ubicación
+ALTIMA 2014,PALANCA DE CAMBIOS,Palanca De Cambios,,VENDIDO,SANTIAGO,55000,55000,,,
+ALTIMA 2014,PARASOL LH,Parasol,Izquierda,VENDIDO,SANTIAGO,20000,20000,,,
+ALTIMA 2014,PARASOL RH,Parasol,Derecha,DISPONIBLE,SANTIAGO,25000,25000,,,
+ALTIMA 2014,PARLANTE DELANTERO LH,Parlante Delantero,Delantera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,PARLANTE DELANTERO RH,Parlante Delantero,Delantera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,PARLANTE GRANDE LH,Parlante Grande,Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,PARLANTE GRANDE RH,Parlante Grande,Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,PERNO O TORNILLO MALETA RUEDA DE REPUESTO,Perno O Tornillo Maleta Rueda De Repuesto,,,SANTIAGO,,,,,
+ALTIMA 2014,PIOLA ASIENTOS ABATIBLE,Piola Asientos Abatible,,,SANTIAGO,,,,,
+ALTIMA 2014,PIOLA CAJA DE CAMBIO,Piola Caja De Cambio,,,SANTIAGO,,,,,
+ALTIMA 2014,PIOLA FRENO DE MANOS,Piola Freno De Manos,,,SANTIAGO,,,,,
+ALTIMA 2014,PIOLA TAPA DE BENCINA ,Piola Tapa De Bencina ,,,SANTIAGO,,,,,
+ALTIMA 2014,PLÁSTICOS DE PISADERA,Plásticos De Pisadera,,,SANTIAGO,,,,,
+ALTIMA 2014,PLUMAVIT RUEDA DE REPUESTO (3 PARTES),Plumavit Rueda De Repuesto (3 Partes),,,SANTIAGO,,,,,
+ALTIMA 2014,PORTA FILTRO DE AIRE,Porta Filtro De Aire,,VENDIDO,,30000,25000,,,Sin ubicación
+ALTIMA 2014,POSAVASO CONSOLA CENTRAL,Posavaso Consola Central,Central,,SANTIAGO,,,,,
+ALTIMA 2014,PUENTE TRASERO,Puente Trasero,Trasera,,SANTIAGO,,,,,
+ALTIMA 2014,PUERTA DELANTERA SOLO LATA LH,Puerta Delantera Solo Lata,Delantera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,PUERTA DELANTERA SOLO LATA RH,Puerta Delantera Solo Lata,Delantera Derecha,VENDIDO,,160000,160000,,,Sin ubicación
+ALTIMA 2014,PUERTA TRASERA SOLO LATA LH,Puerta Trasera Solo Lata,Trasera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,PUERTA TRASERA SOLO LATA RH,Puerta Trasera Solo Lata,Trasera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,RADIO,Radio,,,,,,,,Sin ubicación
+ALTIMA 2014,RAMAL INTERIOR,Ramal Interior,,,SANTIAGO,,,,,
+ALTIMA 2014,RAMAL MOTOR,Ramal Motor,,,SANTIAGO,,,,,
+ALTIMA 2014,REFUERZO DE PARACHOQUE TRASERO,Refuerzo De Parachoque Trasero,Trasera,,,,,,,Sin ubicación
+ALTIMA 2014,SENSOR ABS TRASERO LH,Sensor Abs Trasero,Trasera Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,SENSOR ABS TRASERO RH,Sensor Abs Trasero,Trasera Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,SENSOR DE OXÍGENO,Sensor De Oxígeno,,,,,,,,Sin ubicación
+ALTIMA 2014,SENSOR DE OXÍGENO,Sensor De Oxígeno,,VENDIDO,SANTIAGO,30000,30000,,,
+ALTIMA 2014,SENSOR MAF,Sensor Maf,,,,,,,,Sin ubicación
+ALTIMA 2014,SENSOR PUERTAS,Sensor Puertas,,,SANTIAGO,,,,,
+ALTIMA 2014,SENSORES DE ESTACIONAMIENTO CON RAMAL,Sensores De Estacionamiento Con Ramal,,,SANTIAGO,,,,,
+ALTIMA 2014,SILENCIADOR LH,Silenciador,Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,SINÓPTICO,Sinóptico,,,,,,,,Sin ubicación
+ALTIMA 2014,SLENCIADOR RH,Slenciador,Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,SOPORTE ECU,Soporte Ecu,,,,,,,,Sin ubicación
+ALTIMA 2014,SOPORTE ESCAPE,Soporte Escape,,,SANTIAGO,,,,,
+ALTIMA 2014,SOPORTE INFERIOR CENTRAL LADO MOTOR,Soporte Inferior Central Lado Motor,Central,,SANTIAGO,,,,,
+ALTIMA 2014,TAPA DE BENCINA EXTERIOR ,Tapa De Bencina Exterior ,,,SANTIAGO,,,,,
+ALTIMA 2014,TAPA DE BENCINA INTERIOR,Tapa De Bencina Interior,,,SANTIAGO,,,,,
+ALTIMA 2014,TAPA DE NEBLINERO LH,Tapa De Neblinero,Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,TAPA DE NEBLINERO RH,Tapa De Neblinero,Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,TAPA ODÓMETRO,Tapa Odómetro,,,SANTIAGO,,,,,
+ALTIMA 2014,TAPA ODÓMETRO SINÓPTICO,Tapa Odómetro Sinóptico,,,SANTIAGO,,,,,
+ALTIMA 2014,TAPA PARLANTE PEQUEÑO LH,Tapa Parlante Pequeño,Izquierda,,SANTIAGO,,,,,
+ALTIMA 2014,TAPA PARLANTE PEQUEÑO RH,Tapa Parlante Pequeño,Derecha,,SANTIAGO,,,,,
+ALTIMA 2014,TAPA PLÁSTICA PANEL TRASERO,Tapa Plástica Panel Trasero,Trasera,,,,,,,Sin ubicación
+ALTIMA 2014,TAPA PLÁSTICA TERMOSTATO,Tapa Plástica Termostato,,,,,,,,Sin ubicación
+ALTIMA 2014,TAPABARRO LH,Tapabarro,Izquierda,,,70000,60000,,,Sin ubicación
+ALTIMA 2014,TAPABARRO RH (CON DETALLE),Tapabarro (Con Detalle),Derecha,VENDIDO,,70000,60000,,,Tiene daños o estado especial; Sin ubicación
+ALTIMA 2014,TAPIZ MALETA,Tapiz Maleta,,,,,,,,Sin ubicación
+ALTIMA 2014,TAPIZ PUERTA DELANTERA LH,Tapiz Puerta Delantera,Delantera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,TAPIZ PUERTA DELANTERA RH,Tapiz Puerta Delantera,Delantera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,TAPIZ PUERTA TRASERA LH,Tapiz Puerta Trasera,Trasera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,TAPIZ PUERTA TRASERA RH,Tapiz Puerta Trasera,Trasera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,TELECOMANDOS,Telecomandos,,,,,,,,Sin ubicación
+ALTIMA 2014,TERCERA LUZ DE FRENO,Tercera Luz De Freno,,,SANTIAGO,,,,,
+ALTIMA 2014,TUBO ACEITE DE CAJA,Tubo Aceite De Caja,,,,,,,,Sin ubicación
+ALTIMA 2014,TUBO FLEXIBLE DE FILTRO DE AIRE,Tubo Flexible De Filtro De Aire,,,SANTIAGO,,,,,
+ALTIMA 2014,VÁLVULA AIRE ACONDICIONADO,Válvula Aire Acondicionado,,VENDIDO,SANTIAGO,25000,25000,,,
+ALTIMA 2014,VÁLVULA EVAP,Válvula Evap,,,SANTIAGO,,,,,
+ALTIMA 2014,VIDRIO LUNETA LATERAL TRASERA CON DETALLE EN LA GOMA LH,Vidrio Luneta Lateral Trasera Con Detalle En La Goma,Trasera Izquierda,,SANTIAGO,,,,CON PATENTE,Tiene daños o estado especial
+ALTIMA 2014,VIDRIO LUNETA LATERAL TRASERA CON DETALLE EN LA GOMA RH,Vidrio Luneta Lateral Trasera Con Detalle En La Goma,Trasera Derecha,,SANTIAGO,,,,CON PATENTE,Tiene daños o estado especial
+ALTIMA 2014,VIDRIO LUNETA TRASERA (FALTA UN ENGANCHE),Vidrio Luneta Trasera (Falta Un Enganche),Trasera,,SANTIAGO,,,,,
+ALTIMA 2014,VIDRIO PUERTA DELANTERA LH,Vidrio Puerta Delantera,Delantera Izquierda,VENDIDO,SANTIAGO,60000,55000,,,
+ALTIMA 2014,VIDRIO PUERTA DELANTERA RH,Vidrio Puerta Delantera,Delantera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,VIDRIO PUERTA TRASERA LH,Vidrio Puerta Trasera,Trasera Izquierda,,,,,,,Sin ubicación
+ALTIMA 2014,VIDRIO PUERTA TRASERA RH,Vidrio Puerta Trasera,Trasera Derecha,,,,,,,Sin ubicación
+ALTIMA 2014,VOLANTE + AIRBAG ACTIVADO VOLANTE,Volante + Airbag Activado Volante,,VENDIDO,SANTIAGO,50000,50000,,,

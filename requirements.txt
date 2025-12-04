@@ -40,7 +40,11 @@ django-cors-headers==4.6.0
 # Image handling for Django ImageField
 Pillow==11.0.0
 
+# Database adapters
+psycopg[binary]==3.2.3
+
 # Barcode generation and thermal printing
 python-barcode==0.15.1
 python-escpos==3.0
 qrcode==8.0
+opencv-python-headless==4.10.0.84

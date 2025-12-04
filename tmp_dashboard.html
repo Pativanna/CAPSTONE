@@ -1,0 +1,1046 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard</title>
+  <link rel="icon" href="/static/parts/favicon.7ea682343b1a.svg" type="image/svg+xml">
+  <script src="/static/parts/js/layout-init.3bfdd3da292c.js"></script>
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous"
+        id="bootstrap-cdn">
+  <link href="/static/parts/css/app-shell.82ba836e79fe.css" rel="stylesheet">
+  <link href="/static/parts/css/design-system.c8aa42738663.css" rel="stylesheet">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet"
+        integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        rel="stylesheet"
+        integrity="sha384-t1nt8BQoYMLFN5p42tRAtuAAFQaCQODekUVeKKZrEnEyp4H2R0RHFz0KWpmj7i8g"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer">
+  <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.4/dist/turbo.es2017-umd.js"
+          data-turbo-track="reload"
+          id="turbo-cdn"
+          integrity="sha384-8l7xX2NI+FCTumrdyAk7EqnMbCuq88GMHvysPAU5GJaYJK+wJV9Exx0ipiFp9Lfw"
+          crossorigin="anonymous"></script>
+  <script src="/static/parts/ui-utils.be73c261565a.js?v=20250115c" defer></script>
+  <script nonce="">
+    (function () {
+      const LOCAL_BOOTSTRAP_CSS = "/static/parts/vendor/bootstrap.min.22fd4eef025c.css";
+      const LOCAL_BOOTSTRAP_JS = "/static/parts/vendor/bootstrap.bundle.min.90c4b26d3df2.js";
+      const LOCAL_TURBO = "/static/parts/vendor/turbo.es2017-umd.a96b6ca19938.js";
+
+      function injectStylesheet(href, id) {
+        if (id && document.getElementById(id)) {
+          return document.getElementById(id);
+        }
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        if (id) link.id = id;
+        document.head.appendChild(link);
+        return link;
+      }
+
+      function injectScript(id, src, opts) {
+        if (document.getElementById(id)) {
+          return document.getElementById(id);
+        }
+        const script = document.createElement('script');
+        script.id = id;
+        script.src = src;
+        script.crossOrigin = 'anonymous';
+        if (opts?.defer) script.defer = true;
+        document.head.appendChild(script);
+        return script;
+      }
+
+      function ensureBootstrapCss() {
+        const cdnLink = document.getElementById('bootstrap-cdn');
+        const fallback = () => injectStylesheet(LOCAL_BOOTSTRAP_CSS, 'bootstrap-local');
+        if (!cdnLink) {
+          fallback();
+          return;
+        }
+        cdnLink.addEventListener('error', fallback, { once: true });
+        window.setTimeout(() => {
+          try {
+            const sheet = cdnLink.sheet;
+            if (!sheet || !sheet.cssRules || !sheet.cssRules.length) {
+              fallback();
+            }
+          } catch (_err) {
+            fallback();
+          }
+        }, 900);
+      }
+
+      function ensureBootstrapJs() {
+        if (window.bootstrap && window.bootstrap.Alert) return;
+        injectScript('bootstrap-local-js', LOCAL_BOOTSTRAP_JS, { defer: true });
+      }
+
+      function ensureTurbo() {
+        if (window.Turbo) return;
+        injectScript('turbo-local', LOCAL_TURBO, {});
+      }
+
+      const cdnBootstrapScript = document.getElementById('bootstrap-cdn-js');
+      if (cdnBootstrapScript) {
+        cdnBootstrapScript.addEventListener('error', () => ensureBootstrapJs(), { once: true });
+      }
+      const cdnTurboScript = document.getElementById('turbo-cdn');
+      if (cdnTurboScript) {
+        cdnTurboScript.addEventListener('error', () => ensureTurbo(), { once: true });
+      }
+
+      window.addEventListener('load', () => {
+        ensureBootstrapCss();
+        window.setTimeout(() => {
+          ensureBootstrapJs();
+          ensureTurbo();
+        }, 700);
+      });
+    })();
+  </script>
+  
+</head>
+<body data-user-authenticated="true">
+
+<!-- Navbar fija superior -->
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow-sm">
+  <div class="container-fluid">
+  <a class="navbar-brand" href="/parts/" data-turbo-frame="app-frame">
+      <span class="brand-logo">T</span>
+      <span class="brand-text">TRANSERVIS</span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarMain">
+      <ul class="navbar-nav mx-auto flex-lg-grow-0">
+        
+          <!-- Navegación principal centrada -->
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="/parts/" data-turbo-frame="app-frame">
+              <i class="fas fa-cogs"></i> Repuestos
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="/autos/" data-turbo-frame="app-frame">
+              <i class="fas fa-car"></i> Autos
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="/workshops/" data-turbo-frame="app-frame">
+              <i class="fas fa-wrench"></i> Talleres
+            </a>
+          </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="/dashboard/" data-turbo-frame="app-frame">
+              <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+          </li>
+          
+          <li class="nav-item mx-2">
+            <a class="nav-link" href="/parts/publicar/" data-turbo-frame="app-frame">
+              <i class="bi bi-megaphone"></i> Publicar
+            </a>
+          </li>
+          
+        
+      </ul>
+      
+      <!-- Controles de usuario a la derecha -->
+      <ul class="navbar-nav ms-auto">
+        
+          <li class="nav-item">
+            <button type="button" id="theme-toggle" class="switch-tile" aria-pressed="false">
+              <span class="tile-icon"><i class="bi bi-sun-fill"></i></span>
+              <span class="label">Modo claro</span>
+            </button>
+          </li>
+          
+          <!-- Dropdown Más (configuraciones y herramientas) -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="moreDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-ellipsis-h"></i> <span class="d-none d-lg-inline">Más</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="moreDropdown">
+              <!-- Modo de transcripción -->
+              <li>
+                <a class="dropdown-item" href="#" id="transcription-mode-toggle" title="Cambiar modo de transcripción">
+                  <i class="fas fa-microphone" id="transcription-icon"></i>
+                  <span id="transcription-mode-text">Local</span>
+                  <span id="transcription-mode-badge" class="badge bg-info ms-1">
+                    <i class="fas fa-server"></i>
+                  </span>
+                  <!-- Marcadores de compatibilidad con tests legacy -->
+                  <span id="ai-model-switch" class="d-none"></span>
+                  <span id="beep-switch" class="d-none"></span>
+                </a>
+              </li>
+              
+              <!-- Conexión Bluetooth con indicador de estado -->
+              <li>
+                <button type="button" class="dropdown-item d-flex align-items-center justify-content-between" id="printer-connect-btn" title="Conectar impresora Bluetooth">
+                  <span><i class="bi bi-bluetooth"></i> Conectar Impresora</span>
+                  <span id="bluetooth-status-container"></span>
+                </button>
+              </li>
+              <li>
+                <button type="button"
+                        class="dropdown-item d-flex align-items-center justify-content-between"
+                        id="printer-test-btn"
+                        title="Ejecutar página de prueba">
+                  <span><i class="bi bi-printer"></i> Test de Impresora</span>
+                  <i class="bi bi-chevron-right text-muted"></i>
+                </button>
+              </li>
+              
+              <li><hr class="dropdown-divider"></li>
+              
+              <!-- Reportes -->
+              <li>
+                <a class="dropdown-item" href="/reports/" data-turbo-frame="app-frame">
+                  <i class="fas fa-file-pdf"></i> Reportes
+                </a>
+              </li>
+              
+              <!-- Usuarios (solo si tiene permisos) -->
+              
+              <li>
+                <a class="dropdown-item" href="/users/" data-turbo-frame="app-frame">
+                  <i class="fas fa-users"></i> Usuarios
+                </a>
+              </li>
+              
+              
+              <!-- Logs (solo admin) -->
+              
+              <li>
+                <a class="dropdown-item" href="/logs/" data-turbo-frame="app-frame">
+                  <i class="bi bi-activity"></i> Logs
+                </a>
+              </li>
+              <li>
+                <a class="dropdown-item" href="/synonyms/" data-turbo-frame="app-frame">
+                  <i class="bi bi-translate"></i> Sinónimos
+                </a>
+              </li>
+              
+            </ul>
+          </li>
+          
+          <!-- Dropdown de usuario -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-user-circle me-1"></i>
+              <span class="d-none d-lg-inline">admin</span>
+              <span class="badge bg-secondary ms-2">Administrador</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+              <li>
+                <span class="dropdown-item-text">
+                  <strong>admin</strong><br>
+                  <small class="text-muted">admin@example.com</small>
+                </span>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item text-danger" href="/logout/">
+                  <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </a>
+              </li>
+            </ul>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+
+<!-- Contenido con padding-top para navbar fija -->
+<turbo-frame id="app-frame">
+  <main class="container py-4 app-shell-main">
+    
+<div class="container mt-4">
+  <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+    <h2 class="mb-2">Dashboard integral</h2>
+    <span class="text-muted small">Actualizado al 28/11/2025 00:46</span>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card metric-card metric-card--primary shadow-sm border-0">
+        <div class="card-body text-center py-3">
+          <div class="small text-uppercase opacity-75">Piezas totales</div>
+          <div class="display-6 fw-bold">7 304</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card metric-card--success shadow-sm border-0">
+        <div class="card-body text-center py-3">
+          <div class="small text-uppercase opacity-75">Disponibles</div>
+          <div class="display-6 fw-bold">2 925</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card metric-card--danger shadow-sm border-0">
+        <div class="card-body text-center py-3">
+          <div class="small text-uppercase opacity-75">Vendidas</div>
+          <div class="display-6 fw-bold">1 811</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card metric-card metric-card--violet shadow-sm border-0">
+        <div class="card-body text-center py-3">
+          <div class="small text-uppercase opacity-75">Autos registrados</div>
+          <div class="display-6 fw-bold">52</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Ingresos últimos 30 días</div>
+          <div class="h3 fw-bold mb-0">$0</div>
+          <p class="text-muted small mb-0">Basado en piezas con fecha de venta registrada.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Ticket promedio</div>
+          <div class="h3 fw-bold mb-0">$0</div>
+          <p class="text-muted small mb-0">Promedio del valor de venta por pieza durante el período.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Sell-through</div>
+          <div class="h3 fw-bold mb-0">24,8%</div>
+          <p class="text-muted small mb-0">Relación entre piezas vendidas y totales.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+            <h5 class="card-title mb-2 mb-md-0">Resumen interactivo</h5>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <label class="me-2 small text-muted d-none d-sm-inline">Tipo</label>
+              <select id="summaryMode" class="form-select form-select-sm w-auto min-w-140">
+                <option value="daily">Diario</option>
+                <option value="weekly">Semanal</option>
+                <option value="monthly" selected>Mensual</option>
+                <option value="yearly">Anual</option>
+                <option value="special">Especial</option>
+              </select>
+              <select id="specialKind" class="form-select form-select-sm w-auto min-w-180 d-none">
+                <option value="available_by_workshop" selected>Disponibles por taller</option>
+                <option value="parts_by_model">Piezas por modelo</option>
+                <option value="model_value_sum">Valor agregado por modelo</option>
+                <option value="recent_sales_by_workshop">Ventas recientes (30 días)</option>
+                <option value="sales_all_time">Ventas históricas por año</option>
+              </select>
+            </div>
+          </div>
+          <div id="summarySelectorRow" class="mb-3 d-flex gap-2 flex-wrap"></div>
+          <div class="dashboard-panel rounded p-2 mb-2">
+            <span id="chartDescription" class="text-muted small"></span>
+          </div>
+          <canvas id="summaryChart" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Top talleres por valor disponible</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Taller</th>
+                  <th class="text-end">Piezas</th>
+                  <th class="text-end">Valor estimado</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                  <tr>
+                    <td>Taller Principal</td>
+                    <td class="text-end">2 925</td>
+                    <td class="text-end">$135 672 250</td>
+                  </tr>
+                
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Modelos que concentran mayor valor</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Modelo</th>
+                  <th class="text-end">Piezas</th>
+                  <th class="text-end">Valor estimado</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                  <tr>
+                    <td>QASHQAI</td>
+                    <td class="text-end">163</td>
+                    <td class="text-end">$9 086 000</td>
+                  </tr>
+                
+                  <tr>
+                    <td>S60</td>
+                    <td class="text-end">112</td>
+                    <td class="text-end">$8 732 100</td>
+                  </tr>
+                
+                  <tr>
+                    <td>FABIA</td>
+                    <td class="text-end">111</td>
+                    <td class="text-end">$7 820 000</td>
+                  </tr>
+                
+                  <tr>
+                    <td>116I</td>
+                    <td class="text-end">136</td>
+                    <td class="text-end">$6 376 000</td>
+                  </tr>
+                
+                  <tr>
+                    <td>XTRAIL</td>
+                    <td class="text-end">141</td>
+                    <td class="text-end">$6 350 100</td>
+                  </tr>
+                
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Piezas premium pendientes</h5>
+          <p class="text-muted small">Top 5 piezas disponibles con mayor valor estimado.</p>
+          <ul class="list-group list-group-flush">
+            
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">MÓDULO ABS</div>
+                  <small class="text-muted">S60 2012 · Taller Principal</small>
+                </div>
+                <span class="badge bg-primary rounded-pill">$950 000</span>
+              </li>
+            
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">CAJA</div>
+                  <small class="text-muted">S60 2012 · Taller Principal</small>
+                </div>
+                <span class="badge bg-primary rounded-pill">$800 000</span>
+              </li>
+            
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">CAJA AUTOMÁTICA</div>
+                  <small class="text-muted">S40 2008 · Taller Principal</small>
+                </div>
+                <span class="badge bg-primary rounded-pill">$750 000</span>
+              </li>
+            
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">MOTOR FACTURABLE</div>
+                  <small class="text-muted">FABIA 2021 · Taller Principal</small>
+                </div>
+                <span class="badge bg-primary rounded-pill">$690 000</span>
+              </li>
+            
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <div class="fw-semibold">CREMALLERA DE DIRECCIÓN</div>
+                  <small class="text-muted">JOYEAR X3 2019 · Taller Principal</small>
+                </div>
+                <span class="badge bg-primary rounded-pill">$650 000</span>
+              </li>
+            
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Piezas con baja rotación</h5>
+          <p class="text-muted small">Revisa piezas con más de 60 días en inventario.</p>
+          <ul class="list-group list-group-flush">
+            
+              <li class="list-group-item text-muted text-center">Inventario al día</li>
+            
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-5">
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Sesiones de voz recientes</h5>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Sesión</th>
+                  <th class="text-end">Parciales</th>
+                  <th class="text-end">Finales</th>
+                  <th class="text-end">Comandos</th>
+                </tr>
+              </thead>
+              <tbody>
+                
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">20251114_084034_395333</div>
+                      <small class="text-muted">14/11 08:40 · ACTIVE</small>
+                    </td>
+                    <td class="text-end">0</td>
+                    <td class="text-end">0</td>
+                    <td class="text-end">1</td>
+                  </tr>
+                
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">20251113_235325_585387</div>
+                      <small class="text-muted">13/11 23:53 · ACTIVE</small>
+                    </td>
+                    <td class="text-end">23</td>
+                    <td class="text-end">0</td>
+                    <td class="text-end">5</td>
+                  </tr>
+                
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">20251113_232658_258113</div>
+                      <small class="text-muted">13/11 23:26 · ACTIVE</small>
+                    </td>
+                    <td class="text-end">12</td>
+                    <td class="text-end">0</td>
+                    <td class="text-end">1</td>
+                  </tr>
+                
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">20251113_224430_600206</div>
+                      <small class="text-muted">13/11 22:44 · ACTIVE</small>
+                    </td>
+                    <td class="text-end">11</td>
+                    <td class="text-end">0</td>
+                    <td class="text-end">3</td>
+                  </tr>
+                
+                  <tr>
+                    <td>
+                      <div class="fw-semibold">20251113_205937_984178</div>
+                      <small class="text-muted">13/11 20:59 · ACTIVE</small>
+                    </td>
+                    <td class="text-end">25</td>
+                    <td class="text-end">0</td>
+                    <td class="text-end">3</td>
+                  </tr>
+                
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Indicadores de voz</h5>
+          <div class="row g-3">
+            <div class="col-6">
+              <div class="border rounded p-3 text-center">
+                <div class="text-muted small">Sesiones</div>
+                <div class="h4 mb-0">0</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="border rounded p-3 text-center">
+                <div class="text-muted small">Ingestas confirmadas</div>
+                <div class="h4 mb-0">0</div>
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="border rounded p-3 text-center">
+                <div class="text-muted small">Mic configs registradas</div>
+                <div class="h4 mb-0">3</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+<script nonce="">
+(function(){
+  const CHART_SRC = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+  const CHART_ATTR = 'data-dashboard-chart';
+  const commonOpts = {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    interaction: { mode: 'nearest', axis: 'x', intersect: false },
+    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+  };
+
+  let summaryChart = null;
+  let statsCache = null;
+  let dailyType = 'sold';
+  let weeklyType = 'sold';
+  let monthlyType = 'sold';
+  let yearlyType = 'sold';
+  let canvasEl, modeSelect, specialSelect, selectorRow, descriptionEl;
+
+  function ensureChartJs(){
+    if (window.Chart){
+      return Promise.resolve();
+    }
+    return new Promise((resolve, reject) => {
+      let script = document.querySelector(`script[${CHART_ATTR}]`);
+      if (script){
+        script.addEventListener('load', () => resolve());
+        script.addEventListener('error', () => reject(new Error('No se pudo cargar Chart.js')));
+        return;
+      }
+      script = document.createElement('script');
+      script.src = CHART_SRC;
+      script.async = true;
+      script.setAttribute(CHART_ATTR, 'true');
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('No se pudo cargar Chart.js'));
+      document.head.appendChild(script);
+    });
+  }
+
+  function destroySummaryChart(){
+    if (summaryChart){
+      summaryChart.destroy();
+      summaryChart = null;
+    }
+  }
+
+  function renderSummary(mode){
+    if (!statsCache || !canvasEl || !selectorRow || !descriptionEl){
+      return;
+    }
+    selectorRow.innerHTML = '';
+    let labels = [];
+    let datasets = [];
+    let type = 'line';
+    let chartDesc = '';
+
+    if (mode === 'daily'){
+      const data = statsCache.daily || { axis: [], sold: [], added: [] };
+      labels = data.axis || [];
+      const sel = document.createElement('select');
+      sel.className = 'form-select form-select-sm';
+      sel.style.maxWidth = '220px';
+      sel.innerHTML = '<option value="sold">Piezas vendidas por día</option><option value="added">Piezas ingresadas por día</option>';
+      sel.value = dailyType;
+      sel.addEventListener('change', () => {
+        dailyType = sel.value;
+        renderSummary('daily');
+      });
+      selectorRow.appendChild(sel);
+      if (dailyType === 'sold'){
+        datasets.push({ label: 'Vendidas', data: data.sold || [], backgroundColor: '#ef5350', borderColor: '#ef5350' });
+        chartDesc = 'Evolución diaria de piezas vendidas en los últimos días.';
+      } else {
+        datasets.push({ label: 'Agregadas', data: data.added || [], backgroundColor: '#0069BC', borderColor: '#0069BC' });
+        chartDesc = 'Evolución diaria de piezas agregadas al inventario.';
+      }
+      type = 'bar';
+    } else if (mode === 'weekly'){
+      const data = statsCache.weekly || { axis: [], sold: [], voice_sessions: [] };
+      labels = data.axis || [];
+      const sel = document.createElement('select');
+      sel.className = 'form-select form-select-sm';
+      sel.style.maxWidth = '220px';
+      sel.innerHTML = '<option value="sold">Piezas vendidas por semana</option><option value="voice_sessions">Sesiones de voz por semana</option>';
+      sel.value = weeklyType;
+      sel.addEventListener('change', () => {
+        weeklyType = sel.value;
+        renderSummary('weekly');
+      });
+      selectorRow.appendChild(sel);
+      if (weeklyType === 'sold'){
+        datasets.push({ label: 'Vendidas', data: data.sold || [], backgroundColor: '#ef5350', borderColor: '#ef5350' });
+        chartDesc = 'Cantidad de piezas vendidas agrupadas por semana.';
+      } else {
+        datasets.push({ label: 'Sesiones Voz', data: data.voice_sessions || [], backgroundColor: '#7e57c2', borderColor: '#7e57c2' });
+        chartDesc = 'Cantidad de sesiones de voz agrupadas por semana.';
+      }
+      type = 'bar';
+    } else if (mode === 'monthly'){
+      const data = statsCache.monthly || { axis: [], sold: [], added: [] };
+      labels = data.axis || [];
+      const sel = document.createElement('select');
+      sel.className = 'form-select form-select-sm';
+      sel.style.maxWidth = '220px';
+      sel.innerHTML = '<option value="sold">Piezas vendidas por mes</option><option value="added">Piezas agregadas por mes</option>';
+      sel.value = monthlyType;
+      sel.addEventListener('change', () => {
+        monthlyType = sel.value;
+        renderSummary('monthly');
+      });
+      selectorRow.appendChild(sel);
+      if (monthlyType === 'sold'){
+        datasets.push({ label: 'Vendidas', data: data.sold || [], backgroundColor: '#ef5350', borderColor: '#ef5350' });
+        chartDesc = 'Cantidad de piezas vendidas agrupadas por mes.';
+      } else {
+        datasets.push({ label: 'Agregadas', data: data.added || [], backgroundColor: '#0069BC', borderColor: '#0069BC' });
+        chartDesc = 'Cantidad de piezas agregadas al inventario agrupadas por mes.';
+      }
+      type = 'bar';
+    } else if (mode === 'yearly'){
+      const data = statsCache.yearly || { axis: [], sold: [], added: [] };
+      labels = data.axis || [];
+      const sel = document.createElement('select');
+      sel.className = 'form-select form-select-sm';
+      sel.style.maxWidth = '220px';
+      sel.innerHTML = '<option value="sold">Piezas vendidas por año</option><option value="added">Piezas agregadas por año</option>';
+      sel.value = yearlyType;
+      sel.addEventListener('change', () => {
+        yearlyType = sel.value;
+        renderSummary('yearly');
+      });
+      selectorRow.appendChild(sel);
+      if (yearlyType === 'sold'){
+        datasets.push({ label: 'Vendidas', data: data.sold || [], backgroundColor: '#ef5350', borderColor: '#ef5350' });
+        chartDesc = 'Comportamiento anual de piezas vendidas.';
+      } else {
+        datasets.push({ label: 'Agregadas', data: data.added || [], backgroundColor: '#0069BC', borderColor: '#0069BC' });
+        chartDesc = 'Comportamiento anual de piezas agregadas.';
+      }
+      type = 'bar';
+    } else {
+      const kind = (specialSelect && specialSelect.value) ? specialSelect.value : 'available_by_workshop';
+      const data = (statsCache.special && statsCache.special[kind]) || { labels: [], values: [] };
+      labels = data.labels || [];
+      datasets.push({ label: 'Total', data: data.values || [], backgroundColor: '#26a69a' });
+      type = 'bar';
+      if (kind === 'available_by_workshop'){
+        chartDesc = 'Cantidad de piezas disponibles agrupadas por taller.';
+      } else if (kind === 'parts_by_model'){
+        chartDesc = 'Cantidad de piezas disponibles agrupadas por modelo de auto.';
+      } else if (kind === 'model_value_sum'){
+        chartDesc = 'Suma de promedios de precios agrupados por modelo.';
+      } else if (kind === 'recent_sales_by_workshop'){
+        chartDesc = 'Ventas confirmadas por taller en los últimos 30 días.';
+      } else if (kind === 'sales_all_time'){
+        chartDesc = 'Histórico de ventas por año (todas las piezas).';
+      } else {
+        chartDesc = 'Resumen especial';
+      }
+    }
+
+    descriptionEl.textContent = chartDesc || '';
+    destroySummaryChart();
+    summaryChart = new Chart(canvasEl, {
+      type,
+      data: { labels, datasets },
+      options: { ...commonOpts, scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  let selectorsWired = false;
+
+  function setupSelectors(){
+    const nextCanvas = document.getElementById('summaryChart');
+    canvasEl = nextCanvas;
+    modeSelect = document.getElementById('summaryMode');
+    specialSelect = document.getElementById('specialKind');
+    selectorRow = document.getElementById('summarySelectorRow');
+    descriptionEl = document.getElementById('chartDescription');
+
+    if (!canvasEl || selectorsWired){
+      return !!canvasEl;
+    }
+
+    if (modeSelect){
+      modeSelect.addEventListener('change', () => {
+        const val = modeSelect.value;
+        if (specialSelect){
+          specialSelect.style.display = (val === 'special') ? 'block' : 'none';
+        }
+        renderSummary(val);
+      });
+    }
+    if (specialSelect){
+      specialSelect.addEventListener('change', () => renderSummary('special'));
+    }
+    selectorsWired = true;
+    return true;
+  }
+
+  function hydrateDashboard(data){
+    statsCache = data && data.data ? data.data : data;
+    if (!statsCache){
+      return;
+    }
+    renderSummary(modeSelect ? modeSelect.value : 'monthly');
+  }
+
+  function fetchStats(){
+    const url = "/dashboard/stats/";
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(resp => resp.json())
+      .then(data => hydrateDashboard(data))
+      .catch(err => {
+        console.error('dashboard_stats_error', err);
+        if (descriptionEl){
+          descriptionEl.textContent = 'No se pudo cargar el resumen. Intenta nuevamente más tarde.';
+        }
+      });
+  }
+
+  function init(){
+    if (!setupSelectors()){
+      return;
+    }
+    ensureChartJs().then(fetchStats).catch(err => console.error(err));
+  }
+
+  function onReady(cb){
+    if (document.readyState === 'complete' || document.readyState === 'interactive'){
+      requestAnimationFrame(cb);
+    } else {
+      document.addEventListener('DOMContentLoaded', cb, { once: true });
+    }
+    document.addEventListener('turbo:load', cb);
+    document.addEventListener('turbo:frame-load', event => {
+      if (event.target && event.target.id === 'app-frame'){
+        cb();
+      }
+    });
+  }
+
+  onReady(init);
+})();
+</script>
+
+  </main>
+</turbo-frame>
+
+<!-- Toasts container -->
+<div class="position-fixed top-0 end-0 p-3 toast-region">
+  <div id="toast-container" class="toast-container"></div>
+  <!-- los toasts se inyectan aquí dinámicamente -->
+  
+</div>
+
+<!-- Bootstrap JS (sin jQuery) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"
+        id="bootstrap-cdn-js"
+        defer></script>
+
+<!-- Bluetooth Printer System (Bridge Unificado) -->
+<script src="/static/parts/bluetooth-printer.9c6f42ce75bf.js"></script>
+<script src="/static/parts/printer-bridge.380dd2dfcdcf.js"></script>
+<script src="/static/parts/bluetooth-status-indicator.a0d175c0fd8c.js"></script>
+<script src="/static/parts/js/app-shell.7b5377ccc571.js" defer></script>
+<script src="/static/parts/js/theme-preferences.6b67b9714a5e.js" defer></script>
+<script src="/static/parts/activity-logger.b3af1e9bade9.js?v=20250220a" defer></script>
+<script src="/static/parts/js/logs.8ca902605e27.js?v=20250302c" defer></script>
+
+
+<!-- Modal de configuración de impresora -->
+<div class="modal fade printer-modal" id="printerConfigModal" tabindex="-1" aria-labelledby="printerConfigModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="printerConfigModalLabel">
+          <i class="fas fa-print"></i>
+          Configuración de Impresora
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">
+          <i class="fas fa-info-circle"></i>
+          Selecciona cómo deseas imprimir las etiquetas de código de barras en tu GOOJPRT PT210.
+        </p>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Método de Conexión:</label>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="printerMethod" id="printerUSB" value="usb" checked>
+            <label class="btn btn-outline-primary" for="printerUSB">
+              <i class="fas fa-usb"></i> USB
+            </label>
+            
+            <input type="radio" class="btn-check" name="printerMethod" id="printerBluetooth" value="bluetooth">
+            <label class="btn btn-outline-success" for="printerBluetooth">
+              <i class="fas fa-bluetooth"></i> Bluetooth
+            </label>
+            
+            <input type="radio" class="btn-check" name="printerMethod" id="printerNetwork" value="network">
+            <label class="btn btn-outline-info" for="printerNetwork">
+              <i class="fas fa-network-wired"></i> Red
+            </label>
+          </div>
+        </div>
+        
+        <div id="bluetoothOptions" class="d-none">
+          <div class="alert alert-info">
+            <strong>Bluetooth Directo (Web Bluetooth API):</strong>
+            <ul class="mb-0 mt-2">
+              <li> Solo funciona en Chrome o Edge</li>
+              <li> Imprime directamente desde tu celular/PC</li>
+              <li> La impresora debe estar emparejada con tu dispositivo</li>
+              <li> No requiere configuración del servidor</li>
+            </ul>
+          </div>
+          <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Importante:</strong> Al presionar "Ejecutar Test", se abrirá un diálogo
+            para seleccionar tu impresora Bluetooth. Asegúrate de que esté encendida.
+          </div>
+        </div>
+        
+        <div id="networkOptions" class="d-none">
+          <div class="mb-3">
+            <label class="form-label">Dirección IP:</label>
+            <input type="text" class="form-control" id="printerIP" placeholder="192.168.1.100">
+            <small class="text-muted">Dirección IP del servidor con la impresora compartida</small>
+          </div>
+        </div>
+        
+        <div id="usbOptions">
+          <div class="alert alert-success">
+            <strong>USB (Servidor):</strong>
+            <ul class="mb-0 mt-2">
+              <li>Funciona en todos los navegadores</li>
+              <li>Impresora conectada al servidor</li>
+              <li>Más confiable y estable</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div id="printerStatus" class="alert alert-secondary mt-3">
+          <i class="fas fa-info-circle"></i>
+          <span id="printerStatusText">Método actual: USB (Servidor)</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="savePrinterConfig">
+          <i class="fas fa-save"></i>
+          Guardar Configuración
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Test de Impresora -->
+<div class="modal fade printer-modal" id="printerTestModal" tabindex="-1" aria-labelledby="printerTestModalLabel" aria-hidden="true" data-test-url="/parts/impresora/test/">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="printerTestModalLabel">
+          <i class="fas fa-vial"></i>
+          Test de Impresora
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          <strong>Prueba rápida de conexión</strong><br>
+          Verifica que la impresora térmica esté conectada y funcionando correctamente.
+        </div>
+        
+        <div id="testResult" class="d-none"></div>
+        
+        <div id="testLog" class="mt-3 d-none">
+          <h6 class="text-muted">
+            <i class="fas fa-terminal"></i>
+            Diagnóstico:
+          </h6>
+          <pre id="testLogContent" class="bg-light p-3 rounded printer-log"></pre>
+        </div>
+        
+        <div id="testCommands" class="mt-3 d-none">
+          <h6 class="text-muted">
+            <i class="fas fa-code"></i>
+            Comandos sugeridos:
+          </h6>
+          <div id="testCommandsContent" class="bg-dark text-light p-3 rounded printer-code-block"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="runPrinterTest">
+          <i class="fas fa-play"></i>
+          <span id="testBtnText">Ejecutar Test</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

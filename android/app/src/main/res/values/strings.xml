@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Car Inventory</string>
+    <string name="title_activity_main">Car Inventory</string>
+    <string name="package_name">com.carinventory.app</string>
+    <string name="custom_url_scheme">com.carinventory.app</string>
+</resources>
