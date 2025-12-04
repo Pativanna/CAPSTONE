@@ -761,10 +761,31 @@ function setupZxingReader(retries = 5) {
   }
 
   async function startCamera() {
+    // Diagnóstico detallado
+    console.log('[scanner:startCamera] Debug Info:');
+    console.log('  - isNativePlatform:', isNativePlatform);
+    console.log('  - window.Capacitor:', typeof window.Capacitor);
+    console.log('  - window.MLKitNativeScanner:', typeof window.MLKitNativeScanner);
+    console.log('  - mlKitScanner:', mlKitScanner);
+    
+    appendDebugLog('camera:start-debug', {
+      isNativePlatform,
+      hasCapacitor: typeof window.Capacitor !== 'undefined',
+      hasMLKitClass: typeof window.MLKitNativeScanner !== 'undefined',
+      hasMLKitInstance: !!mlKitScanner
+    });
+    
     // Si estamos en app móvil nativa, usar ML Kit directamente
-    if (isNativePlatform && mlKitScanner && mlKitScanner.isSupported) {
-      console.log('[scanner] Using ML Kit Native Scanner');
-      setCameraStatus('Preparando escáner nativo...');
+    if (isNativePlatform && mlKitScanner) {
+      console.log('[scanner] Ensuring ML Kit is ready...');
+      
+      // Esperar a que ML Kit termine de inicializarse
+      const isReady = await mlKitScanner.ensureReady();
+      console.log('[scanner] ML Kit ready:', isReady);
+      
+      if (isReady) {
+        console.log('[scanner] Using ML Kit Native Scanner');
+        setCameraStatus('Preparando escáner nativo...');
       
       if (els.toggleCameraBtn) {
         els.toggleCameraBtn.disabled = true;
@@ -819,6 +840,9 @@ function setupZxingReader(retries = 5) {
         els.toggleCameraBtn.removeAttribute('aria-busy');
       }
       return;
+      } else {
+        console.log('[scanner] ML Kit not ready, falling back to web camera');
+      }
     }
     
     // Navegador web: usar escáner web tradicional

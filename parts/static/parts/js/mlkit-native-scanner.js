@@ -5,28 +5,53 @@
 
 class MLKitNativeScanner {
   constructor() {
+    console.log('[MLKit] Constructor called');
     this.BarcodeScanner = null;
     this.isSupported = false;
     this.isScanning = false;
-    this.init();
+    this._initPromise = null;
+    this._checkNativePlatform();
   }
 
-  async init() {
+  _checkNativePlatform() {
+    console.log('[MLKit] Checking native platform...');
+    console.log('[MLKit] window.Capacitor:', typeof window.Capacitor);
+    console.log('[MLKit] Capacitor.isNativePlatform:', window.Capacitor?.isNativePlatform?.());
+    
+    if (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform()) {
+      console.log('[MLKit] Native platform detected, starting initialization');
+      this._initPromise = this._init();
+    } else {
+      console.log('[MLKit] Not a native platform, skipping ML Kit');
+    }
+  }
+
+  async _init() {
     try {
-      // Importar plugin ML Kit solo en plataforma nativa
-      if (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform()) {
-        const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning');
-        this.BarcodeScanner = BarcodeScanner;
-        this.isSupported = await this.BarcodeScanner.isSupported();
-        console.log('[MLKit] Native scanner initialized:', this.isSupported);
-        
-        // Solicitar permisos
+      console.log('[MLKit] Importing @capacitor-mlkit/barcode-scanning...');
+      const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning');
+      this.BarcodeScanner = BarcodeScanner;
+      
+      console.log('[MLKit] Checking if supported...');
+      this.isSupported = await this.BarcodeScanner.isSupported();
+      console.log('[MLKit] Native scanner supported:', this.isSupported);
+      
+      if (this.isSupported) {
+        // Solicitar permisos inmediatamente
+        console.log('[MLKit] Requesting camera permissions...');
         await this.requestPermissions();
       }
     } catch (error) {
-      console.warn('[MLKit] Initialization failed:', error);
+      console.error('[MLKit] Initialization failed:', error);
       this.isSupported = false;
     }
+  }
+
+  async ensureReady() {
+    if (this._initPromise) {
+      await this._initPromise;
+    }
+    return this.isSupported;
   }
 
   async requestPermissions() {
