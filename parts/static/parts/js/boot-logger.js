@@ -54,6 +54,10 @@
   window.__getBootLog = function () {
     return logBuffer.slice();
   };
+  window.__clearBootLog = function () {
+    logBuffer = [];
+    logBoot('bootlog:cleared', { ts: Date.now() });
+  };
   window.__setBootLogVerbose = function (flag) {
     verbose = !!flag;
     try {

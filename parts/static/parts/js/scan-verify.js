@@ -288,7 +288,15 @@ function setupZxingReader(retries = 5) {
   function buildDebugBundle() {
     const scannerLog = state.debugLog.slice();
     const storedSnapshot = readDebugStorage();
+    
+    // Obtener bootlog actual
     const bootLog = typeof window.__getBootLog === 'function' ? window.__getBootLog() : [];
+    
+    // Limpiar bootlog en memoria para la próxima exportación
+    if (typeof window.__clearBootLog === 'function') {
+      window.__clearBootLog();
+    }
+    
     return {
       meta: {
         exported_at: new Date().toISOString(),
