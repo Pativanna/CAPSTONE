@@ -60,22 +60,44 @@ class MLKitNativeScanner {
 
   async _init() {
     try {
-      this._log('Step 1: Importing @capacitor-mlkit/barcode-scanning module');
+      this._log('Step 1: Checking for global Capacitor plugins');
       
-      const importResult = await import('@capacitor-mlkit/barcode-scanning');
-      this._log('Import successful', { keys: Object.keys(importResult) });
+      // Verificar que Capacitor.Plugins existe
+      if (!window.Capacitor || !window.Capacitor.Plugins) {
+        throw new Error('Capacitor.Plugins not available');
+      }
       
-      const { BarcodeScanner } = importResult;
-      this._log('BarcodeScanner extracted', typeof BarcodeScanner);
+      this._log('Capacitor.Plugins available', { 
+        pluginNames: Object.keys(window.Capacitor.Plugins) 
+      });
+      
+      // El plugin debe estar registrado como BarcodeScanner en Capacitor.Plugins
+      const { BarcodeScanner } = window.Capacitor.Plugins;
       
       if (!BarcodeScanner) {
-        throw new Error('BarcodeScanner not found in import');
+        this._log('BarcodeScanner plugin not found in Capacitor.Plugins', {
+          availablePlugins: Object.keys(window.Capacitor.Plugins)
+        });
+        throw new Error('BarcodeScanner plugin not registered');
       }
+      
+      this._log('BarcodeScanner plugin found', { 
+        methods: Object.keys(BarcodeScanner) 
+      });
       
       this.BarcodeScanner = BarcodeScanner;
       this._log('BarcodeScanner assigned to instance');
       
       this._log('Step 2: Checking if ML Kit is supported on this device');
+      
+      // Verificar que el método isSupported existe
+      if (typeof this.BarcodeScanner.isSupported !== 'function') {
+        this._log('isSupported method not found', {
+          availableMethods: Object.keys(this.BarcodeScanner)
+        });
+        throw new Error('BarcodeScanner.isSupported is not a function');
+      }
+      
       this.isSupported = await this.BarcodeScanner.isSupported();
       this._log('isSupported() result', this.isSupported);
       

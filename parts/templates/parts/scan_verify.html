@@ -143,7 +143,7 @@
 
 {{ initial_parts_payload|safe }}
 
-<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251204c"
+<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251204d"
         data-page-script="parts:mlkit-scanner"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
@@ -157,7 +157,7 @@
         data-page-script="parts:jsqr"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251204c"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251204d"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"
