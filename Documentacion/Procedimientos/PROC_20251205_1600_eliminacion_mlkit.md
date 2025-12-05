@@ -122,11 +122,13 @@ git tag -d backup-before-mlkit-removal
 
 ## REGISTRO DE CAMBIOS
 
-### 2025-12-05 16:00
-- ✅ Documentación de calidad creada
-- ✅ Estructura de procedimientos establecida
-- ✅ Procedimiento iniciado
-- ⏳ Pendiente: Ejecutar Fase 1
+### 2025-12-05 16:00-16:15
+- ✅ FASE 1 COMPLETADA: Rama y backup creados (commit 176ca36)
+- ✅ FASE 2 COMPLETADA: 7 archivos MLKit eliminados, 2,198 líneas (commit f078380)
+- ✅ FASE 3 COMPLETADA: MainActivity.java actualizado (commit 77672a1)
+- ✅ FASE 4 COMPLETADA: 6 dependencias eliminadas de build.gradle (commit 258e53e)
+- ⏳ FASE 5 PENDIENTE: Compilar APK limpia
+- ⏳ FASES 6-10 PENDIENTES: Implementación scanner web
 
 ---
 
@@ -134,13 +136,15 @@ git tag -d backup-before-mlkit-removal
 
 | Métrica | Valor Actual | Objetivo |
 |---------|--------------|----------|
-| Fases Completadas | 0/10 | 10/10 |
-| Tiempo Transcurrido | 5 min | 90 min |
-| Archivos Eliminados | 0 | 7 |
-| Archivos Modificados | 0 | 4 |
+| Fases Completadas | 4/10 | 10/10 |
+| Tiempo Transcurrido | 15 min | 90 min |
+| Archivos Eliminados | 7 | 7 |
+| Archivos Modificados | 2 | 4 |
 | Archivos Creados | 0 | 1 |
+| Líneas Eliminadas | 2,198 | ~2,500 |
+| Dependencias Eliminadas | 6 | 6 |
+| Commits Realizados | 4 | 10 |
 | Tests Pasados | 0/4 | 4/4 |
-| Commits Realizados | 0 | 10 |
 
 ---
 
@@ -158,9 +162,22 @@ Se documentarán al finalizar el procedimiento.
 
 ## ESTADO ACTUAL
 
-🟡 **EN PROGRESO** - Fase 1 por ejecutar
+🟢 **EN PROGRESO** - 40% completado (4/10 fases)
 
-**Próxima Acción:** Ejecutar comandos de Fase 1 (crear rama y tag)
+**Última Fase:** Fase 4 - Dependencias eliminadas ✅  
+**Próxima Acción:** Fase 5 - Push a GitHub y compilar APK limpia
+
+### Resumen de Eliminación Exitosa
+- ✅ 2,198 líneas de código MLKit eliminadas
+- ✅ 7 archivos Java/JS removidos
+- ✅ 6 dependencias de build removidas
+- ✅ MainActivity limpio (sin plugin registration)
+- ✅ 4 commits atómicos con rollback disponible
+
+### APK Esperado
+- Reducción de tamaño: ~5-8 MB
+- Sin dependencias MLKit/CameraX
+- Build debería completar sin errores
 
 ---
 
