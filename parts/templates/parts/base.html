@@ -12,9 +12,12 @@
   <link rel="icon" href="{% static 'parts/favicon.svg' %}" type="image/svg+xml">
   <meta name="csp-nonce" content="{{ csp_nonce|default:'' }}">
   
-  <!-- Capacitor Runtime - MUST be loaded first for remote content -->
-  <!-- This enables native plugins when loading from server URL -->
-  <script src="{% static 'parts/js/capacitor-runtime.js' %}?v=20251205n" nonce="{{ csp_nonce|default:'' }}"></script>
+  <!-- Capacitor Remote Bridge - Custom bridge for remote content loading -->
+  <!-- This enables native plugins when loading from server.url -->
+  <!-- Note: We use our own bridge instead of capacitor-runtime.js because -->
+  <!-- the runtime expects PluginHeaders to be injected by native, which doesn't -->
+  <!-- happen for remote content -->
+  <script src="{% static 'parts/js/capacitor-remote-bridge.js' %}?v=20251206b" nonce="{{ csp_nonce|default:'' }}"></script>
   
   <script src="{% static 'parts/js/layout-init.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>
   <script src="{% static 'parts/js/boot-logger.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>

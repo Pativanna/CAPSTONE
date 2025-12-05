@@ -15,24 +15,9 @@
 // Prevent double initialization (Turbo may load script multiple times)
 if (typeof window.ZXingNativeScanner === 'undefined') {
 
-// Register the plugin with Capacitor 7+ if not already done
-(function registerZXingPlugin() {
-  if (typeof window.Capacitor === 'undefined') return;
-  if (!window.Capacitor.isNativePlatform()) return;
-  
-  // Check if registerPlugin function exists (Capacitor 7+)
-  if (typeof window.Capacitor.registerPlugin === 'function') {
-    // Only register if not already in Plugins
-    if (!window.Capacitor.Plugins?.ZXingScanner) {
-      console.log('[ZXingScanner] Registering plugin with Capacitor.registerPlugin()...');
-      const ZXingScanner = window.Capacitor.registerPlugin('ZXingScanner');
-      // Ensure Plugins object exists
-      window.Capacitor.Plugins = window.Capacitor.Plugins || {};
-      window.Capacitor.Plugins.ZXingScanner = ZXingScanner;
-      console.log('[ZXingScanner] ✅ Plugin registered via Capacitor.registerPlugin()');
-    }
-  }
-})();
+// Plugin registration is handled by capacitor-remote-bridge.js
+// which creates window.Capacitor.Plugins.ZXingScanner
+// See: templates/parts/base.html
 
 class ZXingNativeScanner {
   constructor() {
