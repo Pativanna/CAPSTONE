@@ -63,7 +63,7 @@ import java.util.concurrent.TimeUnit;
     }
 )
 @SuppressWarnings({"unused", "RedundantSuppression"})
-public class MLKitScannerPlugin extends Plugin {
+class MLKitScannerPlugin_OLD extends Plugin {
     
     private PreviewView previewView;
     private ProcessCameraProvider cameraProvider;
