@@ -11,6 +11,11 @@
   {% endif %}
   <link rel="icon" href="{% static 'parts/favicon.svg' %}" type="image/svg+xml">
   <meta name="csp-nonce" content="{{ csp_nonce|default:'' }}">
+  
+  <!-- Capacitor Runtime - MUST be loaded first for remote content -->
+  <!-- This enables native plugins when loading from server URL -->
+  <script src="{% static 'parts/js/capacitor-runtime.js' %}?v=20251205n" nonce="{{ csp_nonce|default:'' }}"></script>
+  
   <script src="{% static 'parts/js/layout-init.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>
   <script src="{% static 'parts/js/boot-logger.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>
 
