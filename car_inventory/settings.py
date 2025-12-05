@@ -586,13 +586,19 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True,
 }
 
-# CORS Configuration (permitir acceso desde frontend)
+# CORS Configuration (permitir acceso desde frontend y app móvil)
 CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://localhost:8000'
+    'http://localhost:3000,http://localhost:8000,https://www.transervis.cl,capacitor://localhost'
 ).split(',')
 
 CORS_ALLOW_CREDENTIALS = True
+
+# CSRF Configuration para app móvil
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://www.transervis.cl,capacitor://localhost'
+).split(',')
 
 # ------------------------------------------------------------------
 # Security Settings for Production

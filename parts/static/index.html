@@ -48,9 +48,11 @@
     </div>
 
     <script>
-        // Redirigir inmediatamente al servidor remoto
-        // La app móvil funciona como wrapper del sitio web
-        window.location.href = 'https://www.transervis.cl/parts/dashboard/';
+        // Capacitor cargará la app desde server.url configurado
+        // Una vez que cargue, este loading desaparecerá
+        setTimeout(function() {
+            document.getElementById('loading').style.display = 'none';
+        }, 3000);
     </script>
 </body>
 </html>

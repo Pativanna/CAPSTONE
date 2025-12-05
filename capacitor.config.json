@@ -2,6 +2,11 @@
   "appId": "com.carinventory.app",
   "appName": "Car Inventory",
   "webDir": "staticfiles",
+  "server": {
+    "url": "https://www.transervis.cl",
+    "cleartext": false,
+    "androidScheme": "https"
+  },
   "android": {
     "allowMixedContent": false,
     "captureInput": true,
