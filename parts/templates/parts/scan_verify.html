@@ -161,6 +161,13 @@
         data-page-script="parts:scanner-feedback"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
+
+<!-- Librería ZXing JS para fallback en web -->
+<script src="{% static 'parts/vendor/zxing-index.min.js' %}?v=20251205q"
+        defer
+        data-page-script="parts:zxing-vendor"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}"></script>
         
 <!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
 <script src="{% static 'parts/js/scan-verify.js' %}?v=20251205q"
