@@ -15,10 +15,15 @@
   if (isNativePlatform && window.MLKitNativeScanner) {
     mlKitScanner = new window.MLKitNativeScanner();
     if (mlKitScanner.isSupported()) {
-      console.log('[scanner] ML Kit BUNDLED Native Scanner initialized and ready');
+      console.log('[scanner] ✅ ML Kit BUNDLED Native Scanner initialized and ready');
     } else {
-      console.log('[scanner] ML Kit plugin not available, using web scanner');
+      console.error('[scanner] ❌ ML Kit plugin initialized but NOT supported (plugin missing from native code)');
+      console.error('[scanner] This APK does NOT have MLKitScannerPlugin compiled');
       mlKitScanner = null;
+    }
+  } else {
+    if (isNativePlatform) {
+      console.error('[scanner] ❌ MLKitNativeScanner class not found (mlkit-native-scanner.js not loaded?)');
     }
   }
 

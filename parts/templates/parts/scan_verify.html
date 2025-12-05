@@ -145,7 +145,7 @@
 
 <!-- Scripts de la página (mantener dentro del bloque de contenido para Turbo) -->
 <!-- Los plugins nativos se cargan SIN defer para estar disponibles antes del script principal -->
-<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205c"
+<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205d"
         data-page-script="parts:mlkit-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
@@ -163,7 +163,7 @@
         nonce="{{ csp_nonce|default:'' }}"></script>
         
 <!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205c"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205d"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"

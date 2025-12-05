@@ -18,20 +18,25 @@ class MLKitNativeScanner {
     try {
       // Verificar que Capacitor esté disponible
       if (typeof window.Capacitor === 'undefined') {
-        console.warn('[MLKitScanner] Capacitor not available');
+        console.error('[MLKitScanner] Capacitor not available');
         return;
       }
+      
+      console.log('[MLKitScanner] Capacitor available, platform:', window.Capacitor.getPlatform());
+      console.log('[MLKitScanner] Available plugins:', Object.keys(window.Capacitor.Plugins || {}));
       
       // Obtener plugin desde Capacitor.Plugins
       this.plugin = window.Capacitor.Plugins.MLKitScanner;
       
       if (!this.plugin) {
-        console.warn('[MLKitScanner] Plugin not found in Capacitor.Plugins');
+        console.error('[MLKitScanner] Plugin NOT found in Capacitor.Plugins');
+        console.error('[MLKitScanner] This means the native plugin was not compiled or registered');
+        console.error('[MLKitScanner] Available plugins are:', Object.keys(window.Capacitor.Plugins || {}));
         return;
       }
       
       this.isInitialized = true;
-      console.log('[MLKitScanner] Plugin initialized successfully');
+      console.log('[MLKitScanner] ✅ Plugin initialized successfully');
       
     } catch (error) {
       console.error('[MLKitScanner] Initialization error:', error);
