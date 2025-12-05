@@ -1,45 +1,20 @@
 (function () {
   'use strict';
 
-  // ============================================================================
-  // DEBUG LOGGING
-  // ============================================================================
-  
-  const debugLogs = [];
-  const maxLogs = 50;
-  
-  function debugLog(message, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = `[${timestamp}] ${message}`;
-    
-    debugLogs.push(logEntry);
-    if (debugLogs.length > maxLogs) {
-      debugLogs.shift();
-    }
-    
-    // Actualizar panel de logs
-    const logsPanel = document.getElementById('debug-logs');
-    if (logsPanel) {
-      logsPanel.innerHTML = debugLogs.map(log => `<div>${log}</div>`).join('');
-      logsPanel.scrollTop = logsPanel.scrollHeight;
-    }
-    
-    // También log a consola
-    console.log(`[scanner-debug] ${message}`);
-  }
+  console.log('[scanner] Initializing MLKit-only scanner...');
 
   // ============================================================================
   // PLATFORM DETECTION
   // ============================================================================
   
   const isNativePlatform = typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform();
-  const isAndroid = isNativePlatform && window.Capacitor.getPlatform() === 'android';
   
-  debugLog(`Platform: ${isNativePlatform ? 'Native Mobile' : 'Web Browser'}`);
-  console.log('[scanner] Platform:', isNativePlatform ? 'Native Mobile' : 'Web Browser');
-  if (isNativePlatform) {
-    debugLog(`Platform Details: ${window.Capacitor.getPlatform()}`);
-    console.log('[scanner] Platform Details:', window.Capacitor.getPlatform());
+  if (!isNativePlatform) {
+    console.warn('[scanner] Not on native platform - scanner features disabled');
+    document.getElementById('scanner-status-banner')?.classList.remove('d-none');
+    document.getElementById('scanner-status-banner')?.classList.add('alert-warning');
+    document.getElementById('scanner-status-banner').textContent = 'Esta función requiere la app móvil';
+    return;
   }
 
   // ============================================================================
@@ -49,84 +24,39 @@
   let mlKitScanner = null;
   
   async function initMLKitScanner() {
-    if (mlKitScanner !== null) {
-      const ready = await mlKitScanner.waitUntilReady();
-      if (ready) {
-        debugLog('Scanner ya inicializado previamente');
-        return mlKitScanner;  // Ya inicializado
-      }
-      debugLog('Instancia previa encontrada pero todavía no está lista, reintentando');
-    }
+    if (mlKitScanner) return mlKitScanner;
     
-    if (!isNativePlatform) {
-      debugLog('No es plataforma nativa');
-      console.log('[scanner] Not on native platform, skipping ML Kit');
-      return null;
-    }
-    
-    debugLog('Verificando window.MLKitNativeScanner...');
     if (!window.MLKitNativeScanner) {
-      debugLog('ERROR: window.MLKitNativeScanner NO existe');
-      debugLog('Script mlkit-native-scanner.js no cargó correctamente');
-      console.error('[scanner] ❌ MLKitNativeScanner class not found');
-      console.error('[scanner] Check that mlkit-native-scanner.js loaded correctly');
+      console.error('[scanner] MLKitNativeScanner not found');
       return null;
     }
-    
-    debugLog('window.MLKitNativeScanner existe ✓');
     
     try {
-      debugLog('Creando instancia de MLKitNativeScanner...');
       mlKitScanner = new window.MLKitNativeScanner();
-      debugLog('Instancia creada ✓');
+      const ready = await mlKitScanner.waitUntilReady(3000);
       
-      debugLog('Esperando a que el plugin nativo esté disponible...');
-      const supported = await mlKitScanner.waitUntilReady();
-      debugLog(`isSupported() = ${supported}`);
-      
-      if (supported) {
-        debugLog('ML Kit Scanner DISPONIBLE y listo ✓✓✓');
-        console.log('[scanner] ✅ ML Kit BUNDLED Native Scanner initialized and ready');
+      if (ready) {
+        console.log('[scanner] ✅ MLKit scanner ready');
         return mlKitScanner;
       } else {
-        debugLog('ERROR: isSupported() retornó false');
-        debugLog('El plugin NO está compilado en esta APK');
-        console.error('[scanner] ❌ ML Kit plugin initialized but NOT supported');
-        console.error('[scanner] This APK does NOT have MLKitScannerPlugin compiled');
-        mlKitScanner = null;
+        console.error('[scanner] ❌ MLKit plugin not available');
         return null;
       }
     } catch (error) {
-      debugLog(`ERROR al inicializar: ${error.message}`);
-      debugLog(`Stack: ${error.stack}`);
-      console.error('[scanner] ❌ Error initializing ML Kit:', error);
-      mlKitScanner = null;
+      console.error('[scanner] Error initializing MLKit:', error);
       return null;
     }
   }
 
   // ============================================================================
-  // INITIAL DATA & SEARCH INDEX
+  // SEARCH INDEX
   // ============================================================================
   
   const initialPartsScript = document.getElementById('scan-initial-parts');
-  let initialParts = [];
-  
-  if (initialPartsScript) {
-    try {
-      initialParts = JSON.parse(initialPartsScript.textContent || '[]');
-      console.log('[scanner] Loaded', initialParts.length, 'initial parts from script tag');
-    } catch (e) {
-      console.error('[scanner] Failed to parse initial parts:', e);
-      initialParts = [];
-    }
-  } else {
-    console.warn('[scanner] #scan-initial-parts script tag not found');
-  }
+  const initialParts = initialPartsScript ? JSON.parse(initialPartsScript.textContent || '[]') : [];
 
   function normalizeText(text) {
-    if (!text) return '';
-    return String(text)
+    return String(text || '')
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -134,8 +64,7 @@
   }
 
   function normalizeBarcode(code) {
-    if (!code) return '';
-    return String(code).replace(/\s+/g, '').toUpperCase();
+    return String(code || '').replace(/\s+/g, '').toUpperCase();
   }
 
   const SearchIndex = (() => {
@@ -143,100 +72,51 @@
     const barcodeMap = new Map();
 
     const enrich = (part) => {
-      if (!part) return null;
       const clone = { ...part };
       clone.photos = Array.isArray(clone.photos) ? clone.photos : [];
       clone._normalized = normalizeText(`${clone.name || ''} ${clone.auto || ''}`);
       clone._barcode = normalizeBarcode(clone.barcode);
-      clone._hasPhoto = clone.photos.length > 0;
       return clone;
     };
 
-    const upsert = (list) => {
-      if (!Array.isArray(list)) return;
-      list.forEach((item) => {
-        const enriched = enrich(item);
-        if (!enriched) return;
-        store.set(String(enriched.id), enriched);
-        if (enriched._barcode) {
-          barcodeMap.set(enriched._barcode, enriched);
-        }
-      });
-    };
-
-    const all = () => Array.from(store.values());
-
-    const compareUpdated = (a, b) => {
-      const aTs = Date.parse(a.updated_at || '') || 0;
-      const bTs = Date.parse(b.updated_at || '') || 0;
-      return aTs - bTs;
-    };
-
-    const search = (term, limit = 25) => {
-      const normalized = normalizeText(term);
-      if (!normalized) {
-        return all().slice(0, limit);
-      }
-      const stripped = normalized.replace(/\s+/g, '');
-      const tokens = normalized.split(/\s+/).filter(Boolean);
-      const scored = [];
-      store.forEach((part) => {
-        let score = 0;
-        if (stripped && part._barcode && part._barcode.startsWith(stripped)) {
-          score += 15;
-        }
-        if (normalized && part._normalized.includes(normalized)) {
-          score += 8;
-        }
-        tokens.forEach((tok) => {
-          if (tok && part._normalized.includes(tok)) {
-            score += 2;
+    return {
+      bootstrap: (list) => {
+        list.forEach(item => {
+          const enriched = enrich(item);
+          store.set(String(enriched.id), enriched);
+          if (enriched._barcode) {
+            barcodeMap.set(enriched._barcode, enriched);
           }
         });
-        if (score > 0) {
-          scored.push({ part, score });
-        }
-      });
-      scored.sort((a, b) => (b.score - a.score) || compareUpdated(b.part, a.part));
-      return scored.slice(0, limit).map((entry) => entry.part);
-    };
-
-    return {
-      bootstrap(list) {
-        upsert(list);
       },
-      upsert,
-      search,
-      get(partId) {
-        return store.get(String(partId)) || null;
+      
+      search: (query) => {
+        const normalized = normalizeText(query);
+        return Array.from(store.values()).filter(part =>
+          part._normalized.includes(normalized)
+        );
       },
-      findByBarcode(barcode) {
-        if (!barcode) return null;
-        const normalized = normalizeBarcode(barcode);
-        return barcodeMap.get(normalized) || null;
+      
+      findByBarcode: (code) => {
+        return barcodeMap.get(normalizeBarcode(code)) || null;
       },
-      count() {
-        return store.size;
-      },
-      all,
+      
+      all: () => Array.from(store.values()),
+      count: () => store.size
     };
   })();
 
-  SearchIndex.bootstrap(initialParts || []);
+  SearchIndex.bootstrap(initialParts);
+  console.log(`[scanner] SearchIndex loaded with ${SearchIndex.count()} parts`);
 
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
   
   const state = {
-    lastSuccessfulDetection: 0,
-    detectionCooldown: 2000, // 2 segundos de pausa después de detectar
-    lastDetectedCode: null,
-    scannerState: 'SCANNING', // SCANNING | DETECTED | CONFIRMED
-    cameraStatus: 'Esperando...',
-    filtered: [],
-    searchQuery: '',
-    selectedParts: new Set(), // IDs de piezas seleccionadas para búsqueda
+    selectedParts: new Set(),
+    isScanning: false,
+    lastDetection: 0
   };
 
   // ============================================================================
@@ -244,221 +124,83 @@
   // ============================================================================
   
   const els = {
-    toggleCameraBtn: document.getElementById('scanner-toggle-camera-btn'),
-    stopCameraBtn: document.getElementById('scanner-stop-camera-btn'),
-    cameraStatus: document.getElementById('camera-status'),
-    statusBanner: document.querySelector('.scanner-status-banner'),
+    searchInput: document.getElementById('scanner-search-input'),
     resultsContainer: document.getElementById('scanner-results'),
     resultsStatus: document.getElementById('scanner-results-status'),
-    searchInput: document.getElementById('scanner-search-input'),
-    voiceBtn: document.getElementById('scanner-voice-btn'),
-    voiceStatus: document.getElementById('scanner-voice-status'),
-    workspace: document.getElementById('scanner-workspace'),
-    searchShell: document.getElementById('scanner-search-shell'),
-    pieceName: document.getElementById('scanner-piece-name'),
+    statusBanner: document.getElementById('scanner-status-banner'),
+    cameraStatus: document.getElementById('scanner-camera-status')
   };
 
   // ============================================================================
-  // UTILITY FUNCTIONS
+  // UI HELPERS
   // ============================================================================
   
-  function setCameraStatus(text) {
-    if (els.cameraStatus) {
-      els.cameraStatus.textContent = text;
-    }
-    state.cameraStatus = text;
-  }
-
-  function setStatusBanner(message, variant = 'info') {
-    if (!els.statusBanner) return;
-    els.statusBanner.textContent = message;
-    els.statusBanner.classList.remove('d-none', 'scanner-status-success', 'scanner-status-warning');
-    if (variant === 'success') {
-      els.statusBanner.classList.add('scanner-status-success');
-    } else if (variant === 'warning') {
-      els.statusBanner.classList.add('scanner-status-warning');
-    }
-  }
-
-  function hideStatusBanner() {
-    if (els.statusBanner) {
-      els.statusBanner.classList.add('d-none');
-    }
-  }
-
-  function setResultsStatus(message, variant = 'muted') {
-    if (!els.resultsStatus) return;
-    els.resultsStatus.textContent = message;
-    els.resultsStatus.classList.remove('text-muted', 'text-success', 'text-danger');
-    if (variant === 'success') {
-      els.resultsStatus.classList.add('text-success');
-    } else if (variant === 'danger') {
-      els.resultsStatus.classList.add('text-danger');
-    } else {
-      els.resultsStatus.classList.add('text-muted');
-    }
-  }
-
-  // ============================================================================
-  // BARCODE PROCESSING
-  // ============================================================================
-  
-  async function handleDecodedValue(rawValue, bbox, source, cornerPoints) {
-    if (!rawValue) return;
-
-    const now = Date.now();
-    const timeSinceLastDetection = now - state.lastSuccessfulDetection;
-
-    // Cooldown de 2 segundos
-    if (state.lastSuccessfulDetection > 0 && timeSinceLastDetection < state.detectionCooldown) {
-      const remainingSeconds = Math.ceil((state.detectionCooldown - timeSinceLastDetection) / 1000);
-      setStatusBanner(`Esperando ${remainingSeconds}s antes de continuar…`, 'info');
-      return;
-    }
-
-    // Evitar duplicados del mismo código
-    if (rawValue === state.lastDetectedCode && timeSinceLastDetection < 5000) {
-      console.log('[scanner] Duplicate code ignored:', rawValue);
-      return;
-    }
-
-    console.log('[scanner] Processing barcode:', rawValue, 'from', source);
-
-    state.lastDetectedCode = rawValue;
-    state.lastSuccessfulDetection = now;
-    state.scannerState = 'DETECTED';
-
-    // Feedback visual/sonoro
-    if (window.scannerFeedback) {
-      window.scannerFeedback.onBarcodeDetected();
-    }
-
-    setStatusBanner('✓ Código detectado', 'success');
-
-    // Si hay una pieza seleccionada, verificar que el código coincida
-    if (state.selectedParts.size > 0) {
-      const part = SearchIndex.findByBarcode(rawValue);
-      
-      if (part && state.selectedParts.has(part.id)) {
-        state.scannerState = 'CONFIRMED';
-        setStatusBanner(`✅ ¡CORRECTO! ${part.name}`, 'success');
-        setResultsStatus(`✓ Código correcto`, 'success');
-        
-        if (window.scannerFeedback) {
-          window.scannerFeedback.onSuccess();
-        }
-        
-        displayPartResult(part);
-        console.log('[scanner] ✓ Barcode matches selected part:', part);
-        return;
-      } else {
-        setStatusBanner('❌ Este código NO es el de la pieza buscada', 'warning');
-        setResultsStatus('Código incorrecto - Sigue escaneando', 'danger');
-        
-        if (window.scannerFeedback) {
-          window.scannerFeedback.onError();
-        }
-        
-        setTimeout(() => {
-          state.scannerState = 'SCANNING';
-          hideStatusBanner();
-        }, 1500);
-        return;
-      }
-    }
-
-    // Buscar en SearchIndex completo si no hay selección
-    const localPart = SearchIndex.findByBarcode(rawValue);
-    if (localPart) {
-      state.scannerState = 'CONFIRMED';
-      setStatusBanner(`✓ ${localPart.name}`, 'success');
-      setResultsStatus(`Encontrado: ${localPart.name}`, 'success');
-      
-      if (window.scannerFeedback) {
-        window.scannerFeedback.onSuccess();
-      }
-      
-      displayPartResult(localPart);
-      console.log('[scanner] Found in SearchIndex:', localPart);
-      
-      setTimeout(() => {
-        state.scannerState = 'SCANNING';
-        hideStatusBanner();
-      }, 2000);
-      return;
-    }
-
-    // Buscar en backend como último recurso
-    try {
-      const response = await fetch(`/parts/scan-verify/barcode/?barcode=${encodeURIComponent(rawValue)}`, {
-        method: 'GET',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.found) {
-        state.scannerState = 'CONFIRMED';
-        setStatusBanner(`✓ ${data.part.name}`, 'success');
-        setResultsStatus(`Encontrado: ${data.part.name}`, 'success');
-        
-        // Feedback de éxito
-        if (window.scannerFeedback) {
-          window.scannerFeedback.onSuccess();
-        }
-
-        // Mostrar resultado en UI
-        displayPartResult(data.part);
-      } else {
-        setStatusBanner('⚠ Código no encontrado en inventario', 'warning');
-        setResultsStatus('No encontrado', 'danger');
-        
-        if (window.scannerFeedback) {
-          window.scannerFeedback.onError();
-        }
-      }
-    } catch (error) {
-      console.error('[scanner] Error fetching barcode:', error);
-      setStatusBanner('Error al buscar código', 'warning');
-      setResultsStatus('Error de conexión', 'danger');
-    }
-
-    // Resetear a SCANNING después de 2s
-    setTimeout(() => {
-      state.scannerState = 'SCANNING';
-      hideStatusBanner();
-    }, 2000);
-  }
-
-  function displayPartResult(part) {
-    if (!els.resultsContainer) return;
-
-    const resultHTML = `
-      <div class="card mb-2">
-        <div class="card-body">
-          <h6 class="card-title">${escapeHtml(part.name)}</h6>
-          <p class="card-text">
-            <strong>Código:</strong> ${escapeHtml(part.barcode)}<br>
-            ${part.stock_quantity !== undefined ? `<strong>Stock:</strong> ${part.stock_quantity}<br>` : ''}
-            ${part.location ? `<strong>Ubicación:</strong> ${escapeHtml(part.location)}<br>` : ''}
-          </p>
-        </div>
-      </div>
-    `;
-
-    els.resultsContainer.innerHTML = resultHTML;
-  }
-
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  function setStatusBanner(message, type = 'info') {
+    if (!els.statusBanner) return;
+    els.statusBanner.textContent = message;
+    els.statusBanner.className = `alert alert-${type}`;
+    els.statusBanner.classList.remove('d-none');
+  }
+
+  function hideStatusBanner() {
+    els.statusBanner?.classList.add('d-none');
+  }
+
+  function setCameraStatus(message) {
+    if (els.cameraStatus) {
+      els.cameraStatus.textContent = message;
+    }
+  }
+
+  function setResultsStatus(message) {
+    if (els.resultsStatus) {
+      els.resultsStatus.textContent = message;
+    }
+  }
+
+  // ============================================================================
+  // RENDER RESULTS
+  // ============================================================================
+  
+  function renderResults(parts) {
+    if (!els.resultsContainer) return;
+
+    if (!parts || parts.length === 0) {
+      els.resultsContainer.innerHTML = '<p class="text-muted text-center py-3">No hay resultados</p>';
+      return;
+    }
+
+    const html = parts.map(part => {
+      const isSelected = state.selectedParts.has(part.id);
+      return `
+        <div class="card mb-2 ${isSelected ? 'border-primary' : ''}" 
+             data-part-id="${part.id}"
+             style="cursor: pointer;">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <h6 class="card-title mb-1">
+                  ${isSelected ? '<i class="fas fa-check-circle text-primary me-2"></i>' : ''}
+                  ${escapeHtml(part.name || 'Sin nombre')}
+                </h6>
+                <p class="card-text small text-muted mb-0">
+                  ${part.barcode ? `<strong>Código:</strong> ${escapeHtml(part.barcode)}<br>` : ''}
+                  ${part.auto ? `<strong>Auto:</strong> ${escapeHtml(part.auto)}` : ''}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    els.resultsContainer.innerHTML = html;
   }
 
   // ============================================================================
@@ -466,371 +208,188 @@
   // ============================================================================
   
   function performSearch(query) {
-    state.searchQuery = query;
-    
-    if (!query || query.trim().length === 0) {
-      state.filtered = [];
-      renderResults([]);
-      setResultsStatus(`${SearchIndex.count()} piezas disponibles`, 'muted');
+    if (!query || query.trim() === '') {
+      const initial = SearchIndex.all().slice(0, 25);
+      renderResults(initial);
+      setResultsStatus(`Mostrando 25 de ${SearchIndex.count()} piezas`);
       return;
     }
 
-    const results = SearchIndex.search(query, 25);
-    state.filtered = results;
+    const results = SearchIndex.search(query);
     renderResults(results);
-    
-    if (results.length > 0) {
-      setResultsStatus(`${results.length} coincidencia${results.length !== 1 ? 's' : ''}`, 'success');
+    setResultsStatus(`${results.length} resultado(s) encontrado(s)`);
+  }
+
+  // ============================================================================
+  // PART SELECTION
+  // ============================================================================
+  
+  function togglePartSelection(partId) {
+    if (state.selectedParts.has(partId)) {
+      state.selectedParts.delete(partId);
     } else {
-      setResultsStatus('No se encontraron resultados', 'muted');
-    }
-  }
-
-  function renderResults(parts) {
-    if (!els.resultsContainer) return;
-
-    if (!parts || parts.length === 0) {
-      els.resultsContainer.innerHTML = '<p class="text-muted text-center p-3">No hay resultados</p>';
-      return;
+      // Solo permitir seleccionar 1 pieza a la vez
+      state.selectedParts.clear();
+      state.selectedParts.add(partId);
     }
 
-    const html = parts.map(part => {
-      const isSelected = state.selectedParts.has(part.id);
-      return `
-      <div class="scanner-result-item ${isSelected ? 'active' : ''}" 
-           data-part-id="${part.id}"
-           data-barcode="${escapeHtml(part.barcode || '')}"
-           role="option"
-           aria-selected="${isSelected}"
-           tabindex="0">
-        <div class="scanner-result-main">
-          <div class="scanner-result-title">${escapeHtml(part.name || 'Sin nombre')}</div>
-          <div class="scanner-result-meta">
-            ${part.barcode ? `<span class="badge bg-primary">${escapeHtml(part.barcode)}</span>` : ''}
-            ${part.auto ? `<span class="badge bg-secondary">${escapeHtml(part.auto)}</span>` : ''}
-            ${part.stock_quantity !== undefined ? `<span class="badge bg-info">Stock: ${part.stock_quantity}</span>` : ''}
-          </div>
-        </div>
-        <div class="scanner-result-action">
-          <i class="fas ${isSelected ? 'fa-check-circle text-primary' : 'fa-circle text-muted'}"></i>
-        </div>
-      </div>
-      `;
-    }).join('');
+    // Re-render para actualizar checkmarks
+    const currentQuery = els.searchInput?.value || '';
+    performSearch(currentQuery);
 
-    els.resultsContainer.innerHTML = html;
-    console.log('[scanner:renderResults] Rendered', parts.length, 'parts');
-  }
-
-  function togglePartSelection(itemElement) {
-    const partId = parseInt(itemElement.dataset.partId);
-    const barcode = itemElement.dataset.barcode;
-    const partName = itemElement.querySelector('.scanner-result-title')?.textContent || 'pieza';
-    
-    debugLog(`Click en pieza: ${partName} (ID: ${partId})`);
-    
-    if (!partId) {
-      debugLog('ERROR: partId inválido');
-      return;
-    }
-    
-    console.log('[scanner:togglePartSelection] Clicked part:', partId, barcode, partName);
-    
-    // Limpiar selección anterior
-    state.selectedParts.clear();
-    document.querySelectorAll('.scanner-result-item.active').forEach(item => {
-      item.classList.remove('active');
-      item.setAttribute('aria-selected', 'false');
-      item.querySelector('.scanner-result-action i').className = 'fas fa-circle text-muted';
-    });
-    
-    // Seleccionar solo esta pieza
-    state.selectedParts.add(partId);
-    itemElement.classList.add('active');
-    itemElement.setAttribute('aria-selected', 'true');
-    itemElement.querySelector('.scanner-result-action i').className = 'fas fa-check-circle text-primary';
-    
-    debugLog(`Pieza seleccionada: ${partName}`);
-    debugLog('Iniciando cámara en 300ms...');
-    
-    console.log('[scanner:togglePartSelection] Part selected, selectedParts:', Array.from(state.selectedParts));
-    console.log('[scanner:togglePartSelection] Starting camera in 300ms...');
-    
-    // Iniciar cámara automáticamente
-    setStatusBanner(`🎯 Buscando: ${partName}`, 'info');
-    setTimeout(() => {
-      debugLog('Timeout cumplido, llamando startCamera()');
-      console.log('[scanner:togglePartSelection] Timeout elapsed, calling startCamera()');
-      startCamera();
-    }, 300);
-  }
-
-  function updateSelectionStatus() {
+    // Si hay pieza seleccionada, auto-iniciar cámara
     if (state.selectedParts.size > 0) {
-      setResultsStatus('Pieza seleccionada - Iniciando escáner...', 'success');
-    } else {
-      const totalParts = state.filtered.length || SearchIndex.count();
-      setResultsStatus(`Mostrando ${Math.min(25, totalParts)} de ${totalParts} piezas disponibles`, 'muted');
+      console.log('[scanner] Part selected, auto-starting camera...');
+      setTimeout(() => {
+        startCamera();
+      }, 300);
     }
   }
 
   // ============================================================================
-  // CAMERA CONTROL
+  // CAMERA FUNCTIONS
   // ============================================================================
   
   async function startCamera() {
-    debugLog('--- startCamera() INICIADO ---');
-    console.log('[scanner:startCamera] Starting...');
-    
-    // Solo ML Kit nativo - sin fallback web
-    if (!isNativePlatform) {
-      debugLog('ERROR: No es plataforma nativa');
-      console.error('[scanner] Esta app solo funciona en plataforma nativa (Android/iOS)');
-      setCameraStatus('Esta función solo está disponible en la aplicación móvil');
-      setStatusBanner('Usa la aplicación móvil para escanear', 'warning');
+    if (state.isScanning) {
+      console.log('[scanner] Already scanning');
       return;
     }
-    
-    debugLog('Plataforma nativa detectada ✓');
-    debugLog('Inicializando scanner...');
-    
+
+    if (state.selectedParts.size === 0) {
+      setStatusBanner('Selecciona al menos una pieza primero', 'warning');
+      return;
+    }
+
     const scanner = await initMLKitScanner();
     if (!scanner) {
-      debugLog('ERROR: Scanner no disponible');
-      console.error('[scanner] ML Kit scanner not available');
-      setCameraStatus('Escáner no disponible. Verifica que estás usando la app correcta.');
-      setStatusBanner('Escáner no disponible', 'warning');
+      setStatusBanner('Escáner no disponible', 'danger');
       return;
     }
-    
-    debugLog('Scanner inicializado ✓');
-    console.log('[scanner] Using ML Kit BUNDLED Native Scanner (continuous mode)');
-    
-    // Obtener nombre de la pieza seleccionada
-    const selectedPartId = Array.from(state.selectedParts)[0];
-    const selectedPart = selectedPartId ? SearchIndex.get(selectedPartId) : null;
-    const partName = selectedPart ? selectedPart.name : 'Sin seleccionar';
-    
-    debugLog(`Pieza a buscar: ${partName}`);
-    
-    // Actualizar UI: Mostrar workspace, ocultar búsqueda
-    debugLog('Actualizando UI...');
-    if (els.workspace) {
-      els.workspace.classList.remove('d-none');
-      debugLog('Workspace mostrado ✓');
-      console.log('[scanner] Workspace shown');
-    } else {
-      debugLog('ERROR: workspace element no encontrado');
-    }
-    
-    if (els.searchShell) {
-      els.searchShell.classList.add('d-none');
-      debugLog('Search shell ocultado ✓');
-      console.log('[scanner] Search shell hidden');
-    } else {
-      debugLog('ERROR: searchShell element no encontrado');
-    }
-    
-    if (els.pieceName) {
-      els.pieceName.textContent = partName;
-      debugLog('Nombre de pieza actualizado ✓');
-      console.log('[scanner] Piece name set to:', partName);
-    }
-    
-    // Activar modo pantalla completa en móvil
-    if (document.body) {
-      document.body.classList.add('scanner-fullscreen-active');
-      debugLog('Modo pantalla completa activado ✓');
-      console.log('[scanner] Fullscreen mode activated');
-    }
-    
-    if (els.toggleCameraBtn) {
-      els.toggleCameraBtn.disabled = true;
-      els.toggleCameraBtn.setAttribute('aria-busy', 'true');
-    }
-    
+
     try {
-      setCameraStatus('Iniciando escáner ML Kit...');
-      debugLog('Solicitando permisos y iniciando scan...');
-      console.log('[scanner] Requesting camera permissions and starting scan...');
-      
-      // Iniciar escaneo continuo con callback
-      await scanner.startScan((result) => {
-        debugLog(`Código detectado: ${result.value}`);
-        console.log('[scanner] ML Kit detected:', result);
-        // Procesar código detectado inmediatamente y continuar escaneando
-        handleDecodedValue(result.value, null, 'mlkit-native', result.cornerPoints || null);
-      });
-      
-      setCameraStatus('Escáner activo - Apunta al código de barras');
+      setCameraStatus('Iniciando escáner...');
       setStatusBanner('Escaneando...', 'info');
-      debugLog('Scanner iniciado exitosamente ✓✓✓');
-      console.log('[scanner] Scanner started successfully');
-      
-      if (els.stopCameraBtn) {
-        els.stopCameraBtn.disabled = false;
-      }
-      
+
+      // Activar modo pantalla completa
+      document.body.classList.add('scanner-fullscreen-active');
+
+      await scanner.startScan((result) => {
+        console.log('[scanner] Detected:', result.value);
+        handleDecodedValue(result.value);
+      });
+
+      state.isScanning = true;
+      setCameraStatus('Escáner activo');
+      console.log('[scanner] Camera started');
+
     } catch (error) {
-      debugLog(`ERROR al iniciar: ${error.message}`);
-      console.error('[scanner] ML Kit error:', error);
-      setCameraStatus('Error en escáner nativo: ' + error.message);
-      setStatusBanner('Error al iniciar escáner', 'warning');
-      
-      // Revertir UI en caso de error
-      if (els.workspace) els.workspace.classList.add('d-none');
-      if (els.searchShell) els.searchShell.classList.remove('d-none');
-      if (document.body) document.body.classList.remove('scanner-fullscreen-active');
-    }
-    
-    if (els.toggleCameraBtn) {
-      els.toggleCameraBtn.disabled = false;
-      els.toggleCameraBtn.removeAttribute('aria-busy');
+      console.error('[scanner] Error starting camera:', error);
+      setStatusBanner('Error al iniciar cámara: ' + error.message, 'danger');
+      document.body.classList.remove('scanner-fullscreen-active');
     }
   }
 
   function stopCamera() {
-    // Detener escáner nativo ML Kit
     if (mlKitScanner) {
       mlKitScanner.stopScan().catch(err => {
-        console.warn('[scanner] Error stopping ML Kit:', err);
+        console.warn('[scanner] Error stopping:', err);
       });
     }
-    
-    // Restaurar UI
-    if (els.workspace) {
-      els.workspace.classList.add('d-none');
-    }
-    if (els.searchShell) {
-      els.searchShell.classList.remove('d-none');
-    }
-    if (document.body) {
-      document.body.classList.remove('scanner-fullscreen-active');
-    }
-    
-    setCameraStatus('Escáner detenido');
+
+    state.isScanning = false;
+    document.body.classList.remove('scanner-fullscreen-active');
+    setCameraStatus('Cámara detenida');
     hideStatusBanner();
+    console.log('[scanner] Camera stopped');
+  }
+
+  // ============================================================================
+  // BARCODE HANDLING
+  // ============================================================================
+  
+  function handleDecodedValue(rawValue) {
+    const now = Date.now();
     
-    if (els.toggleCameraBtn) {
-      els.toggleCameraBtn.disabled = false;
+    // Debounce: evitar procesar el mismo código muy rápido
+    if (now - state.lastDetection < 2000) {
+      return;
     }
-    if (els.stopCameraBtn) {
-      els.stopCameraBtn.disabled = true;
-    }
+    state.lastDetection = now;
+
+    const part = SearchIndex.findByBarcode(rawValue);
     
-    console.info('[scanner] Escáner ML Kit detenido');
+    if (part && state.selectedParts.has(part.id)) {
+      // ✅ CÓDIGO CORRECTO
+      console.log('[scanner] ✅ CORRECT barcode:', rawValue, part.name);
+      
+      // Feedback
+      if (window.ScannerFeedback) {
+        window.ScannerFeedback.success();
+      }
+      
+      setStatusBanner(`✅ ¡CORRECTO! ${part.name}`, 'success');
+      
+      // Detener cámara después de 1.5 segundos
+      setTimeout(() => {
+        stopCamera();
+        state.selectedParts.clear();
+        performSearch('');
+      }, 1500);
+      
+    } else if (part) {
+      // ⚠️ CÓDIGO ENCONTRADO PERO NO ES EL SELECCIONADO
+      console.log('[scanner] ⚠️ Wrong part:', rawValue, part.name);
+      
+      if (window.ScannerFeedback) {
+        window.ScannerFeedback.warning();
+      }
+      
+      setStatusBanner(`⚠️ Ese es: ${part.name} (no es el seleccionado)`, 'warning');
+      
+    } else {
+      // ❌ CÓDIGO NO ENCONTRADO
+      console.log('[scanner] ❌ Unknown barcode:', rawValue);
+      
+      if (window.ScannerFeedback) {
+        window.ScannerFeedback.error();
+      }
+      
+      setStatusBanner(`❌ Código no encontrado: ${rawValue}`, 'danger');
+    }
   }
 
   // ============================================================================
   // EVENT LISTENERS
   // ============================================================================
   
-  if (els.toggleCameraBtn) {
-    els.toggleCameraBtn.addEventListener('click', startCamera);
-  }
-
-  if (els.stopCameraBtn) {
-    els.stopCameraBtn.addEventListener('click', stopCamera);
-  }
-
-  // Búsqueda de piezas
   if (els.searchInput) {
     els.searchInput.addEventListener('input', (e) => {
       performSearch(e.target.value);
     });
-    
-    els.searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        performSearch(els.searchInput.value);
-      }
-    });
   }
 
-  // Delegación de eventos para selección de piezas
+  // Event delegation para clicks en piezas
   if (els.resultsContainer) {
     els.resultsContainer.addEventListener('click', (e) => {
-      debugLog('Click detectado en resultsContainer');
-      const item = e.target.closest('.scanner-result-item');
-      if (item) {
-        debugLog('Item encontrado, llamando togglePartSelection');
-        console.log('[scanner:click] Result item clicked');
-        togglePartSelection(item);
-      } else {
-        debugLog('Click fuera de item');
+      const card = e.target.closest('[data-part-id]');
+      if (card) {
+        const partId = parseInt(card.dataset.partId, 10);
+        togglePartSelection(partId);
       }
     });
-  } else {
-    debugLog('ERROR: resultsContainer no encontrado en DOM');
-  }
-
-  // Búsqueda por voz
-  if (els.voiceBtn && 'webkitSpeechRecognition' in window) {
-    const recognition = new webkitSpeechRecognition();
-    recognition.lang = 'es-CL';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    els.voiceBtn.addEventListener('click', () => {
-      recognition.start();
-      if (els.voiceStatus) {
-        els.voiceStatus.textContent = '🎤 Escuchando...';
-      }
-      els.voiceBtn.classList.add('btn-danger');
-      els.voiceBtn.classList.remove('btn-outline-primary');
-    });
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      console.log('[scanner] Voice input:', transcript);
-      if (els.searchInput) {
-        els.searchInput.value = transcript;
-        performSearch(transcript);
-      }
-      if (els.voiceStatus) {
-        els.voiceStatus.textContent = 'Toca el micrófono para dictar el nombre de la pieza.';
-      }
-      els.voiceBtn.classList.remove('btn-danger');
-      els.voiceBtn.classList.add('btn-outline-primary');
-    };
-
-    recognition.onerror = (event) => {
-      console.error('[scanner] Voice recognition error:', event.error);
-      if (els.voiceStatus) {
-        els.voiceStatus.textContent = 'Error al reconocer voz. Intenta de nuevo.';
-      }
-      els.voiceBtn.classList.remove('btn-danger');
-      els.voiceBtn.classList.add('btn-outline-primary');
-    };
-
-    recognition.onend = () => {
-      els.voiceBtn.classList.remove('btn-danger');
-      els.voiceBtn.classList.add('btn-outline-primary');
-    };
-  } else if (els.voiceBtn) {
-    // Ocultar botón de voz si no hay soporte
-    els.voiceBtn.style.display = 'none';
   }
 
   // ============================================================================
   // INITIALIZATION
   // ============================================================================
   
-  console.log('[scanner] MLKit-only scanner module initialized');
-  console.log(`[scanner] SearchIndex loaded with ${SearchIndex.count()} parts`);
-  
-  // Mostrar 25 piezas iniciales
   if (SearchIndex.count() > 0) {
-    const initialParts = SearchIndex.all().slice(0, 25);
-    renderResults(initialParts);
-    setResultsStatus(`Mostrando 25 de ${SearchIndex.count()} piezas disponibles`, 'muted');
-    console.log('[scanner] Displaying initial 25 parts');
+    const initial = SearchIndex.all().slice(0, 25);
+    renderResults(initial);
+    setResultsStatus(`Mostrando 25 de ${SearchIndex.count()} piezas disponibles`);
   }
-  
-  // NO auto-start - esperar que el usuario seleccione piezas
-  if (!isNativePlatform) {
-    setCameraStatus('Usa la aplicación móvil para escanear');
-    setStatusBanner('Esta función requiere la app móvil', 'info');
-  }
+
+  console.log('[scanner] MLKit-only scanner initialized');
 
 })();

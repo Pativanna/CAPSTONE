@@ -4,166 +4,79 @@
 {% block title %}Verificador de Piezas por Cámara{% endblock %}
 
 {% block content %}
-<div class="scanner-page" id="scanner-page" data-turbo="false" data-mlkit-enabled="{{ mlkit_enabled|yesno:'true,false' }}">
-  <header class="scanner-header card shadow-sm mb-4" id="scanner-header">
+<div class="container py-4" id="scanner-page" data-turbo="false">
+  <!-- Header -->
+  <div class="card shadow-sm mb-4">
     <div class="card-body">
-      <h1 class="h4 mb-2"><i class="fas fa-barcode me-2 text-primary"></i>Verificador de Piezas por Cámara</h1>
+      <h1 class="h4 mb-2">
+        <i class="fas fa-barcode me-2 text-primary"></i>
+        Verificador de Piezas por Cámara
+      </h1>
       <p class="text-muted mb-0">
         Busca una pieza con código de barras. Cuando la selecciones, abriremos la cámara en pantalla completa;
         apunta cualquier etiqueta y confirmaremos visual y auditivamente cuando encontremos la coincidencia.
       </p>
     </div>
-  </header>
+  </div>
 
-  <section class="scanner-controls card shadow-sm mb-4" id="scanner-search-shell">
+  <!-- Search Section -->
+  <div class="card shadow-sm mb-4" id="scanner-search-shell">
     <div class="card-body">
-      <!-- Debug logs panel -->
-      <div class="alert alert-info mb-3" id="debug-logs-panel" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.75rem;">
-        <strong>Debug Logs:</strong>
-        <div id="debug-logs"></div>
-      </div>
-      
-      <div class="scanner-search">
-        <label for="scanner-search-input" class="form-label text-muted small mb-1">Buscar pieza</label>
-        <div class="input-group input-group-lg global-search-with-voice">
-          <span class="input-group-text bg-transparent border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
+      <!-- Search Input -->
+      <div class="mb-3">
+        <label for="scanner-search-input" class="form-label text-muted small">Buscar pieza</label>
+        <div class="input-group input-group-lg">
+          <span class="input-group-text bg-transparent border-0">
+            <i class="fas fa-search text-muted"></i>
+          </span>
           <input type="search"
                  id="scanner-search-input"
                  class="form-control border-0"
                  placeholder="Ej: parachoques delantero, focos, etc."
                  autocomplete="off">
-          <button type="button"
-                  class="btn btn-outline-primary text-nowrap voice-search-btn"
-                  id="scanner-voice-btn"
-                  aria-label="Dictar búsqueda"
-                  title="Dictar búsqueda">
-            <i class="fas fa-microphone"></i>
-          </button>
-        </div>
-        <div id="scanner-voice-status" class="small text-muted mt-1">
-          Toca el micrófono para dictar el nombre de la pieza.
         </div>
       </div>
-      <div id="scanner-results"
-           class="scanner-results mt-3 card card-body p-0"
-           aria-live="polite"
-           role="listbox">
-      </div>
+
+      <!-- Results Container -->
+      <div id="scanner-results" class="mt-3" role="listbox" aria-live="polite"></div>
+      
+      <!-- Results Status -->
       <div id="scanner-results-status"
-           class="scanner-results-status text-muted small mt-2"
+           class="text-muted small mt-2"
            role="status"
            aria-live="polite">
-        Empieza a escribir o dicta para ver piezas con código de barras.
+        Empieza a escribir para ver piezas con código de barras.
       </div>
     </div>
-  </section>
+  </div>
 
-  <section class="scanner-workspace d-none" id="scanner-workspace">
-    <div class="scanner-global-controls">
-      <button type="button"
-              class="btn btn-outline-light btn-sm"
-              id="scanner-toggle-camera-btn"
-              title="Activar cámara"
-              aria-label="Activar cámara">
-        <i class="fas fa-play"></i>
-      </button>
-      <button type="button"
-              class="btn btn-outline-danger btn-sm"
-              id="scanner-stop-camera-btn"
-              disabled
-              title="Detener cámara"
-              aria-label="Detener cámara">
-        <i class="fas fa-stop-circle"></i>
-      </button>
-      <button type="button"
-              class="btn btn-outline-warning btn-sm"
-              id="scanner-toggle-torch-btn"
-              title="Activar linterna"
-              aria-label="Activar linterna">
-        <i class="fas fa-lightbulb"></i>
-      </button>
-      <button type="button"
-              class="btn btn-outline-secondary btn-sm"
-              id="scanner-exit-mode-floating"
-              title="Salir del modo escáner">
-        <i class="fas fa-door-open"></i>
-      </button>
-      <button type="button"
-              class="btn btn-outline-info btn-sm"
-              id="scanner-debug-export-btn"
-              title="Exportar log">
-        <i class="fas fa-file-export"></i>
-      </button>
-    </div>
-    <div class="scanner-toast-stack" id="scanner-toast-stack" aria-live="polite" aria-atomic="false"></div>
-    <div class="scanner-immersive-shell">
-      <div class="scanner-viewport-card">
-          <div class="scanner-viewport">
-            <video id="scanner-video" playsinline autoplay muted></video>
-            <canvas id="scanner-overlay"></canvas>
-            <div id="scanner-flash" class="scanner-flash d-none" aria-hidden="true"></div>
-            <div id="scanner-status-banner"
-                 class="scanner-status-banner d-none"
-               role="status"
-               aria-live="assertive"></div>
-            <div class="scanner-viewport-actions d-none"></div>
-            <div class="scanner-viewport-tuners">
-              <label for="scanner-zoom-slider" class="form-label">Zoom digital</label>
-              <input type="range"
-                     id="scanner-zoom-slider"
-                     class="form-range"
-                     min="100"
-                     max="100"
-                     step="1"
-                     value="100"
-                     disabled>
-              <small id="scanner-zoom-value" class="text-muted">1.0x</small>
-              <button type="button" class="btn btn-outline-info btn-sm mt-2" id="scanner-capture-btn">
-                <i class="fas fa-camera"></i> Tomar foto
-              </button>
-            </div>
-          </div>
-        <span class="visually-hidden" id="scanner-camera-status" role="status" aria-live="polite">Cámara inactiva</span>
-      </div>
-      <div class="scanner-detail-panel">
-        <div class="scanner-piece-card" id="scanner-detail-card">
-          <div class="scanner-piece-card__header">
-            <small class="text-uppercase text-muted">Pieza seleccionada</small>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="scanner-change-piece-btn">
-              <i class="fas fa-arrow-left"></i> Cambiar
-            </button>
-          </div>
-          <h2 class="scanner-piece-name mb-3" id="scanner-piece-name">Sin seleccionar</h2>
-          <div class="scanner-photo-stage" id="scanner-photo-stage">
-            <div class="scanner-photo-thumbs" id="scanner-photo-thumbs"></div>
-            <div id="scanner-photo-placeholder" class="scanner-photo-placeholder text-muted">
-              <i class="fas fa-camera mb-2"></i>
-              <p class="mb-0">Sin fotos registradas</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Status Messages (hidden by default) -->
+  <div id="scanner-status-banner"
+       class="alert d-none"
+       role="status"
+       aria-live="assertive"></div>
+  
+  <!-- Hidden elements for screen readers -->
+  <span class="visually-hidden" id="scanner-camera-status" role="status" aria-live="polite">
+    Cámara inactiva
+  </span>
 </div>
 
+<!-- Initial parts data -->
 {{ initial_parts_payload|safe }}
 
-<!-- Scripts de la página (mantener dentro del bloque de contenido para Turbo) -->
-<!-- Los plugins nativos se cargan SIN defer para estar disponibles antes del script principal -->
-<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205q"
+<!-- Scripts -->
+<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205h"
         data-page-script="parts:mlkit-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
 
-<!-- Módulo de feedback (vibraciones, beeps, animaciones) -->
-<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205q"
+<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205h"
         data-page-script="parts:scanner-feedback"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
         
-<!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205q"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205h"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"
