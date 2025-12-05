@@ -72,7 +72,7 @@ urlpatterns = [
     path('api/scanner-logs/', scanner_logs.receive_scanner_logs, name='receive_scanner_logs'),
     path('parts/scanner-logs/', scanner_logs.view_scanner_logs, name='view_scanner_logs'),
     
-    path('parts/api/catalog-cache/', views.parts_catalog_cache, name='parts_catalog_cache');
+    path('parts/api/catalog-cache/', views.parts_catalog_cache, name='parts_catalog_cache'),
     # Endpoints adicionales se habilitarán cuando el módulo esté listo
 
     # Mic config & test
