@@ -3,8 +3,12 @@ package com.carinventory.app;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.graphics.Color;
+import android.graphics.Rect;
+import android.util.Log;
+import android.util.Size;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
@@ -13,10 +17,20 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.camera.core.Camera;
+import androidx.camera.core.CameraControl;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.FocusMeteringAction;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
+import androidx.camera.core.MeteringPoint;
+import androidx.camera.core.MeteringPointFactory;
+import androidx.camera.core.Preview;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+import androidx.core.content.ContextCompat;
+import androidx.lifecycle.LifecycleOwner;
 
-import com.carinventory.app.scanner.CameraSource;
-import com.carinventory.app.scanner.CameraSourcePreview;
-import com.carinventory.app.scanner.MLKitBarcodeProcessor;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -24,13 +38,26 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
+import com.google.android.gms.tasks.Task;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.mlkit.vision.barcode.BarcodeScanner;
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
+import com.google.mlkit.vision.barcode.BarcodeScanning;
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.common.InputImage;
 
-import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Scanner ML Kit optimizado con CameraSource de Google
+ * Scanner ML Kit con CameraX moderno
  * Layout: 80% cámara, 12% info, 8% safe area
- * Escaneo continuo sin salir
+ * Características: autofocus continuo, tap-to-focus, flash automático
  */
 @CapacitorPlugin(
     name = "MLKitScanner",
@@ -44,16 +71,54 @@ import java.io.IOException;
 @SuppressWarnings({"unused", "RedundantSuppression"})
 public class MLKitScannerPlugin extends Plugin {
     
-    private CameraSource cameraSource;
-    private CameraSourcePreview cameraPreview;
+    private static final String TAG = "MLKitScanner";
+    
     private LinearLayout scannerContainer;
+    private PreviewView cameraPreview;
     private TextView infoTextView;
+    private ProcessCameraProvider cameraProvider;
+    private Camera camera;
+    private BarcodeScanner barcodeScanner;
+    private ExecutorService cameraExecutor;
+    
     private boolean isScanning = false;
+    private boolean isProcessing = false;
     private String lastScannedCode = "";
+    
+    // Cooldown management
+    private final Map<String, Long> codeDetectionTimes = new HashMap<>();
+    private static final long CODE_COOLDOWN_MS = 2000;
+    private static final long FRAME_COOLDOWN_MS = 50;
+    private long lastFrameTime = 0;
+    
+    // Auto torch
+    private boolean torchEnabled = false;
+    private static final double LOW_LIGHT_THRESHOLD = 0.15;
     
     @Override
     public void load() {
         super.load();
+        setupBarcodeScanner();
+        cameraExecutor = Executors.newSingleThreadExecutor();
+        Log.i(TAG, "Plugin loaded with CameraX");
+    }
+    
+    private void setupBarcodeScanner() {
+        BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(
+                Barcode.FORMAT_CODE_128,
+                Barcode.FORMAT_CODE_39,
+                Barcode.FORMAT_CODE_93,
+                Barcode.FORMAT_EAN_8,
+                Barcode.FORMAT_EAN_13,
+                Barcode.FORMAT_QR_CODE,
+                Barcode.FORMAT_UPC_A,
+                Barcode.FORMAT_UPC_E
+            )
+            .build();
+        
+        barcodeScanner = BarcodeScanning.getClient(options);
+        Log.i(TAG, "BarcodeScanner initialized with common formats");
     }
     
     @PluginMethod
@@ -92,8 +157,8 @@ public class MLKitScannerPlugin extends Plugin {
             return;
         }
         
-        // Iniciar escaneo continuo
-        startContinuousScanning(call);
+        codeDetectionTimes.clear();
+        startCamera(call);
     }
     
     @PluginMethod
@@ -115,32 +180,32 @@ public class MLKitScannerPlugin extends Plugin {
         call.resolve(result);
     }
     
-    private void startContinuousScanning(@NonNull PluginCall call) {
-        getBridge().executeOnMainThread(() -> {
+    private void startCamera(@NonNull PluginCall call) {
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = 
+            ProcessCameraProvider.getInstance(getContext());
+        
+        cameraProviderFuture.addListener(() -> {
             try {
+                cameraProvider = cameraProviderFuture.get();
                 createScannerUI(call);
-                isScanning = true;
-                
-                JSObject ret = new JSObject();
-                ret.put("status", "started");
-                ret.put("mode", "continuous");
-                call.resolve(ret);
-            } catch (Exception e) {
-                call.reject("Failed to start scanner: " + e.getMessage());
+            } catch (ExecutionException | InterruptedException e) {
+                Log.e(TAG, "Failed to start camera", e);
+                call.reject("Failed to start camera: " + e.getMessage());
             }
-        });
+        }, ContextCompat.getMainExecutor(getContext()));
     }
     
     @SuppressLint("ClickableViewAccessibility")
-    private void createScannerUI(@NonNull PluginCall scanCall) throws IOException {
+    private void createScannerUI(@NonNull PluginCall call) {
         WebView webView = getBridge().getWebView();
         if (webView == null || webView.getParent() == null) {
-            throw new IOException("WebView not available");
+            call.reject("WebView not available");
+            return;
         }
         
         ViewGroup parent = (ViewGroup) webView.getParent();
         
-        // Ocultar WebView temporalmente (no transparente, sino invisible)
+        // Ocultar WebView completamente (no transparente, INVISIBLE)
         webView.setVisibility(View.GONE);
         
         // Crear contenedor principal con layout vertical
@@ -152,11 +217,12 @@ public class MLKitScannerPlugin extends Plugin {
         ));
         scannerContainer.setBackgroundColor(Color.BLACK);
         
-        // Agregar contenedor ENCIMA (último índice = más al frente)
+        // Agregar contenedor ENCIMA (no detrás)
         parent.addView(scannerContainer);
         
         // Crear vista de cámara (80% de altura)
-        cameraPreview = new CameraSourcePreview(getContext(), null);
+        cameraPreview = new PreviewView(getContext());
+        cameraPreview.setImplementationMode(PreviewView.ImplementationMode.PERFORMANCE);
         LinearLayout.LayoutParams cameraParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             0,
@@ -164,6 +230,15 @@ public class MLKitScannerPlugin extends Plugin {
         );
         cameraPreview.setLayoutParams(cameraParams);
         scannerContainer.addView(cameraPreview);
+        
+        // Tap-to-focus
+        cameraPreview.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN && camera != null) {
+                focusOnPoint(event.getX(), event.getY());
+                return true;
+            }
+            return false;
+        });
         
         // Crear área de info (12% de altura)
         infoTextView = new TextView(getContext());
@@ -193,38 +268,263 @@ public class MLKitScannerPlugin extends Plugin {
         safeZone.setLayoutParams(safeParams);
         scannerContainer.addView(safeZone);
         
-        // Crear y configurar CameraSource
-        cameraSource = new CameraSource(getActivity());
+        // Bind camera
+        bindCameraUseCases(call);
+    }
+    
+    private void bindCameraUseCases(@NonNull PluginCall call) {
+        CameraSelector cameraSelector = new CameraSelector.Builder()
+            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+            .build();
         
-        // Crear procesador con callback continuo
-        MLKitBarcodeProcessor processor = new MLKitBarcodeProcessor((code, format, timestamp) -> {
-            // Callback ejecutado cada vez que se detecta un código
-            lastScannedCode = code;
+        Preview preview = new Preview.Builder().build();
+        preview.setSurfaceProvider(cameraPreview.getSurfaceProvider());
+        
+        // Image analysis optimizado para ML Kit
+        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+            .setTargetResolution(new Size(1280, 720))
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build();
+        
+        imageAnalysis.setAnalyzer(cameraExecutor, this::analyzeImage);
+        
+        try {
+            cameraProvider.unbindAll();
+            LifecycleOwner lifecycleOwner = (LifecycleOwner) getActivity();
+            camera = cameraProvider.bindToLifecycle(
+                lifecycleOwner,
+                cameraSelector,
+                preview,
+                imageAnalysis
+            );
             
-            // Actualizar UI con info del código
-            getBridge().executeOnMainThread(() -> {
-                String displayText = String.format(
-                    "✅ Código: %s\nFormato: %s\nEscanea otro código...",
-                    code,
-                    format
+            enableContinuousAutofocus();
+            isScanning = true;
+            
+            JSObject ret = new JSObject();
+            ret.put("status", "started");
+            ret.put("mode", "continuous");
+            call.resolve(ret);
+            
+            Log.i(TAG, "Camera bound successfully with CameraX");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to bind camera", e);
+            call.reject("Failed to bind camera: " + e.getMessage());
+        }
+    }
+    
+    private void enableContinuousAutofocus() {
+        if (camera == null || cameraPreview == null) return;
+        
+        getBridge().executeOnMainThread(() -> {
+            try {
+                CameraControl cameraControl = camera.getCameraControl();
+                MeteringPointFactory factory = cameraPreview.getMeteringPointFactory();
+                MeteringPoint centerPoint = factory.createPoint(
+                    cameraPreview.getWidth() / 2.0f,
+                    cameraPreview.getHeight() / 2.0f
                 );
-                if (infoTextView != null) {
-                    infoTextView.setText(displayText);
+                
+                FocusMeteringAction action = new FocusMeteringAction.Builder(centerPoint)
+                    .setAutoCancelDuration(5, TimeUnit.SECONDS)
+                    .build();
+                
+                cameraControl.startFocusAndMetering(action);
+                Log.d(TAG, "Continuous autofocus enabled");
+            } catch (Exception e) {
+                Log.w(TAG, "Autofocus not supported", e);
+            }
+        });
+    }
+    
+    private void focusOnPoint(float x, float y) {
+        if (camera == null || cameraPreview == null) return;
+        
+        getBridge().executeOnMainThread(() -> {
+            try {
+                CameraControl cameraControl = camera.getCameraControl();
+                MeteringPointFactory factory = cameraPreview.getMeteringPointFactory();
+                MeteringPoint point = factory.createPoint(x, y);
+                
+                FocusMeteringAction action = new FocusMeteringAction.Builder(point)
+                    .setAutoCancelDuration(3, TimeUnit.SECONDS)
+                    .build();
+                
+                cameraControl.startFocusAndMetering(action);
+                Log.d(TAG, "Tap-to-focus at (" + x + ", " + y + ")");
+            } catch (Exception e) {
+                Log.w(TAG, "Tap-to-focus failed", e);
+            }
+        });
+    }
+    
+    @SuppressLint("UnsafeOptInUsageError")
+    private void analyzeImage(@NonNull ImageProxy imageProxy) {
+        if (!isScanning || isProcessing) {
+            imageProxy.close();
+            return;
+        }
+        
+        // Frame cooldown
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastFrameTime < FRAME_COOLDOWN_MS) {
+            imageProxy.close();
+            return;
+        }
+        lastFrameTime = currentTime;
+        
+        isProcessing = true;
+        
+        // Calcular luminosidad para flash automático
+        double luminance = calculateLuminance(imageProxy);
+        boolean shouldEnableTorch = luminance < LOW_LIGHT_THRESHOLD;
+        if (shouldEnableTorch != torchEnabled) {
+            updateTorch(shouldEnableTorch);
+        }
+        
+        @SuppressLint("UnsafeOptInUsageError")
+        InputImage image = InputImage.fromMediaImage(
+            imageProxy.getImage(),
+            imageProxy.getImageInfo().getRotationDegrees()
+        );
+        
+        Task<List<Barcode>> result = barcodeScanner.process(image);
+        
+        result.addOnSuccessListener(barcodes -> {
+            if (!barcodes.isEmpty() && isScanning) {
+                Log.d(TAG, "ML Kit processing complete - found " + barcodes.size() + " barcodes");
+                Barcode mostCentered = findMostCenteredBarcode(barcodes, imageProxy.getWidth(), imageProxy.getHeight());
+                if (mostCentered != null) {
+                    handleBarcodeDetected(mostCentered);
                 }
-            });
+            }
+            isProcessing = false;
+            imageProxy.close();
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Barcode detection failed", e);
+            isProcessing = false;
+            imageProxy.close();
+        });
+    }
+    
+    private double calculateLuminance(ImageProxy imageProxy) {
+        try {
+            @SuppressLint("UnsafeOptInUsageError")
+            android.media.Image image = imageProxy.getImage();
+            if (image == null) return 0.5;
             
-            // Notificar a JavaScript para procesamiento continuo
-            JSObject eventData = new JSObject();
-            eventData.put("value", code);
-            eventData.put("format", format);
-            eventData.put("timestamp", timestamp);
-            notifyListeners("barcodeScanned", eventData);
+            android.media.Image.Plane yPlane = image.getPlanes()[0];
+            java.nio.ByteBuffer yBuffer = yPlane.getBuffer();
+            
+            int sampleSize = Math.min(1000, yBuffer.remaining());
+            long sum = 0;
+            for (int i = 0; i < sampleSize; i++) {
+                sum += (yBuffer.get(i) & 0xFF);
+            }
+            
+            return (sum / (double) sampleSize) / 255.0;
+        } catch (Exception e) {
+            return 0.5;
+        }
+    }
+    
+    private Barcode findMostCenteredBarcode(List<Barcode> barcodes, int imageWidth, int imageHeight) {
+        if (barcodes.isEmpty()) return null;
+        if (barcodes.size() == 1) return barcodes.get(0);
+        
+        int centerX = imageWidth / 2;
+        int centerY = imageHeight / 2;
+        
+        Barcode mostCentered = null;
+        double minDistance = Double.MAX_VALUE;
+        
+        for (Barcode barcode : barcodes) {
+            Rect boundingBox = barcode.getBoundingBox();
+            if (boundingBox == null) continue;
+            
+            int barcodeX = boundingBox.centerX();
+            int barcodeY = boundingBox.centerY();
+            
+            double distance = Math.sqrt(
+                Math.pow(barcodeX - centerX, 2) + 
+                Math.pow(barcodeY - centerY, 2)
+            );
+            
+            if (distance < minDistance) {
+                minDistance = distance;
+                mostCentered = barcode;
+            }
+        }
+        
+        return mostCentered;
+    }
+    
+    private void handleBarcodeDetected(Barcode barcode) {
+        if (!isScanning) return;
+        
+        String code = barcode.getRawValue();
+        if (code == null || code.isEmpty()) return;
+        
+        long currentTime = System.currentTimeMillis();
+        Long lastDetection = codeDetectionTimes.get(code);
+        if (lastDetection != null && (currentTime - lastDetection) < CODE_COOLDOWN_MS) {
+            Log.d(TAG, "Code still in cooldown: " + code);
+            return;
+        }
+        
+        codeDetectionTimes.put(code, currentTime);
+        codeDetectionTimes.entrySet().removeIf(entry -> 
+            (currentTime - entry.getValue()) > 10000
+        );
+        
+        lastScannedCode = code;
+        
+        getBridge().executeOnMainThread(() -> {
+            String displayText = String.format(
+                "✅ Código: %s\nFormato: %s\nEscanea otro código...",
+                code,
+                getBarcodeFormatName(barcode.getFormat())
+            );
+            if (infoTextView != null) {
+                infoTextView.setText(displayText);
+            }
         });
         
-        cameraSource.setFrameProcessor(processor);
+        JSObject eventData = new JSObject();
+        eventData.put("value", code);
+        eventData.put("format", getBarcodeFormatName(barcode.getFormat()));
+        eventData.put("timestamp", currentTime);
+        notifyListeners("barcodeScanned", eventData);
         
-        // Iniciar cámara
-        cameraPreview.start(cameraSource);
+        Log.i(TAG, "Detected barcode: " + code + " (format: " + getBarcodeFormatName(barcode.getFormat()) + ")");
+    }
+    
+    private String getBarcodeFormatName(int format) {
+        switch (format) {
+            case Barcode.FORMAT_CODE_128: return "CODE_128";
+            case Barcode.FORMAT_CODE_39: return "CODE_39";
+            case Barcode.FORMAT_CODE_93: return "CODE_93";
+            case Barcode.FORMAT_EAN_13: return "EAN_13";
+            case Barcode.FORMAT_EAN_8: return "EAN_8";
+            case Barcode.FORMAT_UPC_A: return "UPC_A";
+            case Barcode.FORMAT_UPC_E: return "UPC_E";
+            case Barcode.FORMAT_QR_CODE: return "QR_CODE";
+            default: return "UNKNOWN";
+        }
+    }
+    
+    private void updateTorch(boolean enable) {
+        if (camera == null || !camera.getCameraInfo().hasFlashUnit()) return;
+        
+        getBridge().executeOnMainThread(() -> {
+            try {
+                camera.getCameraControl().enableTorch(enable);
+                torchEnabled = enable;
+                Log.d(TAG, "Torch " + (enable ? "enabled" : "disabled") + " (low light detection)");
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to toggle torch", e);
+            }
+        });
     }
     
     private int dpToPx(int dp) {
@@ -237,18 +537,17 @@ public class MLKitScannerPlugin extends Plugin {
     
     private void stopCamera() {
         isScanning = false;
+        isProcessing = false;
         lastScannedCode = "";
+        codeDetectionTimes.clear();
         
         getBridge().executeOnMainThread(() -> {
-            if (cameraPreview != null) {
-                cameraPreview.stop();
-                cameraPreview.release();
-                cameraPreview = null;
+            if (torchEnabled && camera != null) {
+                updateTorch(false);
             }
             
-            if (cameraSource != null) {
-                cameraSource.release();
-                cameraSource = null;
+            if (cameraProvider != null) {
+                cameraProvider.unbindAll();
             }
             
             if (scannerContainer != null && scannerContainer.getParent() != null) {
@@ -256,6 +555,7 @@ public class MLKitScannerPlugin extends Plugin {
                 scannerContainer = null;
             }
             
+            cameraPreview = null;
             infoTextView = null;
             
             // Restaurar WebView
@@ -263,12 +563,20 @@ public class MLKitScannerPlugin extends Plugin {
             if (webView != null) {
                 webView.setVisibility(View.VISIBLE);
             }
+            
+            Log.i(TAG, "Camera stopped");
         });
     }
     
     @Override
     protected void handleOnDestroy() {
         stopCamera();
+        if (cameraExecutor != null) {
+            cameraExecutor.shutdown();
+        }
+        if (barcodeScanner != null) {
+            barcodeScanner.close();
+        }
         super.handleOnDestroy();
     }
 }
