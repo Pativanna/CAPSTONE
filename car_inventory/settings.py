@@ -192,14 +192,20 @@ def _bool_env(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
-def _sqlite_config(name: str = 'db.sqlite3') -> dict:
-    sqlite_name = name if name == ':memory:' else BASE_DIR / name
-    timeout = int(os.environ.get('SQLITE_TIMEOUT', '20'))
+def _sqlite_config(name: str | Path = 'db.sqlite3', *, timeout: int | None = None) -> dict:
+    if name == ':memory:':
+        sqlite_name = name
+    else:
+        sqlite_path = Path(name) if not isinstance(name, Path) else name
+        if not sqlite_path.is_absolute():
+            sqlite_path = BASE_DIR / sqlite_path
+        sqlite_name = sqlite_path
+    effective_timeout = timeout if timeout is not None else int(os.environ.get('SQLITE_TIMEOUT', '20'))
     return {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': sqlite_name,
         'OPTIONS': {
-            'timeout': timeout,
+            'timeout': effective_timeout,
         },
     }
 
@@ -228,8 +234,9 @@ def _postgres_config_from_parts(*, name: str, user: str, password: str, host: st
 
 def _postgres_config_from_url(url: str) -> dict:
     parsed = urlparse(url)
-    if parsed.scheme not in {'postgres', 'postgresql'}:
-        raise ValueError(f"Esquema de DATABASE_URL no soportado: {parsed.scheme}")
+    scheme = (parsed.scheme or '').lower()
+    if scheme not in {'postgres', 'postgresql'}:
+        raise ValueError(f"Esquema de DATABASE_URL no soportado: {scheme}")
     query = parse_qs(parsed.query)
     options = {}
     if 'sslmode' in query:
@@ -242,6 +249,39 @@ def _postgres_config_from_url(url: str) -> dict:
         port=parsed.port,
         options=options
     )
+
+
+def _sqlite_config_from_url(url: str) -> dict:
+    parsed = urlparse(url)
+    scheme = (parsed.scheme or '').lower()
+    if scheme not in {'sqlite', 'sqlite3'}:
+        raise ValueError(f"Esquema de DATABASE_URL no soportado: {scheme}")
+    raw_path = parsed.path or ''
+    if parsed.netloc:
+        raw_path = f"//{parsed.netloc}{parsed.path}"
+    if raw_path in {'', '/'}:
+        sqlite_name = 'db.sqlite3'
+    elif raw_path in {'/:memory:', ':memory:'}:
+        sqlite_name = ':memory:'
+    else:
+        sqlite_name = raw_path
+    query = parse_qs(parsed.query)
+    timeout_value = None
+    if 'timeout' in query:
+        try:
+            timeout_value = int(query['timeout'][-1])
+        except (ValueError, TypeError):
+            timeout_value = None
+    return _sqlite_config(sqlite_name, timeout=timeout_value)
+
+
+def _database_config_from_url(url: str) -> dict:
+    scheme = (urlparse(url).scheme or '').lower()
+    if scheme in {'postgres', 'postgresql'}:
+        return _postgres_config_from_url(url)
+    if scheme in {'sqlite', 'sqlite3'}:
+        return _sqlite_config_from_url(url)
+    raise ValueError(f"Esquema de DATABASE_URL no soportado: {scheme}")
 
 
 def _database_settings() -> dict:
@@ -260,7 +300,7 @@ def _database_settings() -> dict:
 
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
-        return _postgres_config_from_url(database_url)
+        return _database_config_from_url(database_url)
 
     pg_host = os.environ.get('POSTGRES_HOST') or os.environ.get('PGHOST')
     if pg_host:
