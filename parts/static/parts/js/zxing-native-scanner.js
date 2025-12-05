@@ -1,126 +1,255 @@
 /**
- * ZXing Native Scanner Plugin Wrapper
- * Plugin custom que usa ZXing + CameraX para escaneo continuo
- * con overlay del WebView (la cámara se ve DETRÁS de tu UI)
+ * ZXing Native Scanner Wrapper
+ * Continuous barcode scanning with Google ZXing (native Android)
+ * Integrated in the app (not full-screen)
+ * 
+ * Replaces MLKit with lighter alternative
+ * ZXing: ~500 KB vs MLKit: ~8-10 MB
+ * 
+ * @see ANALISIS_MLKIT_ZXING.md
+ * @see ZXingScannerPlugin.java
  */
 
-class ZxingNativeScanner {
+// Prevent double initialization (Turbo may load script multiple times)
+if (typeof window.ZXingNativeScanner === 'undefined') {
+
+class ZXingNativeScanner {
   constructor() {
-    this.isScanning = false;
-    this.onBarcodeDetected = null;
     this.plugin = null;
+    this.onBarcodeDetected = null;
+    this.isInitialized = false;
+    this.eventListener = null;
     
-    console.log('[ZXing] Constructor called');
-    
-    if (window.Capacitor?.Plugins?.ZxingScanner) {
-      this.plugin = window.Capacitor.Plugins.ZxingScanner;
-      console.log('[ZXing] Plugin found and ready');
+    this.initialize();
+  }
+  
+  initialize() {
+    console.log('[ZXingScanner] 🚀 initialize() called');
+    try {
+      console.log('[ZXingScanner] Checking window.Capacitor...');
+      console.log('[ZXingScanner] window.Capacitor type:', typeof window.Capacitor);
       
-      // Escuchar eventos de detección
-      this.plugin.addListener('barcodeDetected', (result) => {
-        console.log('[ZXing] Barcode detected:', result);
-        if (this.onBarcodeDetected) {
-          this.onBarcodeDetected(result);
-        }
-      });
-    } else {
-      console.warn('[ZXing] Plugin not found');
+      if (typeof window.Capacitor === 'undefined') {
+        console.error('[ZXingScanner] ❌ Capacitor not available');
+        return;
+      }
+      
+      console.log('[ZXingScanner] Capacitor available');
+      console.log('[ZXingScanner] Platform:', window.Capacitor.getPlatform());
+      console.log('[ZXingScanner] isNativePlatform:', window.Capacitor.isNativePlatform());
+      console.log('[ZXingScanner] Available plugins:', Object.keys(window.Capacitor.Plugins || {}));
+      
+      console.log('[ZXingScanner] Calling refreshPluginReference()...');
+      if (this.refreshPluginReference()) {
+        console.log('[ZXingScanner] ✅ Plugin initialized successfully');
+      } else {
+        console.warn('[ZXingScanner] ⚠️ Plugin not ready yet, will retry lazily');
+      }
+    } catch (error) {
+      console.error('[ZXingScanner] ❌ Initialization error:', error);
+      console.log('[ZXingScanner] Error stack:', error.stack);
     }
+  }
+
+  refreshPluginReference() {
+    console.log('[ZXingScanner] 🔍 refreshPluginReference() called');
+    console.log('[ZXingScanner] window.Capacitor exists:', typeof window.Capacitor !== 'undefined');
+    
+    if (typeof window.Capacitor === 'undefined') {
+      console.log('[ZXingScanner] Capacitor not available, returning false');
+      return false;
+    }
+    
+    const plugins = window.Capacitor.Plugins || {};
+    console.log('[ZXingScanner] Available plugins:', Object.keys(plugins));
+    console.log('[ZXingScanner] ZXingScanner in plugins:', 'ZXingScanner' in plugins);
+    console.log('[ZXingScanner] plugins.ZXingScanner exists:', plugins.ZXingScanner !== undefined);
+    
+    if (!plugins.ZXingScanner) {
+      console.log('[ZXingScanner] ❌ ZXingScanner plugin not found in Capacitor.Plugins');
+      return false;
+    }
+    
+    if (!this.plugin) {
+      console.log('[ZXingScanner] ✅ Attaching native plugin for first time');
+      console.log('[ZXingScanner] Plugin object:', plugins.ZXingScanner);
+      console.log('[ZXingScanner] Plugin methods:', Object.keys(plugins.ZXingScanner));
+    }
+    
+    this.plugin = plugins.ZXingScanner;
+    this.isInitialized = true;
+    console.log('[ZXingScanner] Plugin attached, isInitialized:', this.isInitialized);
+    return true;
+  }
+  
+  async waitUntilReady(timeoutMs = 2000, pollMs = 75) {
+    console.log('[ZXingScanner] ⏳ waitUntilReady() called, timeout:', timeoutMs, 'ms');
+    console.log('[ZXingScanner] Checking if already supported...');
+    
+    if (this.isSupported()) {
+      console.log('[ZXingScanner] ✅ Already supported, returning true');
+      return true;
+    }
+    
+    console.log('[ZXingScanner] Not yet supported, starting polling...');
+    const deadline = Date.now() + timeoutMs;
+    let attempts = 0;
+    
+    while (Date.now() < deadline) {
+      attempts++;
+      await new Promise(resolve => setTimeout(resolve, pollMs));
+      console.log('[ZXingScanner] Poll attempt', attempts, '- refreshing plugin reference...');
+      
+      if (this.refreshPluginReference() && this.isSupported()) {
+        console.log('[ZXingScanner] ✅ Plugin detected after', attempts, 'attempts');
+        return true;
+      }
+    }
+    
+    console.log('[ZXingScanner] ❌ Timeout after', attempts, 'attempts');
+    const finalCheck = this.isSupported();
+    console.log('[ZXingScanner] Final isSupported check:', finalCheck);
+    return finalCheck;
   }
   
   isSupported() {
-    return !!this.plugin;
+    if (!this.plugin) {
+      this.refreshPluginReference();
+    }
+    return this.isInitialized && this.plugin !== null;
   }
   
   async checkPermissions() {
-    if (!this.plugin) {
-      return { camera: 'denied', microphone: 'denied' };
-    }
-    
-    const defaults = { camera: 'prompt', microphone: 'prompt' };
-    try {
-      console.log('[ZXing] Checking permissions...');
-      const result = await this.plugin.checkPermissions();
-      console.log('[ZXing] Permissions status:', result);
-      return { ...defaults, ...result };
-    } catch (error) {
-      console.error('[ZXing] Error checking permissions:', error);
-      return { camera: 'denied', microphone: 'denied' };
-    }
-  }
-  
-  async requestPermissions() {
-    if (!this.plugin) {
+    if (!this.isSupported()) {
       throw new Error('ZXing plugin not available');
     }
     
-    const defaults = { camera: 'denied', microphone: 'denied' };
     try {
-      console.log('[ZXing] Requesting camera permissions...');
-      const result = await this.plugin.requestPermissions();
-      console.log('[ZXing] Permission request result:', result);
-      return { ...defaults, ...result };
+      const result = await this.plugin.checkPermissions();
+      console.log('[ZXingScanner] Permissions status:', result);
+      return result;
     } catch (error) {
-      console.error('[ZXing] Error requesting permissions:', error);
+      console.error('[ZXingScanner] Check permissions error:', error);
       throw error;
     }
   }
   
-  async startScan(callback) {
-    if (!this.plugin) {
+  async requestPermissions() {
+    if (!this.isSupported()) {
       throw new Error('ZXing plugin not available');
     }
     
-    if (this.isScanning) {
-      console.warn('[ZXing] Already scanning');
-      return;
+    try {
+      const result = await this.plugin.requestPermissions();
+      console.log('[ZXingScanner] Permissions result:', result);
+      return result;
+    } catch (error) {
+      console.error('[ZXingScanner] Request permissions error:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Start continuous scanning
+   * @param {Function} callback - Function that receives {value, format, cornerPoints}
+   */
+  async startScan(callback) {
+    console.log('[ZXingScanner] 🎬 startScan() called');
+    console.log('[ZXingScanner] Checking if supported...');
+    console.log('[ZXingScanner] this.isSupported():', this.isSupported());
+    console.log('[ZXingScanner] this.isInitialized:', this.isInitialized);
+    console.log('[ZXingScanner] this.plugin:', this.plugin !== null);
+    
+    if (!this.isSupported()) {
+      console.error('[ZXingScanner] ❌ Plugin not supported');
+      throw new Error('ZXing plugin not available');
     }
     
-    // Verificar permisos antes de iniciar
-    const permissions = await this.checkPermissions();
-    console.log('[ZXing] Pre-scan permissions check:', permissions);
+    console.log('[ZXingScanner] Validating callback...');
+    if (typeof callback !== 'function') {
+      console.error('[ZXingScanner] ❌ Callback is not a function:', typeof callback);
+      throw new Error('Callback must be a function');
+    }
     
-    if (permissions.camera !== 'granted' || permissions.microphone !== 'granted') {
-      console.log('[ZXing] Camera/Microphone permission not granted, requesting...');
-      const requestResult = await this.requestPermissions();
+    console.log('[ZXingScanner] Checking permissions...');
+    const permissions = await this.checkPermissions();
+    console.log('[ZXingScanner] Permissions:', permissions);
+    
+    if (permissions.camera !== 'granted') {
+      console.log('[ZXingScanner] Camera not granted, requesting...');
+      const result = await this.requestPermissions();
+      console.log('[ZXingScanner] Permission result:', result);
       
-      if (requestResult.camera !== 'granted' || requestResult.microphone !== 'granted') {
-        throw new Error('Camera/Microphone permission denied');
+      if (result.camera !== 'granted') {
+        console.error('[ZXingScanner] ❌ Camera permission denied');
+        throw new Error('Camera permission denied');
       }
     }
     
+    console.log('[ZXingScanner] Saving callback...');
     this.onBarcodeDetected = callback;
-    this.isScanning = true;
     
-    console.log('[ZXing] Starting continuous scan...');
+    console.log('[ZXingScanner] Setting up event listener...');
+    if (!this.eventListener) {
+      console.log('[ZXingScanner] Adding listener for barcodeScanned event...');
+      this.eventListener = await this.plugin.addListener('barcodeScanned', (data) => {
+        console.log('[ZXingScanner] 📷 Barcode scanned event:', data);
+        if (this.onBarcodeDetected) {
+          this.onBarcodeDetected(data);
+        }
+      });
+      console.log('[ZXingScanner] ✅ Event listener registered');
+    } else {
+      console.log('[ZXingScanner] Event listener already exists');
+    }
     
     try {
-      await this.plugin.startScan();
-      console.log('[ZXing] Scan started successfully');
+      console.log('[ZXingScanner] Calling plugin.startScan()...');
+      const result = await this.plugin.startScan();
+      console.log('[ZXingScanner] ✅ plugin.startScan() returned:', result);
+      return result;
+      
     } catch (error) {
-      this.isScanning = false;
-      console.error('[ZXing] Failed to start scan:', error);
+      console.error('[ZXingScanner] ❌ Start scan error:', error);
+      console.log('[ZXingScanner] Error name:', error.name);
+      console.log('[ZXingScanner] Error message:', error.message);
+      console.log('[ZXingScanner] Error stack:', error.stack);
+      
+      console.log('[ZXingScanner] Cleaning up listener...');
+      if (this.eventListener) {
+        this.eventListener.remove();
+        this.eventListener = null;
+      }
       throw error;
     }
   }
   
   async stopScan() {
-    if (!this.plugin || !this.isScanning) {
+    if (!this.isSupported()) {
       return;
     }
     
-    console.log('[ZXing] Stopping scan...');
-    
     try {
+      // Stop scanner
       await this.plugin.stopScan();
-      this.isScanning = false;
+      console.log('[ZXingScanner] Scan stopped');
+      
+      // Remove event listener
+      if (this.eventListener) {
+        this.eventListener.remove();
+        this.eventListener = null;
+        console.log('[ZXingScanner] Event listener removed');
+      }
+      
       this.onBarcodeDetected = null;
-      console.log('[ZXing] Scan stopped');
+      
     } catch (error) {
-      console.error('[ZXing] Error stopping scan:', error);
+      console.error('[ZXingScanner] Stop scan error:', error);
     }
   }
 }
 
-// Exportar instancia global
-window.ZxingNativeScanner = ZxingNativeScanner;
+// Expose globally
+window.ZXingNativeScanner = ZXingNativeScanner;
+
+} // End double initialization prevention

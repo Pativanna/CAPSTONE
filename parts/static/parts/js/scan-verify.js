@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  console.log('[scanner] Initializing MLKit-only scanner...');
+  console.log('[scanner] Initializing ZXing native scanner...');
 
   // ============================================================================
   // PLATFORM DETECTION
@@ -27,47 +27,47 @@
   }
 
   // ============================================================================
-  // ML KIT SCANNER INITIALIZATION
+  // ZXING SCANNER INITIALIZATION
   // ============================================================================
   
-  let mlKitScanner = null;
+  let zxingScanner = null;
   
-  async function initMLKitScanner() {
-    console.log('[scanner] 🔍 initMLKitScanner() called');
-    console.log('[scanner] mlKitScanner already exists:', mlKitScanner !== null);
+  async function initZXingScanner() {
+    console.log('[scanner] 🔍 initZXingScanner() called');
+    console.log('[scanner] zxingScanner already exists:', zxingScanner !== null);
     
-    if (mlKitScanner) return mlKitScanner;
+    if (zxingScanner) return zxingScanner;
     
-    console.log('[scanner] Checking window.MLKitNativeScanner...');
-    console.log('[scanner] window.MLKitNativeScanner exists:', typeof window.MLKitNativeScanner !== 'undefined');
+    console.log('[scanner] Checking window.ZXingNativeScanner...');
+    console.log('[scanner] window.ZXingNativeScanner exists:', typeof window.ZXingNativeScanner !== 'undefined');
     
-    if (!window.MLKitNativeScanner) {
-      console.error('[scanner] ❌ MLKitNativeScanner class not found in window');
-      console.log('[scanner] Available window properties:', Object.keys(window).filter(k => k.includes('ML') || k.includes('Scanner')));
+    if (!window.ZXingNativeScanner) {
+      console.error('[scanner] ❌ ZXingNativeScanner class not found in window');
+      console.log('[scanner] Available window properties:', Object.keys(window).filter(k => k.includes('ZX') || k.includes('Scanner')));
       return null;
     }
     
     try {
-      console.log('[scanner] Creating new MLKitNativeScanner instance...');
-      mlKitScanner = new window.MLKitNativeScanner();
+      console.log('[scanner] Creating new ZXingNativeScanner instance...');
+      zxingScanner = new window.ZXingNativeScanner();
       console.log('[scanner] Instance created, calling waitUntilReady(3000)...');
       
-      const ready = await mlKitScanner.waitUntilReady(3000);
+      const ready = await zxingScanner.waitUntilReady(3000);
       console.log('[scanner] waitUntilReady() returned:', ready);
       
       if (ready) {
-        console.log('[scanner] ✅ MLKit scanner ready');
-        console.log('[scanner] Scanner state - isInitialized:', mlKitScanner.isInitialized);
-        console.log('[scanner] Scanner state - plugin exists:', mlKitScanner.plugin !== null);
-        return mlKitScanner;
+        console.log('[scanner] ✅ ZXing scanner ready');
+        console.log('[scanner] Scanner state - isInitialized:', zxingScanner.isInitialized);
+        console.log('[scanner] Scanner state - plugin exists:', zxingScanner.plugin !== null);
+        return zxingScanner;
       } else {
-        console.error('[scanner] ❌ MLKit plugin not available after wait');
-        console.log('[scanner] Scanner state - isInitialized:', mlKitScanner.isInitialized);
-        console.log('[scanner] Scanner state - plugin:', mlKitScanner.plugin);
+        console.error('[scanner] ❌ ZXing plugin not available after wait');
+        console.log('[scanner] Scanner state - isInitialized:', zxingScanner.isInitialized);
+        console.log('[scanner] Scanner state - plugin:', zxingScanner.plugin);
         return null;
       }
     } catch (error) {
-      console.error('[scanner] ❌ Error initializing MLKit:', error);
+      console.error('[scanner] ❌ Error initializing ZXing:', error);
       console.log('[scanner] Error stack:', error.stack);
       return null;
     }
@@ -291,9 +291,9 @@
       return;
     }
 
-    console.log('[scanner] Calling initMLKitScanner()...');
-    const scanner = await initMLKitScanner();
-    console.log('[scanner] initMLKitScanner() returned:', scanner !== null);
+    console.log('[scanner] Calling initZXingScanner()...');
+    const scanner = await initZXingScanner();
+    console.log('[scanner] initZXingScanner() returned:', scanner !== null);
     
     if (!scanner) {
       console.error('[scanner] Scanner is null, cannot proceed');
@@ -330,8 +330,8 @@
   }
 
   function stopCamera() {
-    if (mlKitScanner) {
-      mlKitScanner.stopScan().catch(err => {
+    if (zxingScanner) {
+      zxingScanner.stopScan().catch(err => {
         console.warn('[scanner] Error stopping:', err);
       });
     }
@@ -429,6 +429,6 @@
     setResultsStatus(`Mostrando 25 de ${SearchIndex.count()} piezas disponibles`);
   }
 
-  console.log('[scanner] MLKit-only scanner initialized');
+  console.log('[scanner] ZXing native scanner initialized');
 
 })();

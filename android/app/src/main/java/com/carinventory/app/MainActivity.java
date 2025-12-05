@@ -10,8 +10,10 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // MLKit plugin removed - using web-based scanner with ZXing.js
-        // See: Documentacion/Procedimientos/PROC_20251205_1600_eliminacion_mlkit.md
+        // ZXing native scanner plugin
+        // Replaces MLKit with lighter alternative (~500 KB vs ~8-10 MB)
+        // See: ANALISIS_MLKIT_ZXING.md
+        registerPlugin(ZXingScannerPlugin.class);
         
         // Configuración para desarrollo: deshabilitar cache de WebView
         WebView webView = getBridge().getWebView();
