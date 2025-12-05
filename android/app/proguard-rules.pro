@@ -20,9 +20,11 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# ML Kit Barcode Scanning
+# ML Kit Barcode Scanning (Google Play Services)
 -keep class com.google.mlkit.vision.barcode.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_barcode.** { *; }
 -dontwarn com.google.mlkit.vision.barcode.**
+-dontwarn com.google.android.gms.**
 
 # CameraX library
 -keep class androidx.camera.** { *; }

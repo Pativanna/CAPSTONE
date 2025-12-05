@@ -127,7 +127,7 @@ public class ZxingScannerPlugin extends Plugin {
         if (cameraGranted && microphoneGranted) {
             call.resolve(result);
         } else {
-            call.reject("Required permissions not granted", null, result);
+            call.reject("Required permissions not granted", "PERMISSION_DENIED", result);
         }
     }
     
