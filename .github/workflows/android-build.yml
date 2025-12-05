@@ -46,16 +46,12 @@ jobs:
         pip install -r requirements.txt
         python manage.py collectstatic --noinput --clear
     
-    - name: Copy index.html to staticfiles
-      run: |
-        cp car_inventory/static/index.html staticfiles/index.html
-        echo "✓ Copied index.html to staticfiles/"
-        ls -la staticfiles/index.html
-    
     - name: Clean compressed files
       run: |
         find staticfiles -name "*.gz" -type f -delete
         echo "Removed compressed files to prevent duplicate assets"
+        echo "Verifying index.html exists:"
+        ls -la staticfiles/index.html
     
     - name: Sync Capacitor
       run: npx cap sync android

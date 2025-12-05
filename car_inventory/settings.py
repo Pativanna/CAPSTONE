@@ -377,7 +377,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'parts' / 'static']
+# STATICFILES_DIRS removido - parts ya está en INSTALLED_APPS con AppDirectoriesFinder
 
 # WhiteNoise configuration for production static files
 STORAGES = {
