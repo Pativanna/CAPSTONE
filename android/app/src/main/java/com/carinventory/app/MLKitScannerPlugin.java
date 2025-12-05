@@ -140,7 +140,10 @@ public class MLKitScannerPlugin extends Plugin {
     public void checkPermissions(PluginCall call) {
         JSObject result = new JSObject();
         
-        if (hasRequiredPermissions()) {
+        boolean hasPermission = hasRequiredPermissions();
+        Log.d(TAG, "checkPermissions: hasRequiredPermissions=" + hasPermission);
+        
+        if (hasPermission) {
             result.put("camera", "granted");
         } else {
             result.put("camera", "prompt");
@@ -151,62 +154,78 @@ public class MLKitScannerPlugin extends Plugin {
     
     @PluginMethod
     public void requestPermissions(PluginCall call) {
+        Log.d(TAG, "requestPermissions: checking current state");
+        
         if (hasRequiredPermissions()) {
+            Log.i(TAG, "requestPermissions: already granted");
             JSObject result = new JSObject();
             result.put("camera", "granted");
             call.resolve(result);
         } else {
+            Log.i(TAG, "requestPermissions: requesting camera permission");
             requestAllPermissions(call, "permissionsCallback");
         }
     }
     
     @PluginMethod
     public void startScan(PluginCall call) {
+        Log.i(TAG, "startScan called");
+        
         if (isScanning.get()) {
+            Log.w(TAG, "startScan: already scanning");
             call.reject("Already scanning");
             return;
         }
         
         // Validate plugin initialization
         if (cameraExecutor == null || cameraExecutor.isShutdown()) {
-            Log.e(TAG, "Camera executor not initialized or shutdown");
+            Log.e(TAG, "startScan: camera executor not initialized or shutdown");
             call.reject("Plugin not properly initialized");
             return;
         }
         
         if (barcodeScanner == null) {
-            Log.e(TAG, "Barcode scanner not initialized");
+            Log.e(TAG, "startScan: barcode scanner not initialized");
             call.reject("Plugin not properly initialized");
             return;
         }
         
         if (!hasRequiredPermissions()) {
+            Log.e(TAG, "startScan: camera permission not granted");
             call.reject("Camera permission not granted");
             return;
         }
         
         if (getActivity() == null) {
+            Log.e(TAG, "startScan: activity not available");
             call.reject("Activity not available");
             return;
         }
         
+        Log.d(TAG, "startScan: clearing cooldown times");
         codeDetectionTimes.clear();
         
+        Log.i(TAG, "startScan: calling startCamera");
         // startCamera uses MainExecutor, no need for extra runOnUiThread
         startCamera(call);
     }
     
     @PluginMethod
     public void stopScan(PluginCall call) {
+        Log.i(TAG, "stopScan called");
         stopCamera();
         call.resolve();
+        Log.d(TAG, "stopScan: completed");
     }
     
     @PermissionCallback
     private void permissionsCallback(PluginCall call) {
         JSObject result = new JSObject();
         
-        if (hasRequiredPermissions()) {
+        boolean hasPermission = hasRequiredPermissions();
+        Log.i(TAG, "permissionsCallback: result=" + (hasPermission ? "granted" : "denied"));
+        
+        if (hasPermission) {
             result.put("camera", "granted");
         } else {
             result.put("camera", "denied");
@@ -216,21 +235,27 @@ public class MLKitScannerPlugin extends Plugin {
     }
     
     private void startCamera(@NonNull PluginCall call) {
+        Log.i(TAG, "startCamera: getting ProcessCameraProvider");
+        
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = 
             ProcessCameraProvider.getInstance(getContext());
         
         cameraProviderFuture.addListener(() -> {
             try {
+                Log.d(TAG, "startCamera: ProcessCameraProvider future completed");
                 cameraProvider = cameraProviderFuture.get();
+                Log.i(TAG, "startCamera: cameraProvider obtained successfully");
                 
                 // CRITICAL: createScannerUI MUST run on main thread
                 if (getActivity() != null) {
+                    Log.d(TAG, "startCamera: scheduling createScannerUI on main thread");
                     getActivity().runOnUiThread(() -> createScannerUI(call));
                 } else {
+                    Log.e(TAG, "startCamera: activity is null");
                     call.reject("Activity not available");
                 }
             } catch (ExecutionException | InterruptedException e) {
-                Log.e(TAG, "Failed to start camera", e);
+                Log.e(TAG, "startCamera: failed to get ProcessCameraProvider", e);
                 call.reject("Failed to start camera: " + e.getMessage());
             }
         }, ContextCompat.getMainExecutor(getContext()));
@@ -238,29 +263,33 @@ public class MLKitScannerPlugin extends Plugin {
     
     @SuppressLint("ClickableViewAccessibility")
     private void createScannerUI(@NonNull PluginCall call) {
+        Log.i(TAG, "createScannerUI: starting UI creation");
+        
         WebView webView = getBridge().getWebView();
         if (webView == null) {
-            Log.e(TAG, "WebView is null");
+            Log.e(TAG, "createScannerUI: WebView is null");
             call.reject("WebView not available");
             return;
         }
         
         if (webView.getParent() == null) {
-            Log.e(TAG, "WebView parent is null");
+            Log.e(TAG, "createScannerUI: WebView parent is null");
             call.reject("WebView parent not available");
             return;
         }
         
         if (!(webView.getParent() instanceof ViewGroup)) {
-            Log.e(TAG, "WebView parent is not a ViewGroup");
+            Log.e(TAG, "createScannerUI: WebView parent is not a ViewGroup, type=" + webView.getParent().getClass().getName());
             call.reject("Invalid WebView parent");
             return;
         }
         
         ViewGroup parent = (ViewGroup) webView.getParent();
+        Log.d(TAG, "createScannerUI: WebView parent obtained, type=" + parent.getClass().getName());
         
         // Ocultar WebView completamente (no transparente, INVISIBLE)
         webView.setVisibility(View.GONE);
+        Log.d(TAG, "createScannerUI: WebView hidden");
         
         // Crear contenedor principal con layout vertical
         scannerContainer = new LinearLayout(getContext());
@@ -322,44 +351,58 @@ public class MLKitScannerPlugin extends Plugin {
         safeZone.setLayoutParams(safeParams);
         scannerContainer.addView(safeZone);
         
+        Log.i(TAG, "createScannerUI: UI created successfully, binding camera");
+        
         // Bind camera
         bindCameraUseCases(call);
     }
     
     private void bindCameraUseCases(@NonNull PluginCall call) {
+        Log.i(TAG, "bindCameraUseCases: starting camera binding");
+        
         if (cameraProvider == null) {
+            Log.e(TAG, "bindCameraUseCases: cameraProvider is null");
             call.reject("Camera provider not initialized");
             return;
         }
         
         if (cameraExecutor == null || cameraExecutor.isShutdown()) {
+            Log.e(TAG, "bindCameraUseCases: cameraExecutor is null or shutdown");
             call.reject("Camera executor not available");
             return;
         }
         
         if (!(getActivity() instanceof LifecycleOwner)) {
+            Log.e(TAG, "bindCameraUseCases: Activity does not implement LifecycleOwner");
             call.reject("Activity does not implement LifecycleOwner");
             return;
         }
         
+        Log.d(TAG, "bindCameraUseCases: creating CameraSelector");
         CameraSelector cameraSelector = new CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
             .build();
         
+        Log.d(TAG, "bindCameraUseCases: creating Preview");
         Preview preview = new Preview.Builder().build();
         preview.setSurfaceProvider(cameraPreview.getSurfaceProvider());
         
+        Log.d(TAG, "bindCameraUseCases: creating ImageAnalysis (1280x720)");
         // Image analysis optimizado para ML Kit
         ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
             .setTargetResolution(new Size(1280, 720))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build();
         
+        Log.d(TAG, "bindCameraUseCases: setting analyzer");
         imageAnalysis.setAnalyzer(cameraExecutor, this::analyzeImage);
         
         try {
+            Log.d(TAG, "bindCameraUseCases: unbinding all previous use cases");
             cameraProvider.unbindAll();
+            
             LifecycleOwner lifecycleOwner = (LifecycleOwner) getActivity();
+            Log.d(TAG, "bindCameraUseCases: binding to lifecycle");
             camera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
@@ -367,17 +410,20 @@ public class MLKitScannerPlugin extends Plugin {
                 imageAnalysis
             );
             
+            Log.i(TAG, "bindCameraUseCases: camera bound successfully");
+            
             enableContinuousAutofocus();
             isScanning.set(true);
+            Log.d(TAG, "bindCameraUseCases: isScanning set to true");
             
             JSObject ret = new JSObject();
             ret.put("status", "started");
             ret.put("mode", "continuous");
             call.resolve(ret);
             
-            Log.i(TAG, "Camera bound successfully with CameraX");
+            Log.i(TAG, "bindCameraUseCases: Camera bound successfully with CameraX");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to bind camera", e);
+            Log.e(TAG, "bindCameraUseCases: Failed to bind camera", e);
             call.reject("Failed to bind camera: " + e.getMessage());
         }
     }
@@ -443,6 +489,7 @@ public class MLKitScannerPlugin extends Plugin {
         lastFrameTime = currentTime;
         
         isProcessing.set(true);
+        Log.v(TAG, "analyzeImage: processing frame " + imageProxy.getImageInfo().getTimestamp());
         
         // Calcular luminosidad para flash automático
         double luminance = calculateLuminance(imageProxy);
@@ -455,11 +502,13 @@ public class MLKitScannerPlugin extends Plugin {
         @SuppressLint("UnsafeOptInUsageError")
         android.media.Image mediaImage = imageProxy.getImage();
         if (mediaImage == null) {
-            Log.w(TAG, "ImageProxy.getImage() returned null");
+            Log.w(TAG, "analyzeImage: ImageProxy.getImage() returned null, skipping frame");
             isProcessing.set(false);
             imageProxy.close();
             return;
         }
+        
+        Log.v(TAG, "analyzeImage: creating InputImage from media image");
         
         @SuppressLint("UnsafeOptInUsageError")
         InputImage image = InputImage.fromMediaImage(
