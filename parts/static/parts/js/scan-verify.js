@@ -96,6 +96,8 @@
     lastHiResSnapshot: 0,
     lastSuccessfulDetection: 0,
     detectionCooldown: 2000, // 2 segundos de pausa después de detectar
+    lastDetectedCode: null, // Último código detectado para cooldown
+    scannerState: 'SCANNING', // SCANNING | DETECTED | CONFIRMED
   };
 
   let viewportListenersBound = false;
@@ -1439,24 +1441,37 @@ function detectBitmapWithJsQR(bitmap, source = 'photo') {
   function handleDecodedValue(rawValue, location = null, source = 'camera', boundingBox = null) {
     const value = String(rawValue || '').trim();
     if (!value) return;
+    
+    // Cooldown de 2 segundos para el MISMO código
+    const now = Date.now();
+    if (state.lastDetectedCode === value && (now - state.lastSuccessfulDetection) < state.detectionCooldown) {
+      console.log('[scanner] Ignoring duplicate detection (cooldown active):', value);
+      return;
+    }
+    
     if (!state.selectedPart) {
       setResultsStatus('Selecciona una pieza antes de validar un código.', 'warning');
       clearOverlay();
       return;
     }
+    
     const normalizedValue = normalizeBarcode(value);
     const normalizedKey = normalizedValue;
     const expectedNormalized = normalizeBarcode(state.selectedPart?.barcode || '');
     const isMatch = Boolean(expectedNormalized && normalizedKey === expectedNormalized);
+    
     if (!SearchIndex.findByBarcode(normalizedKey)) {
       ensureBarcodeIndexed(value);
     }
+    
     console.info('[scanner] detection', {
       value,
       normalizedKey,
       expected: expectedNormalized,
-      source
+      source,
+      isMatch
     });
+    
     appendDebugLog('detection', {
       value,
       normalizedKey,
@@ -1464,6 +1479,7 @@ function detectBitmapWithJsQR(bitmap, source = 'photo') {
       source,
       partId: state.selectedPart?.id || null,
     });
+    
     if (location) {
       renderDetectionOutline(location);
     } else if (boundingBox) {
@@ -1471,17 +1487,21 @@ function detectBitmapWithJsQR(bitmap, source = 'photo') {
     } else {
       clearOverlay();
     }
+    
     setStatusBanner(`Escaneando… Código leído: ${value}`, 'info');
     announceDetection(value, normalizedKey, isMatch);
     state.failedDetections = 0;
     
-    // Activar cooldown de 2s después de detección exitosa
-    state.lastSuccessfulDetection = Date.now();
+    // Actualizar cooldown SOLO si es código diferente o cooldown expiró
+    state.lastSuccessfulDetection = now;
+    state.lastDetectedCode = value;
+    state.scannerState = 'DETECTED';
     
     const resolvedBox = location ? locationToBoundingBox(location) : boundingBox;
     if (resolvedBox && source !== 'mlkit') {
       maybeTriggerHiResSnapshot(resolvedBox, { source, value });
     }
+    
     if (isMatch) {
       handleMatch(value, resolvedBox, { source });
     } else if (state.selectedPart?.barcode) {
@@ -2286,7 +2306,15 @@ function updateCaptureButton(enabled) {
   function handleMismatch(value, options = {}) {
     const { force = false, source = 'camera' } = options;
     if (!force && state.lastMismatch === value) return;
+    
     state.lastMismatch = value;
+    state.scannerState = 'CONFIRMED';
+    
+    // FEEDBACK: 1 vibración + 1 beep
+    if (window.scannerFeedback) {
+      window.scannerFeedback.triggerMismatch();
+    }
+    
     setStatusBanner(`Detectado: ${value}`, 'warning');
     setInfoState('mismatch');
     console.warn('[scanner] mismatch', {
@@ -2301,6 +2329,11 @@ function updateCaptureButton(enabled) {
     });
     logScanEvent('mismatch', value, { source });
     setResultsStatus(`Código detectado (${value}) no coincide con la pieza (${state.selectedPart?.barcode || 'N/A'}).`, 'warning');
+    
+    // Volver a SCANNING después de 1.5s
+    setTimeout(() => {
+      state.scannerState = 'SCANNING';
+    }, 1500);
   }
 
   function noteDetectionMiss(reason = 'unknown') {
@@ -2371,6 +2404,13 @@ function updateCaptureButton(enabled) {
   function handleMatch(detectedValue, boundingBox = null, options = {}) {
     const { source = 'camera' } = options;
     state.lastMismatch = null;
+    state.scannerState = 'CONFIRMED';
+    
+    // FEEDBACK: 2 vibraciones + 2 beeps + bordes verdes
+    if (window.scannerFeedback) {
+      window.scannerFeedback.triggerMatch();
+    }
+    
     setStatusBanner('¡Pieza encontrada!', 'success');
     setInfoState('success');
     playBeep();
@@ -2404,6 +2444,7 @@ function updateCaptureButton(enabled) {
     setTimeout(() => {
       hideStatusBanner();
       setInfoState('ready');
+      state.scannerState = 'SCANNING';
     }, 1600);
   }
 

@@ -2,23 +2,16 @@ package com.carinventory.app;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.graphics.Rect;
 import android.util.Size;
-import android.view.MotionEvent;
-import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.camera.core.Camera;
-import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraSelector;
-import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageProxy;
-import androidx.camera.core.MeteringPoint;
-import androidx.camera.core.MeteringPointFactory;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
@@ -41,13 +34,10 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 @CapacitorPlugin(
     name = "MLKitScanner",
@@ -73,16 +63,8 @@ public class MLKitScannerPlugin extends Plugin {
     private boolean isScanning = false;
     private boolean isProcessing = false;
     private PluginCall pendingStartCall;
-    
-    // Cooldown por código (2 segundos)
-    private Map<String, Long> codeDetectionTimes = new HashMap<>();
-    private static final long CODE_COOLDOWN_MS = 2000; // 2 segundos entre detecciones del MISMO código
-    private static final long FRAME_COOLDOWN_MS = 50; // 50ms entre frames para optimizar CPU
-    
-    // Torch automático
-    private boolean torchEnabled = false;
-    private static final double LOW_LIGHT_THRESHOLD = 0.15; // Umbral de luminosidad para flash automático
-    private long lastFrameTime = 0;
+    private long lastDetectionTime = 0;
+    private static final long DETECTION_COOLDOWN_MS = 100; // 100ms entre detecciones para escaneo continuo
     
     @Override
     public void load() {
@@ -147,8 +129,6 @@ public class MLKitScannerPlugin extends Plugin {
             return;
         }
         
-        // Limpiar historial de detecciones al iniciar nueva sesión
-        codeDetectionTimes.clear();
         pendingStartCall = call;
         startCamera();
     }
@@ -186,7 +166,6 @@ public class MLKitScannerPlugin extends Plugin {
         }, ContextCompat.getMainExecutor(getContext()));
     }
     
-    @SuppressLint("ClickableViewAccessibility")
     private void bindCameraUseCases() {
         // Obtener WebView para overlay
         WebView webView = getBridge().getWebView();
@@ -236,80 +215,11 @@ public class MLKitScannerPlugin extends Plugin {
                 preview,
                 imageAnalysis
             );
-            
-            // Configurar autofocus continuo
-            enableContinuousAutofocus();
-            
-            // Tap-to-focus en PreviewView
-            previewView.setOnTouchListener((v, event) -> {
-                if (event.getAction() == MotionEvent.ACTION_DOWN && camera != null) {
-                    focusOnPoint(event.getX(), event.getY());
-                    return true;
-                }
-                return false;
-            });
-            
             isScanning = true;
             resolvePendingStart();
         } catch (Exception e) {
             rejectPendingStart("Failed to bind camera: " + e.getMessage());
         }
-    }
-    
-    private void enableContinuousAutofocus() {
-        if (camera == null) return;
-        
-        getBridge().executeOnMainThread(() -> {
-            try {
-                CameraControl cameraControl = camera.getCameraControl();
-                MeteringPointFactory factory = previewView.getMeteringPointFactory();
-                MeteringPoint centerPoint = factory.createPoint(
-                    previewView.getWidth() / 2.0f,
-                    previewView.getHeight() / 2.0f
-                );
-                
-                FocusMeteringAction action = new FocusMeteringAction.Builder(centerPoint)
-                    .setAutoCancelDuration(5, TimeUnit.SECONDS)
-                    .build();
-                
-                cameraControl.startFocusAndMetering(action);
-            } catch (Exception e) {
-                // Silently fail if autofocus not supported
-            }
-        });
-    }
-    
-    private void focusOnPoint(float x, float y) {
-        if (camera == null || previewView == null) return;
-        
-        getBridge().executeOnMainThread(() -> {
-            try {
-                CameraControl cameraControl = camera.getCameraControl();
-                MeteringPointFactory factory = previewView.getMeteringPointFactory();
-                MeteringPoint point = factory.createPoint(x, y);
-                
-                FocusMeteringAction action = new FocusMeteringAction.Builder(point)
-                    .setAutoCancelDuration(3, TimeUnit.SECONDS)
-                    .build();
-                
-                cameraControl.startFocusAndMetering(action);
-            } catch (Exception e) {
-                // Silently fail
-            }
-        });
-    }
-    
-    private void updateTorch(boolean enable) {
-        if (camera == null || !camera.getCameraInfo().hasFlashUnit()) return;
-        
-        getBridge().executeOnMainThread(() -> {
-            try {
-                camera.getCameraControl().enableTorch(enable);
-                torchEnabled = enable;
-            } catch (Exception e) {
-                // Silently fail
-            }
-        });
     }
     
     @SuppressLint("UnsafeOptInUsageError")
@@ -319,22 +229,14 @@ public class MLKitScannerPlugin extends Plugin {
             return;
         }
         
-        // Cooldown entre frames para optimizar CPU
+        // Cooldown para evitar spam de detecciones
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastFrameTime < FRAME_COOLDOWN_MS) {
+        if (currentTime - lastDetectionTime < DETECTION_COOLDOWN_MS) {
             imageProxy.close();
             return;
         }
-        lastFrameTime = currentTime;
         
         isProcessing = true;
-        
-        // Calcular luminosidad para torch automático
-        double luminance = calculateLuminance(imageProxy);
-        boolean shouldEnableTorch = luminance < LOW_LIGHT_THRESHOLD;
-        if (shouldEnableTorch != torchEnabled) {
-            updateTorch(shouldEnableTorch);
-        }
         
         @SuppressLint("UnsafeOptInUsageError")
         InputImage image = InputImage.fromMediaImage(
@@ -346,10 +248,10 @@ public class MLKitScannerPlugin extends Plugin {
         
         result.addOnSuccessListener(barcodes -> {
             if (!barcodes.isEmpty() && isScanning) {
-                // Escanear solo el código más centrado
-                Barcode mostCentered = findMostCenteredBarcode(barcodes, imageProxy.getWidth(), imageProxy.getHeight());
-                if (mostCentered != null) {
-                    handleBarcodeDetected(mostCentered, luminance);
+                for (Barcode barcode : barcodes) {
+                    handleBarcodeDetected(barcode);
+                    lastDetectionTime = System.currentTimeMillis();
+                    break; // Procesar solo el primero para escaneo continuo
                 }
             }
             isProcessing = false;
@@ -360,90 +262,15 @@ public class MLKitScannerPlugin extends Plugin {
         });
     }
     
-    private double calculateLuminance(ImageProxy imageProxy) {
-        // Estimación simple de luminosidad basada en el brillo promedio de la imagen
-        // En producción, esto debería ser más sofisticado
-        try {
-            @SuppressLint("UnsafeOptInUsageError")
-            android.media.Image image = imageProxy.getImage();
-            if (image == null) return 0.5;
-            
-            // Obtener plano Y (luminancia) de YUV
-            android.media.Image.Plane yPlane = image.getPlanes()[0];
-            java.nio.ByteBuffer yBuffer = yPlane.getBuffer();
-            
-            // Muestrear algunos pixels para estimar luminosidad
-            int sampleSize = Math.min(1000, yBuffer.remaining());
-            long sum = 0;
-            for (int i = 0; i < sampleSize; i++) {
-                sum += (yBuffer.get(i) & 0xFF);
-            }
-            
-            return (sum / (double) sampleSize) / 255.0;
-        } catch (Exception e) {
-            return 0.5; // Valor medio por defecto
-        }
-    }
-    
-    private Barcode findMostCenteredBarcode(List<Barcode> barcodes, int imageWidth, int imageHeight) {
-        if (barcodes.isEmpty()) return null;
-        if (barcodes.size() == 1) return barcodes.get(0);
-        
-        int centerX = imageWidth / 2;
-        int centerY = imageHeight / 2;
-        
-        Barcode mostCentered = null;
-        double minDistance = Double.MAX_VALUE;
-        
-        for (Barcode barcode : barcodes) {
-            Rect boundingBox = barcode.getBoundingBox();
-            if (boundingBox == null) continue;
-            
-            int barcodeX = boundingBox.centerX();
-            int barcodeY = boundingBox.centerY();
-            
-            double distance = Math.sqrt(
-                Math.pow(barcodeX - centerX, 2) + 
-                Math.pow(barcodeY - centerY, 2)
-            );
-            
-            if (distance < minDistance) {
-                minDistance = distance;
-                mostCentered = barcode;
-            }
-        }
-        
-        return mostCentered;
-    }
-    
-    private void handleBarcodeDetected(Barcode barcode, double luminance) {
-        if (!isScanning) return;
-        
-        String code = barcode.getRawValue();
-        if (code == null || code.isEmpty()) return;
-        
-        // Verificar cooldown de 2 segundos para el MISMO código
-        long currentTime = System.currentTimeMillis();
-        Long lastDetection = codeDetectionTimes.get(code);
-        if (lastDetection != null && (currentTime - lastDetection) < CODE_COOLDOWN_MS) {
-            // Ignorar detección, aún en cooldown
+    private void handleBarcodeDetected(Barcode barcode) {
+        if (!isScanning) {
             return;
         }
         
-        // Actualizar tiempo de detección para este código
-        codeDetectionTimes.put(code, currentTime);
-        
-        // Limpiar códigos antiguos del mapa (mayores a 10 segundos)
-        codeDetectionTimes.entrySet().removeIf(entry -> 
-            (currentTime - entry.getValue()) > 10000
-        );
-        
         getBridge().executeOnMainThread(() -> {
             JSObject ret = new JSObject();
-            ret.put("value", code);
+            ret.put("value", barcode.getRawValue());
             ret.put("format", getBarcodeFormatName(barcode.getFormat()));
-            ret.put("luminance", luminance);
-            ret.put("timestamp", currentTime);
             
             // Corner points para highlight visual
             if (barcode.getCornerPoints() != null) {
@@ -481,15 +308,9 @@ public class MLKitScannerPlugin extends Plugin {
     private void stopCamera() {
         isScanning = false;
         isProcessing = false;
-        codeDetectionTimes.clear();
         rejectPendingStart("Scan cancelled");
         
         getBridge().executeOnMainThread(() -> {
-            // Apagar torch si está encendido
-            if (torchEnabled) {
-                updateTorch(false);
-            }
-            
             if (cameraProvider != null) {
                 cameraProvider.unbindAll();
             }
@@ -524,7 +345,6 @@ public class MLKitScannerPlugin extends Plugin {
         if (pendingStartCall != null) {
             JSObject ret = new JSObject();
             ret.put("status", "started");
-            ret.put("torchSupported", camera != null && camera.getCameraInfo().hasFlashUnit());
             pendingStartCall.resolve(ret);
             pendingStartCall = null;
         }
