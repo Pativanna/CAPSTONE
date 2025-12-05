@@ -45,6 +45,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         python manage.py collectstatic --noinput
+        # Copiar index.html a staticfiles para Capacitor
+        cp car_inventory/static/index.html staticfiles/index.html
+    
+    - name: Clean compressed files
+      run: |
+        find staticfiles -name "*.gz" -type f -delete
+        echo "Removed compressed files to prevent duplicate assets"
     
     - name: Sync Capacitor
       run: npx cap sync android
