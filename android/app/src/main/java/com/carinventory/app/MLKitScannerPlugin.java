@@ -206,7 +206,13 @@ public class MLKitScannerPlugin extends Plugin {
         cameraProviderFuture.addListener(() -> {
             try {
                 cameraProvider = cameraProviderFuture.get();
-                createScannerUI(call);
+                
+                // CRITICAL: createScannerUI MUST run on main thread
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> createScannerUI(call));
+                } else {
+                    call.reject("Activity not available");
+                }
             } catch (ExecutionException | InterruptedException e) {
                 Log.e(TAG, "Failed to start camera", e);
                 call.reject("Failed to start camera: " + e.getMessage());
@@ -345,25 +351,23 @@ public class MLKitScannerPlugin extends Plugin {
     private void enableContinuousAutofocus() {
         if (camera == null || cameraPreview == null || getActivity() == null) return;
         
-        getActivity().runOnUiThread(() -> {
-            try {
-                CameraControl cameraControl = camera.getCameraControl();
-                MeteringPointFactory factory = cameraPreview.getMeteringPointFactory();
-                MeteringPoint centerPoint = factory.createPoint(
-                    cameraPreview.getWidth() / 2.0f,
-                    cameraPreview.getHeight() / 2.0f
-                );
-                
-                FocusMeteringAction action = new FocusMeteringAction.Builder(centerPoint)
-                    .setAutoCancelDuration(5, TimeUnit.SECONDS)
-                    .build();
-                
-                cameraControl.startFocusAndMetering(action);
-                Log.d(TAG, "Continuous autofocus enabled");
-            } catch (Exception e) {
-                Log.w(TAG, "Autofocus not supported", e);
-            }
-        });
+        // Already on main thread from bindCameraUseCases
+        try {
+            CameraControl cameraControl = camera.getCameraControl();
+            MeteringPointFactory factory = cameraPreview.getMeteringPointFactory();
+            
+            // Use 0.5, 0.5 normalized coordinates (center) instead of pixel coordinates
+            MeteringPoint centerPoint = factory.createPoint(0.5f, 0.5f);
+            
+            FocusMeteringAction action = new FocusMeteringAction.Builder(centerPoint)
+                .setAutoCancelDuration(5, TimeUnit.SECONDS)
+                .build();
+            
+            cameraControl.startFocusAndMetering(action);
+            Log.d(TAG, "Continuous autofocus enabled");
+        } catch (Exception e) {
+            Log.w(TAG, "Autofocus not supported", e);
+        }
     }
     
     private void focusOnPoint(float x, float y) {
@@ -373,6 +377,8 @@ public class MLKitScannerPlugin extends Plugin {
             try {
                 CameraControl cameraControl = camera.getCameraControl();
                 MeteringPointFactory factory = cameraPreview.getMeteringPointFactory();
+                
+                // factory.createPoint expects pixel coordinates from the view
                 MeteringPoint point = factory.createPoint(x, y);
                 
                 FocusMeteringAction action = new FocusMeteringAction.Builder(point)
@@ -445,14 +451,28 @@ public class MLKitScannerPlugin extends Plugin {
             android.media.Image.Plane yPlane = image.getPlanes()[0];
             java.nio.ByteBuffer yBuffer = yPlane.getBuffer();
             
+            // CRITICAL: Save position and restore it to avoid buffer exhaustion
+            int originalPosition = yBuffer.position();
+            yBuffer.rewind();
+            
             int sampleSize = Math.min(1000, yBuffer.remaining());
             long sum = 0;
+            
+            // Sample evenly across the buffer
+            int step = Math.max(1, yBuffer.remaining() / sampleSize);
             for (int i = 0; i < sampleSize; i++) {
-                sum += (yBuffer.get(i) & 0xFF);
+                int position = i * step;
+                if (position < yBuffer.remaining()) {
+                    sum += (yBuffer.get(position) & 0xFF);
+                }
             }
+            
+            // Restore original position
+            yBuffer.position(originalPosition);
             
             return (sum / (double) sampleSize) / 255.0;
         } catch (Exception e) {
+            Log.w(TAG, "Failed to calculate luminance", e);
             return 0.5;
         }
     }
@@ -573,8 +593,14 @@ public class MLKitScannerPlugin extends Plugin {
         if (getActivity() == null) return;
         
         getActivity().runOnUiThread(() -> {
-            if (torchEnabled && camera != null) {
-                updateTorch(false);
+            // Apagar torch directamente (ya estamos en main thread)
+            if (torchEnabled && camera != null && camera.getCameraInfo().hasFlashUnit()) {
+                try {
+                    camera.getCameraControl().enableTorch(false);
+                    torchEnabled = false;
+                } catch (Exception e) {
+                    Log.w(TAG, "Failed to disable torch on stop", e);
+                }
             }
             
             if (cameraProvider != null) {
@@ -588,6 +614,7 @@ public class MLKitScannerPlugin extends Plugin {
             
             cameraPreview = null;
             infoTextView = null;
+            camera = null;
             
             // Restaurar WebView
             WebView webView = getBridge().getWebView();
