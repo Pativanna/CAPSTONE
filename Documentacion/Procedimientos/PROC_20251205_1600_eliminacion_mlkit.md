@@ -38,20 +38,22 @@ git checkout -b feature/remove-mlkit-iso27001
 # Crear tag de backup
 git tag backup-before-mlkit-removal
 
-# Verificar estado
-git status
-git branch
+# Commit de documentación
+git add CHANGE_MANAGEMENT_ISO27001.md Calidad/ Documentacion/
+git commit -m "docs: Add ISO 27001 quality control..."
 ```
 
 #### Resultados
 ```
-PENDIENTE - Ejecutar en siguiente bloque
+✅ Switched to a new branch 'feature/remove-mlkit-iso27001'
+✅ Tag backup-before-mlkit-removal created
+✅ Commit 176ca36: 4 files changed, 981 insertions(+)
 ```
 
 #### Criterio de Éxito
-- [ ] Rama `feature/remove-mlkit-iso27001` creada
-- [ ] Tag `backup-before-mlkit-removal` establecido
-- [ ] Git status limpio
+- [x] Rama `feature/remove-mlkit-iso27001` creada
+- [x] Tag `backup-before-mlkit-removal` establecido
+- [x] Documentación committeada
 
 #### Plan de Rollback
 ```bash
@@ -62,17 +64,19 @@ git tag -d backup-before-mlkit-removal
 
 ---
 
-### ⏳ FASE 2: Eliminación de Código Nativo MLKit
-**Estado:** PENDIENTE  
+### 🔄 FASE 2: Eliminación de Código Nativo MLKit
+**Estado:** EN PROGRESO  
+**Tiempo:** 16:05 - 16:15  
 **Objetivo:** Eliminar archivos Java y scripts de soporte
 
 #### Archivos a Eliminar
-- `android/app/src/main/java/com/carinventory/app/MLKitScannerPlugin.java`
-- `android/app/src/main/java/com/carinventory/app/MLKitScannerPlugin_Camera1_BACKUP.java`
+- `android/app/src/main/java/com/carinventory/app/MLKitScannerPlugin.java` (730 líneas)
+- `android/app/src/main/java/com/carinventory/app/MLKitScannerPlugin_Camera1_BACKUP.java` (275 líneas)
 - `android/app/src/main/java/com/carinventory/app/MLKitScannerPlugin_OLD.java`
 - `android/app/src/main/java/com/carinventory/app/scanner/MLKitBarcodeProcessor.java`
 - `scripts/inject-mlkit-plugin.js`
 - `templates/mlkit-scanner-helper.js`
+- `parts/static/parts/js/mlkit-native-scanner.js` (200 líneas)
 
 ---
 

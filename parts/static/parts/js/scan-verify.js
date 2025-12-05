@@ -7,6 +7,15 @@
   // PLATFORM DETECTION
   // ============================================================================
   
+  console.log('[scanner] 🔍 Checking Capacitor availability...');
+  console.log('[scanner] window.Capacitor exists:', typeof window.Capacitor !== 'undefined');
+  
+  if (typeof window.Capacitor !== 'undefined') {
+    console.log('[scanner] Capacitor.isNativePlatform():', window.Capacitor.isNativePlatform());
+    console.log('[scanner] Capacitor.getPlatform():', window.Capacitor.getPlatform());
+    console.log('[scanner] Capacitor.Plugins:', window.Capacitor.Plugins ? Object.keys(window.Capacitor.Plugins) : 'undefined');
+  }
+  
   const isNativePlatform = typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform();
   
   if (!isNativePlatform) {
@@ -24,26 +33,42 @@
   let mlKitScanner = null;
   
   async function initMLKitScanner() {
+    console.log('[scanner] 🔍 initMLKitScanner() called');
+    console.log('[scanner] mlKitScanner already exists:', mlKitScanner !== null);
+    
     if (mlKitScanner) return mlKitScanner;
     
+    console.log('[scanner] Checking window.MLKitNativeScanner...');
+    console.log('[scanner] window.MLKitNativeScanner exists:', typeof window.MLKitNativeScanner !== 'undefined');
+    
     if (!window.MLKitNativeScanner) {
-      console.error('[scanner] MLKitNativeScanner not found');
+      console.error('[scanner] ❌ MLKitNativeScanner class not found in window');
+      console.log('[scanner] Available window properties:', Object.keys(window).filter(k => k.includes('ML') || k.includes('Scanner')));
       return null;
     }
     
     try {
+      console.log('[scanner] Creating new MLKitNativeScanner instance...');
       mlKitScanner = new window.MLKitNativeScanner();
+      console.log('[scanner] Instance created, calling waitUntilReady(3000)...');
+      
       const ready = await mlKitScanner.waitUntilReady(3000);
+      console.log('[scanner] waitUntilReady() returned:', ready);
       
       if (ready) {
         console.log('[scanner] ✅ MLKit scanner ready');
+        console.log('[scanner] Scanner state - isInitialized:', mlKitScanner.isInitialized);
+        console.log('[scanner] Scanner state - plugin exists:', mlKitScanner.plugin !== null);
         return mlKitScanner;
       } else {
-        console.error('[scanner] ❌ MLKit plugin not available');
+        console.error('[scanner] ❌ MLKit plugin not available after wait');
+        console.log('[scanner] Scanner state - isInitialized:', mlKitScanner.isInitialized);
+        console.log('[scanner] Scanner state - plugin:', mlKitScanner.plugin);
         return null;
       }
     } catch (error) {
-      console.error('[scanner] Error initializing MLKit:', error);
+      console.error('[scanner] ❌ Error initializing MLKit:', error);
+      console.log('[scanner] Error stack:', error.stack);
       return null;
     }
   }
@@ -251,29 +276,40 @@
   // ============================================================================
   
   async function startCamera() {
+    console.log('[scanner] 🎥 startCamera() called');
+    console.log('[scanner] state.isScanning:', state.isScanning);
+    console.log('[scanner] state.selectedParts.size:', state.selectedParts.size);
+    
     if (state.isScanning) {
       console.log('[scanner] Already scanning');
       return;
     }
 
     if (state.selectedParts.size === 0) {
+      console.log('[scanner] No parts selected, showing warning');
       setStatusBanner('Selecciona al menos una pieza primero', 'warning');
       return;
     }
 
+    console.log('[scanner] Calling initMLKitScanner()...');
     const scanner = await initMLKitScanner();
+    console.log('[scanner] initMLKitScanner() returned:', scanner !== null);
+    
     if (!scanner) {
+      console.error('[scanner] Scanner is null, cannot proceed');
       setStatusBanner('Escáner no disponible', 'danger');
       return;
     }
 
     try {
+      console.log('[scanner] Scanner available, setting status...');
       setCameraStatus('Iniciando escáner...');
       setStatusBanner('Escaneando...', 'info');
 
-      // Activar modo pantalla completa
+      console.log('[scanner] Activating fullscreen mode...');
       document.body.classList.add('scanner-fullscreen-active');
 
+      console.log('[scanner] Calling scanner.startScan()...');
       await scanner.startScan((result) => {
         console.log('[scanner] Detected:', result.value);
         handleDecodedValue(result.value);
@@ -281,10 +317,13 @@
 
       state.isScanning = true;
       setCameraStatus('Escáner activo');
-      console.log('[scanner] Camera started');
+      console.log('[scanner] ✅ Camera started successfully');
 
     } catch (error) {
-      console.error('[scanner] Error starting camera:', error);
+      console.error('[scanner] ❌ Error starting camera:', error);
+      console.log('[scanner] Error name:', error.name);
+      console.log('[scanner] Error message:', error.message);
+      console.log('[scanner] Error stack:', error.stack);
       setStatusBanner('Error al iniciar cámara: ' + error.message, 'danger');
       document.body.classList.remove('scanner-fullscreen-active');
     }
