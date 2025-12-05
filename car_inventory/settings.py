@@ -461,6 +461,15 @@ LOGGING = {
             'level': 'INFO',
             'filters': ['request_context'],
         },
+        'scanner_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOG_DIR / 'scanner.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'encoding': 'utf-8',
+            'formatter': 'simple',
+            'level': 'INFO',
+        },
     },
     'loggers': {
         'django': {
@@ -480,6 +489,11 @@ LOGGING = {
         },
         'parts.bluetooth': {
             'handlers': ['console', 'app_file', 'bluetooth_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'parts.views.scanner_logs': {
+            'handlers': ['scanner_file'],
             'level': 'INFO',
             'propagate': False,
         },

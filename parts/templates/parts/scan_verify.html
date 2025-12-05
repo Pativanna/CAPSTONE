@@ -66,17 +66,23 @@
 {{ initial_parts_payload|safe }}
 
 <!-- Scripts -->
-<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205h"
+<!-- Logger debe ir PRIMERO para interceptar todos los logs -->
+<script src="{% static 'parts/js/scanner-logger.js' %}?v=20251205i"
+        data-page-script="parts:scanner-logger"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}"></script>
+
+<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205i"
         data-page-script="parts:mlkit-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
 
-<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205h"
+<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205i"
         data-page-script="parts:scanner-feedback"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
         
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205h"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205i"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"
