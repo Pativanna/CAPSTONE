@@ -1,7 +1,6 @@
 package com.carinventory.app;
 
 import android.Manifest;
-import android.graphics.Rect;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.widget.FrameLayout;
@@ -12,6 +11,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
@@ -35,7 +35,6 @@ import androidx.lifecycle.LifecycleOwner;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
@@ -49,6 +48,10 @@ import java.util.concurrent.Executors;
         @Permission(
             alias = "camera",
             strings = { Manifest.permission.CAMERA }
+        ),
+        @Permission(
+            alias = "microphone",
+            strings = { Manifest.permission.RECORD_AUDIO }
         )
     }
 )
@@ -61,7 +64,7 @@ public class ZxingScannerPlugin extends Plugin {
     private MultiFormatReader reader;
     private ExecutorService cameraExecutor;
     private boolean isScanning = false;
-    private PluginCall scanCall;
+    private PluginCall pendingStartCall;
     
     @Override
     public void load() {
@@ -96,41 +99,51 @@ public class ZxingScannerPlugin extends Plugin {
     @PluginMethod
     public void checkPermissions(PluginCall call) {
         JSObject result = new JSObject();
-        
-        if (hasRequiredPermissions()) {
-            result.put("camera", "granted");
-        } else {
-            result.put("camera", "prompt");
-        }
-        
+        result.put("camera", hasPermission("camera") ? "granted" : "prompt");
+        result.put("microphone", hasPermission("microphone") ? "granted" : "prompt");
         call.resolve(result);
     }
     
     @PluginMethod
     public void requestPermissions(PluginCall call) {
-        if (hasRequiredPermissions()) {
+        if (hasPermission("camera") && hasPermission("microphone")) {
             JSObject result = new JSObject();
             result.put("camera", "granted");
+            result.put("microphone", "granted");
+            call.resolve(result);
+            return;
+        }
+        requestAllPermissions(call, "permissionsCallback");
+    }
+
+    @PermissionCallback
+    private void permissionsCallback(PluginCall call) {
+        JSObject result = new JSObject();
+        boolean cameraGranted = hasPermission("camera");
+        boolean microphoneGranted = hasPermission("microphone");
+        result.put("camera", cameraGranted ? "granted" : "denied");
+        result.put("microphone", microphoneGranted ? "granted" : "denied");
+
+        if (cameraGranted && microphoneGranted) {
             call.resolve(result);
         } else {
-            requestAllPermissions(call, "permissionsCallback");
+            call.reject("Required permissions not granted", null, result);
         }
     }
     
     @PluginMethod
     public void startScan(PluginCall call) {
-        if (isScanning) {
+        if (isScanning || pendingStartCall != null) {
             call.reject("Scanner already active");
             return;
         }
         
         if (!hasRequiredPermissions()) {
-            call.reject("Camera permission not granted");
+            call.reject("Required permissions not granted");
             return;
         }
         
-        scanCall = call;
-        scanCall.setKeepAlive(true);
+        pendingStartCall = call;
         
         getBridge().executeOnMainThread(() -> {
             startCamera();
@@ -144,8 +157,6 @@ public class ZxingScannerPlugin extends Plugin {
     }
     
     private void startCamera() {
-        isScanning = true;
-        
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = 
             ProcessCameraProvider.getInstance(getContext());
         
@@ -154,10 +165,7 @@ public class ZxingScannerPlugin extends Plugin {
                 cameraProvider = cameraProviderFuture.get();
                 bindCameraUseCases();
             } catch (ExecutionException | InterruptedException e) {
-                if (scanCall != null) {
-                    scanCall.reject("Failed to start camera: " + e.getMessage());
-                    scanCall = null;
-                }
+                rejectPendingStart("Failed to start camera: " + e.getMessage());
             }
         }, ContextCompat.getMainExecutor(getContext()));
     }
@@ -166,10 +174,7 @@ public class ZxingScannerPlugin extends Plugin {
         // Obtener WebView para overlay
         WebView webView = getBridge().getWebView();
         if (webView == null || webView.getParent() == null) {
-            if (scanCall != null) {
-                scanCall.reject("WebView not available");
-                scanCall = null;
-            }
+            rejectPendingStart("WebView not available");
             return;
         }
         
@@ -213,11 +218,10 @@ public class ZxingScannerPlugin extends Plugin {
                 preview,
                 imageAnalysis
             );
+            isScanning = true;
+            resolvePendingStart();
         } catch (Exception e) {
-            if (scanCall != null) {
-                scanCall.reject("Failed to bind camera: " + e.getMessage());
-                scanCall = null;
-            }
+            rejectPendingStart("Failed to bind camera: " + e.getMessage());
         }
     }
     
@@ -228,33 +232,37 @@ public class ZxingScannerPlugin extends Plugin {
         }
         
         try {
-            ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-            byte[] data = new byte[buffer.remaining()];
-            buffer.get(data);
+            byte[] luminance = extractLuminance(image);
+            if (luminance == null) {
+                return;
+            }
             
             int width = image.getWidth();
             int height = image.getHeight();
             
             PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(
-                data, width, height, 0, 0, width, height, false
+                luminance, width, height, 0, 0, width, height, false
             );
             
-            BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+            int rotation = image.getImageInfo().getRotationDegrees();
+            source = rotateSourceIfNeeded(source, rotation);
             
-            Result result = reader.decode(bitmap);
+            BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(source));
+            Result result = reader.decodeWithState(bitmap);
             
             if (result != null) {
                 handleBarcodeDetected(result);
             }
         } catch (Exception e) {
-            // No barcode found, continue scanning
+            // Ignorar y continuar con el siguiente frame
         } finally {
             image.close();
+            reader.reset();
         }
     }
     
     private void handleBarcodeDetected(Result result) {
-        if (scanCall == null || !isScanning) {
+        if (!isScanning) {
             return;
         }
         
@@ -283,6 +291,7 @@ public class ZxingScannerPlugin extends Plugin {
     
     private void stopCamera() {
         isScanning = false;
+        rejectPendingStart("Scan cancelled");
         
         getBridge().executeOnMainThread(() -> {
             if (cameraProvider != null) {
@@ -298,13 +307,9 @@ public class ZxingScannerPlugin extends Plugin {
             WebView webView = getBridge().getWebView();
             if (webView != null) {
                 webView.setBackgroundColor(0xFFFFFFFF);
+                webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
             }
         });
-        
-        if (scanCall != null) {
-            scanCall.setKeepAlive(false);
-            scanCall = null;
-        }
     }
     
     @Override
@@ -314,5 +319,71 @@ public class ZxingScannerPlugin extends Plugin {
             cameraExecutor.shutdown();
         }
         super.handleOnDestroy();
+    }
+
+    private void resolvePendingStart() {
+        if (pendingStartCall != null) {
+            JSObject ret = new JSObject();
+            ret.put("status", "started");
+            pendingStartCall.resolve(ret);
+            pendingStartCall = null;
+        }
+    }
+
+    private void rejectPendingStart(String message) {
+        if (pendingStartCall != null) {
+            pendingStartCall.reject(message);
+            pendingStartCall = null;
+        }
+    }
+
+    private byte[] extractLuminance(ImageProxy image) {
+        try {
+            ImageProxy.PlaneProxy plane = image.getPlanes()[0];
+            ByteBuffer buffer = plane.getBuffer();
+            int width = image.getWidth();
+            int height = image.getHeight();
+            int rowStride = plane.getRowStride();
+            int pixelStride = plane.getPixelStride();
+            
+            buffer.rewind();
+            byte[] yuvData = new byte[buffer.remaining()];
+            buffer.get(yuvData);
+            
+            byte[] luminance = new byte[width * height];
+            if (pixelStride == 1 && rowStride == width) {
+                System.arraycopy(yuvData, 0, luminance, 0, luminance.length);
+                return luminance;
+            }
+            
+            for (int row = 0; row < height; row++) {
+                int srcRowStart = row * rowStride;
+                int dstRowStart = row * width;
+                if (pixelStride == 1) {
+                    System.arraycopy(yuvData, srcRowStart, luminance, dstRowStart, width);
+                } else {
+                    for (int col = 0; col < width; col++) {
+                        luminance[dstRowStart + col] = yuvData[srcRowStart + col * pixelStride];
+                    }
+                }
+            }
+            return luminance;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private PlanarYUVLuminanceSource rotateSourceIfNeeded(PlanarYUVLuminanceSource source, int rotation) {
+        if (!source.isRotateSupported() || rotation == 0) {
+            return source;
+        }
+        if (rotation == 90) {
+            return source.rotateCounterClockwise();
+        } else if (rotation == 180) {
+            return source.rotateCounterClockwise().rotateCounterClockwise();
+        } else if (rotation == 270) {
+            return source.rotateCounterClockwise().rotateCounterClockwise().rotateCounterClockwise();
+        }
+        return source;
     }
 }

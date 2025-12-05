@@ -1,205 +1,172 @@
 /**
- * ML Kit Native Scanner for Capacitor
- * Usa Google ML Kit nativo (como TeaCapps) cuando está en app móvil
+ * ML Kit Native Scanner Wrapper
+ * Escaneo continuo de códigos de barras con Google ML Kit
+ * Integrado en la app (no full-screen)
  */
 
 class MLKitNativeScanner {
   constructor() {
-    this.diagnosticLog = [];
-    this._log('Constructor called');
-    this.BarcodeScanner = null;
-    this.isSupported = false;
-    this.isScanning = false;
-    this._initPromise = null;
-    this._checkNativePlatform();
+    this.plugin = null;
+    this.onBarcodeDetected = null;
+    this.isInitialized = false;
+    this.eventListener = null;
+    
+    this.initialize();
   }
-
-  _log(message, data = null) {
-    const entry = {
-      ts: new Date().toISOString(),
-      msg: message,
-      data: data
-    };
-    this.diagnosticLog.push(entry);
-    console.log(`[MLKit] ${message}`, data || '');
-  }
-
-  _checkNativePlatform() {
-    this._log('Checking native platform');
-    
-    const hasCapacitor = typeof window.Capacitor !== 'undefined';
-    this._log('window.Capacitor exists', hasCapacitor);
-    
-    if (!hasCapacitor) {
-      this._log('SKIP: No Capacitor found');
-      return;
-    }
-    
-    const hasIsNativePlatform = typeof window.Capacitor.isNativePlatform === 'function';
-    this._log('Capacitor.isNativePlatform is function', hasIsNativePlatform);
-    
-    if (!hasIsNativePlatform) {
-      this._log('SKIP: isNativePlatform not a function');
-      return;
-    }
-    
-    const isNative = window.Capacitor.isNativePlatform();
-    this._log('Capacitor.isNativePlatform() result', isNative);
-    
-    if (!isNative) {
-      this._log('SKIP: Not running in native platform');
-      return;
-    }
-    
-    const platform = window.Capacitor.getPlatform?.();
-    this._log('Platform detected', platform);
-    
-    this._log('Starting async initialization...');
-    this._initPromise = this._init();
-  }
-
-  async _init() {
+  
+  initialize() {
     try {
-      this._log('Step 1: Checking for global Capacitor plugins');
-      
-      // Verificar que Capacitor.Plugins existe
-      if (!window.Capacitor || !window.Capacitor.Plugins) {
-        throw new Error('Capacitor.Plugins not available');
-      }
-      
-      this._log('Capacitor.Plugins available', { 
-        pluginNames: Object.keys(window.Capacitor.Plugins) 
-      });
-      
-      // El plugin debe estar registrado como BarcodeScanner en Capacitor.Plugins
-      const { BarcodeScanner } = window.Capacitor.Plugins;
-      
-      if (!BarcodeScanner) {
-        this._log('BarcodeScanner plugin not found in Capacitor.Plugins', {
-          availablePlugins: Object.keys(window.Capacitor.Plugins)
-        });
-        throw new Error('BarcodeScanner plugin not registered');
-      }
-      
-      this._log('BarcodeScanner plugin found', { 
-        methods: Object.keys(BarcodeScanner) 
-      });
-      
-      this.BarcodeScanner = BarcodeScanner;
-      this._log('BarcodeScanner assigned to instance');
-      
-      this._log('Step 2: Checking if ML Kit is supported on this device');
-      
-      // Verificar que el método isSupported existe
-      if (typeof this.BarcodeScanner.isSupported !== 'function') {
-        this._log('isSupported method not found', {
-          availableMethods: Object.keys(this.BarcodeScanner)
-        });
-        throw new Error('BarcodeScanner.isSupported is not a function');
-      }
-      
-      this.isSupported = await this.BarcodeScanner.isSupported();
-      this._log('isSupported() result', this.isSupported);
-      
-      if (!this.isSupported) {
-        this._log('WARNING: ML Kit not supported on this device');
+      // Verificar que Capacitor esté disponible
+      if (typeof window.Capacitor === 'undefined') {
+        console.warn('[MLKitScanner] Capacitor not available');
         return;
       }
       
-      this._log('Step 3: Requesting camera permissions');
-      const permissionResult = await this.requestPermissions();
-      this._log('Permission request completed', permissionResult);
+      // Obtener plugin desde Capacitor.Plugins
+      this.plugin = window.Capacitor.Plugins.MLKitScanner;
       
-      this._log('SUCCESS: ML Kit fully initialized and ready');
+      if (!this.plugin) {
+        console.warn('[MLKitScanner] Plugin not found in Capacitor.Plugins');
+        return;
+      }
+      
+      this.isInitialized = true;
+      console.log('[MLKitScanner] Plugin initialized successfully');
       
     } catch (error) {
-      this._log('ERROR during initialization', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
-      this.isSupported = false;
+      console.error('[MLKitScanner] Initialization error:', error);
     }
   }
-
-  async ensureReady() {
-    this._log('ensureReady() called');
-    if (this._initPromise) {
-      this._log('Waiting for initialization to complete...');
-      await this._initPromise;
-      this._log('Initialization complete, isSupported:', this.isSupported);
-    } else {
-      this._log('No initialization promise (not native platform)');
+  
+  isSupported() {
+    return this.isInitialized && this.plugin !== null;
+  }
+  
+  async checkPermissions() {
+    if (!this.isSupported()) {
+      throw new Error('MLKit plugin not available');
     }
-    return this.isSupported;
+    
+    try {
+      const result = await this.plugin.checkPermissions();
+      console.log('[MLKitScanner] Permissions status:', result);
+      return result;
+    } catch (error) {
+      console.error('[MLKitScanner] Check permissions error:', error);
+      throw error;
+    }
   }
-
-  getDiagnostics() {
-    return {
-      log: this.diagnosticLog,
-      state: {
-        isSupported: this.isSupported,
-        isScanning: this.isScanning,
-        hasBarcodeScanner: !!this.BarcodeScanner,
-        hasInitPromise: !!this._initPromise
-      }
-    };
-  }
-
+  
   async requestPermissions() {
-    this._log('requestPermissions() called');
-    
-    if (!this.BarcodeScanner) {
-      this._log('ERROR: Cannot request permissions - BarcodeScanner not initialized');
-      return false;
+    if (!this.isSupported()) {
+      throw new Error('MLKit plugin not available');
     }
-
+    
     try {
-      this._log('Calling BarcodeScanner.checkPermissions()');
-      const currentPermissions = await this.BarcodeScanner.checkPermissions();
-      this._log('Current permissions', currentPermissions);
-
-      if (currentPermissions.camera === 'granted') {
-        this._log('Camera permission already granted');
-        return true;
-      }
-
-      this._log('Camera not granted, requesting permissions...');
-      this._log('Calling BarcodeScanner.requestPermissions()');
-      const { camera } = await this.BarcodeScanner.requestPermissions();
-      this._log('Permission request result', { camera });
-
-      if (camera === 'granted') {
-        this._log('SUCCESS: Camera permission granted');
-        return true;
-      } else {
-        this._log('WARNING: Camera permission denied', camera);
-        return false;
-      }
+      const result = await this.plugin.requestPermissions();
+      console.log('[MLKitScanner] Permissions result:', result);
+      return result;
     } catch (error) {
-      this._log('ERROR in requestPermissions()', {
-        message: error.message,
-        stack: error.stack
-      });
-      return false;
+      console.error('[MLKitScanner] Request permissions error:', error);
+      throw error;
     }
   }
-
-  async startScan(options = {}) {
-    this._log('startScan() called', options);
+  
+  /**
+   * Iniciar escaneo continuo
+   * @param {Function} callback - Función que recibe {value, format, cornerPoints}
+   */
+  async startScan(callback) {
+    if (!this.isSupported()) {
+      throw new Error('MLKit plugin not available');
+    }
     
-    if (!this.isSupported || !this.BarcodeScanner) {
-      this._log('ERROR: Cannot start scan - ML Kit not supported or not initialized');
-      throw new Error('ML Kit not supported on this platform');
+    if (typeof callback !== 'function') {
+      throw new Error('Callback must be a function');
     }
-
-    if (this.isScanning) {
-      this._log('WARNING: Scan already in progress, ignoring duplicate call');
-      return null;
+    
+    // Verificar permisos primero
+    const permissions = await this.checkPermissions();
+    
+    if (permissions.camera !== 'granted') {
+      console.log('[MLKitScanner] Requesting camera permission...');
+      const result = await this.requestPermissions();
+      
+      if (result.camera !== 'granted') {
+        throw new Error('Camera permission denied');
+      }
     }
-
+    
+    // Guardar callback
+    this.onBarcodeDetected = callback;
+    
+    // Registrar event listener para detecciones continuas
+    if (!this.eventListener) {
+      this.eventListener = await this.plugin.addListener('barcodeDetected', (data) => {
+        console.log('[MLKitScanner] Barcode detected:', data);
+        if (this.onBarcodeDetected) {
+          this.onBarcodeDetected(data);
+        }
+      });
+      console.log('[MLKitScanner] Event listener registered');
+    }
+    
     try {
-      this.isScanning = true;
+      // Iniciar escáner
+      const result = await this.plugin.startScan();
+      console.log('[MLKitScanner] Scan started:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('[MLKitScanner] Start scan error:', error);
+      // Limpiar listener si falla
+      if (this.eventListener) {
+        this.eventListener.remove();
+        this.eventListener = null;
+      }
+      throw error;
+    }
+  }
+  
+  async stopScan() {
+    if (!this.isSupported()) {
+      return;
+    }
+    
+    try {
+      // Detener escáner
+      await this.plugin.stopScan();
+      console.log('[MLKitScanner] Scan stopped');
+      
+      // Remover event listener
+      if (this.eventListener) {
+        this.eventListener.remove();
+        this.eventListener = null;
+        console.log('[MLKitScanner] Event listener removed');
+      }
+      
+      this.onBarcodeDetected = null;
+      
+    } catch (error) {
+      console.error('[MLKitScanner] Stop scan error:', error);
+    }
+  }
+}
+
+// Exponer globalmente
+window.MLKitNativeScanner = MLKitNativeScanner;
+
+// Auto-inicializar si Capacitor ya está listo
+if (typeof window.Capacitor !== 'undefined') {
+  console.log('[MLKitScanner] Auto-initializing...');
+  window.mlKitScanner = new MLKitNativeScanner();
+} else {
+  // Esperar a que Capacitor esté listo
+  document.addEventListener('deviceready', () => {
+    console.log('[MLKitScanner] Initializing on deviceready...');
+    window.mlKitScanner = new MLKitNativeScanner();
+  });
+}
       this._log('Setting isScanning = true');
 
       // Configuración para escaneo de códigos 1D (CODE_128, etc.)

@@ -143,10 +143,10 @@
 
 {{ initial_parts_payload|safe }}
 
-<!-- Scripts de la página (DEBEN estar dentro de {% block content %} para Turbo) -->
+<!-- Scripts de la página (mantener dentro del bloque de contenido para Turbo) -->
 <!-- Los plugins nativos se cargan SIN defer para estar disponibles antes del script principal -->
-<script src="{% static 'parts/js/zxing-native-scanner.js' %}?v=20251204h"
-        data-page-script="parts:zxing-native"
+<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205a"
+        data-page-script="parts:mlkit-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
         
@@ -163,7 +163,7 @@
         nonce="{{ csp_nonce|default:'' }}"></script>
         
 <!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251204h"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205a"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"

@@ -34,17 +34,18 @@ class ZxingNativeScanner {
   
   async checkPermissions() {
     if (!this.plugin) {
-      return { camera: 'denied' };
+      return { camera: 'denied', microphone: 'denied' };
     }
     
+    const defaults = { camera: 'prompt', microphone: 'prompt' };
     try {
       console.log('[ZXing] Checking permissions...');
       const result = await this.plugin.checkPermissions();
       console.log('[ZXing] Permissions status:', result);
-      return result;
+      return { ...defaults, ...result };
     } catch (error) {
       console.error('[ZXing] Error checking permissions:', error);
-      return { camera: 'denied' };
+      return { camera: 'denied', microphone: 'denied' };
     }
   }
   
@@ -53,11 +54,12 @@ class ZxingNativeScanner {
       throw new Error('ZXing plugin not available');
     }
     
+    const defaults = { camera: 'denied', microphone: 'denied' };
     try {
       console.log('[ZXing] Requesting camera permissions...');
       const result = await this.plugin.requestPermissions();
       console.log('[ZXing] Permission request result:', result);
-      return result;
+      return { ...defaults, ...result };
     } catch (error) {
       console.error('[ZXing] Error requesting permissions:', error);
       throw error;
@@ -78,12 +80,12 @@ class ZxingNativeScanner {
     const permissions = await this.checkPermissions();
     console.log('[ZXing] Pre-scan permissions check:', permissions);
     
-    if (permissions.camera !== 'granted') {
-      console.log('[ZXing] Camera permission not granted, requesting...');
+    if (permissions.camera !== 'granted' || permissions.microphone !== 'granted') {
+      console.log('[ZXing] Camera/Microphone permission not granted, requesting...');
       const requestResult = await this.requestPermissions();
       
-      if (requestResult.camera !== 'granted') {
-        throw new Error('Camera permission denied');
+      if (requestResult.camera !== 'granted' || requestResult.microphone !== 'granted') {
+        throw new Error('Camera/Microphone permission denied');
       }
     }
     

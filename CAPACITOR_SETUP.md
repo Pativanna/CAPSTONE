@@ -5,7 +5,7 @@
 **Instalado y configurado**:
 - ✅ Node.js 20.19.6
 - ✅ Capacitor 6.x
-- ✅ Plugin ML Kit Barcode Scanning
+- ✅ Plugin ZXing + CameraX (nativo)
 - ✅ Estructura Android creada
 - ✅ GitHub Actions workflow para compilación automática
 
@@ -18,7 +18,7 @@
 cd /home/ubuntu/car_inventory
 git init
 git add .
-git commit -m "feat: Agregar soporte Capacitor + ML Kit nativo"
+git commit -m "feat: Agregar soporte Capacitor + ZXing nativo"
 
 # Crear repositorio en GitHub (https://github.com/new)
 # Luego conectar:
@@ -75,44 +75,24 @@ ip addr show | grep "inet " | grep -v 127.0.0.1
 # Ejemplo: "url": "http://192.168.1.100:8000"
 ```
 
-### 4. Agregar Script ML Kit al Template Base
+### 4. Escáner nativo ZXing + CameraX
 
-En `templates/base.html` o donde cargas scripts:
+El plugin `ZxingScanner` ya incluye todo el flujo (permisos, CameraX y ZXing 3.5).  
+No necesitas cargar scripts adicionales: el template `parts/templates/parts/scan_verify.html`
+registra `parts/js/zxing-native-scanner.js` sin `defer`, por lo que el wrapper está disponible
+antes de que corra `scan-verify.js`.
 
-```html
-<!-- Solo cargar en plataforma nativa -->
-<script>
-  if (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform()) {
-    // Cargar ML Kit nativo
-    const script = document.createElement('script');
-    script.src = "{% static 'parts/js/mlkit-native-scanner.js' %}";
-    script.type = 'module';
-    document.head.appendChild(script);
-  }
-</script>
-```
+Para validar:
+1. Ejecuta `npx cap run android`.
+2. Abre la pantalla **Verificador** en la app.
+3. Presiona el botón de la cámara → el overlay web quedará arriba del preview nativo.
 
-### 5. Integrar ML Kit en scan-verify.js
+### 5. Flujo de inicio de cámara en JavaScript
 
-Modificar función de inicio de cámara para usar ML Kit cuando esté disponible:
-
-```javascript
-async function startCamera() {
-  // Si estamos en app nativa, usar ML Kit
-  if (isNativePlatform && window.MLKitNativeScanner) {
-    const scanner = new window.MLKitNativeScanner();
-    if (scanner.isSupported) {
-      console.log('[scanner] Using native ML Kit (like TeaCapps!)');
-      // Usar scanner nativo en lugar de getUserMedia
-      return;
-    }
-  }
-  
-  // Fallback: usar scanner web (BarcodeDetector, ZXing, jsQR)
-  console.log('[scanner] Using web scanner');
-  // ... código actual
-}
-```
+El `startCamera()` de `scan-verify.js` primero intenta iniciar el plugin nativo y, si este falla,
+retoma automáticamente el escáner web (BarcodeDetector/ZXing en canvas).  
+No vuelvas a inyectar ML Kit: toda la lógica de permisos y detección continua vive ahora en
+`zxing-native-scanner.js` + `ZxingScannerPlugin.java`.
 
 ## 🔧 Comandos Útiles
 
@@ -142,7 +122,7 @@ cd android
 - ❌ No detecta códigos térmicos
 
 ### DESPUÉS (App Nativa):
-- ✅ ML Kit completo (como TeaCapps)
+- ✅ ZXing + CameraX con overlay transparente
 - ✅ Acceso directo a cámara
 - ✅ Procesamiento nativo (C++)
 - ✅ **Detecta códigos térmicos perfectamente**
@@ -188,7 +168,7 @@ adb logcat | grep -i mlkit
 
 Una app Android nativa que:
 - Se conecta a tu servidor Django
-- Usa ML Kit nativo para escaneo (como TeaCapps)
+- Usa ZXing + CameraX nativo para escaneo continuo
 - Se actualiza automáticamente cuando cambias código
 - Funciona offline (si habilitas service worker)
 - **Detecta tus códigos térmicos sin problema**
