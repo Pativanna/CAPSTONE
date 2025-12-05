@@ -49,10 +49,12 @@ import com.google.mlkit.vision.common.InputImage;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Scanner ML Kit con CameraX moderno
@@ -81,15 +83,16 @@ public class MLKitScannerPlugin extends Plugin {
     private BarcodeScanner barcodeScanner;
     private ExecutorService cameraExecutor;
     
-    private boolean isScanning = false;
-    private boolean isProcessing = false;
-    private String lastScannedCode = "";
+    // Thread-safe flags accessed from multiple threads
+    private final AtomicBoolean isScanning = new AtomicBoolean(false);
+    private final AtomicBoolean isProcessing = new AtomicBoolean(false);
+    private volatile String lastScannedCode = "";
     
-    // Cooldown management
-    private final Map<String, Long> codeDetectionTimes = new HashMap<>();
+    // Cooldown management - thread-safe for multi-threaded access
+    private final Map<String, Long> codeDetectionTimes = new ConcurrentHashMap<>();
     private static final long CODE_COOLDOWN_MS = 2000;
     private static final long FRAME_COOLDOWN_MS = 50;
-    private long lastFrameTime = 0;
+    private volatile long lastFrameTime = 0;
     
     // Auto torch
     private boolean torchEnabled = false;
@@ -105,6 +108,8 @@ public class MLKitScannerPlugin extends Plugin {
             Log.i(TAG, "✅ Plugin loaded successfully with CameraX");
         } catch (Exception e) {
             Log.e(TAG, "❌ FATAL: Plugin load failed", e);
+            // Re-throw to prevent plugin from being in corrupted state
+            throw new RuntimeException("Failed to initialize MLKitScanner plugin", e);
         }
     }
     
@@ -157,8 +162,21 @@ public class MLKitScannerPlugin extends Plugin {
     
     @PluginMethod
     public void startScan(PluginCall call) {
-        if (isScanning) {
+        if (isScanning.get()) {
             call.reject("Already scanning");
+            return;
+        }
+        
+        // Validate plugin initialization
+        if (cameraExecutor == null || cameraExecutor.isShutdown()) {
+            Log.e(TAG, "Camera executor not initialized or shutdown");
+            call.reject("Plugin not properly initialized");
+            return;
+        }
+        
+        if (barcodeScanner == null) {
+            Log.e(TAG, "Barcode scanner not initialized");
+            call.reject("Plugin not properly initialized");
             return;
         }
         
@@ -314,6 +332,11 @@ public class MLKitScannerPlugin extends Plugin {
             return;
         }
         
+        if (cameraExecutor == null || cameraExecutor.isShutdown()) {
+            call.reject("Camera executor not available");
+            return;
+        }
+        
         if (!(getActivity() instanceof LifecycleOwner)) {
             call.reject("Activity does not implement LifecycleOwner");
             return;
@@ -345,7 +368,7 @@ public class MLKitScannerPlugin extends Plugin {
             );
             
             enableContinuousAutofocus();
-            isScanning = true;
+            isScanning.set(true);
             
             JSObject ret = new JSObject();
             ret.put("status", "started");
@@ -406,7 +429,7 @@ public class MLKitScannerPlugin extends Plugin {
     
     @SuppressLint("UnsafeOptInUsageError")
     private void analyzeImage(@NonNull ImageProxy imageProxy) {
-        if (!isScanning || isProcessing) {
+        if (!isScanning.get() || isProcessing.get()) {
             imageProxy.close();
             return;
         }
@@ -419,7 +442,7 @@ public class MLKitScannerPlugin extends Plugin {
         }
         lastFrameTime = currentTime;
         
-        isProcessing = true;
+        isProcessing.set(true);
         
         // Calcular luminosidad para flash automático
         double luminance = calculateLuminance(imageProxy);
@@ -433,7 +456,7 @@ public class MLKitScannerPlugin extends Plugin {
         android.media.Image mediaImage = imageProxy.getImage();
         if (mediaImage == null) {
             Log.w(TAG, "ImageProxy.getImage() returned null");
-            isProcessing = false;
+            isProcessing.set(false);
             imageProxy.close();
             return;
         }
@@ -447,18 +470,18 @@ public class MLKitScannerPlugin extends Plugin {
         Task<List<Barcode>> result = barcodeScanner.process(image);
         
         result.addOnSuccessListener(barcodes -> {
-            if (!barcodes.isEmpty() && isScanning) {
+            if (!barcodes.isEmpty() && isScanning.get()) {
                 Log.d(TAG, "ML Kit processing complete - found " + barcodes.size() + " barcodes");
                 Barcode mostCentered = findMostCenteredBarcode(barcodes, imageProxy.getWidth(), imageProxy.getHeight());
                 if (mostCentered != null) {
                     handleBarcodeDetected(mostCentered);
                 }
             }
-            isProcessing = false;
+            isProcessing.set(false);
             imageProxy.close();
         }).addOnFailureListener(e -> {
             Log.e(TAG, "Barcode detection failed", e);
-            isProcessing = false;
+            isProcessing.set(false);
             imageProxy.close();
         });
     }
@@ -545,7 +568,7 @@ public class MLKitScannerPlugin extends Plugin {
     }
     
     private void handleBarcodeDetected(Barcode barcode) {
-        if (!isScanning || getActivity() == null) return;
+        if (!isScanning.get() || getActivity() == null) return;
         
         String code = barcode.getRawValue();
         if (code == null || code.isEmpty()) return;
@@ -621,8 +644,8 @@ public class MLKitScannerPlugin extends Plugin {
     }
     
     private void stopCamera() {
-        isScanning = false;
-        isProcessing = false;
+        isScanning.set(false);
+        isProcessing.set(false);
         lastScannedCode = "";
         codeDetectionTimes.clear();
         
@@ -665,8 +688,8 @@ public class MLKitScannerPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         // Stop scanning immediately to prevent new frames
-        isScanning = false;
-        isProcessing = false;
+        isScanning.set(false);
+        isProcessing.set(false);
         
         // Shutdown executor gracefully
         if (cameraExecutor != null && !cameraExecutor.isShutdown()) {
