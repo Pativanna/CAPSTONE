@@ -145,31 +145,19 @@
 
 <!-- Scripts de la página (mantener dentro del bloque de contenido para Turbo) -->
 <!-- Los plugins nativos se cargan SIN defer para estar disponibles antes del script principal -->
-<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205f"
+<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205g"
         data-page-script="parts:mlkit-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
 
 <!-- Módulo de feedback (vibraciones, beeps, animaciones) -->
-<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205f"
+<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205g"
         data-page-script="parts:scanner-feedback"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
         
-<!-- Bibliotecas de escaneo web (con defer, cargan después) -->
-<script src="{% static 'parts/vendor/zxing-index.min.js' %}?v=20250315a"
-        defer
-        data-page-script="parts:zxing-vendor"
-        data-turbo-track="reload"
-        nonce="{{ csp_nonce|default:'' }}"></script>
-<script src="{% static 'parts/vendor/jsQR.min.js' %}?v=20250310f"
-        defer
-        data-page-script="parts:jsqr"
-        data-turbo-track="reload"
-        nonce="{{ csp_nonce|default:'' }}"></script>
-        
 <!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205f"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205g"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"
