@@ -38,39 +38,33 @@
     
     if (zxingScanner) return zxingScanner;
     
+    // Native scanner ONLY (requires updated APK)
     console.log('[scanner] Checking window.ZXingNativeScanner...');
     console.log('[scanner] window.ZXingNativeScanner exists:', typeof window.ZXingNativeScanner !== 'undefined');
     
-    if (!window.ZXingNativeScanner) {
-      console.error('[scanner] ❌ ZXingNativeScanner class not found in window');
-      console.log('[scanner] Available window properties:', Object.keys(window).filter(k => k.includes('ZX') || k.includes('Scanner')));
-      return null;
+    if (window.ZXingNativeScanner) {
+      try {
+        console.log('[scanner] Creating new ZXingNativeScanner instance...');
+        const nativeScanner = new window.ZXingNativeScanner();
+        console.log('[scanner] Instance created, calling waitUntilReady(2000)...');
+        
+        const ready = await nativeScanner.waitUntilReady(2000);
+        console.log('[scanner] waitUntilReady() returned:', ready);
+        
+        if (ready && nativeScanner.isSupported()) {
+          console.log('[scanner] ✅ Native ZXing scanner ready');
+          zxingScanner = nativeScanner;
+          zxingScanner._isNative = true;
+          return zxingScanner;
+        }
+      } catch (error) {
+        console.warn('[scanner] Native scanner not available:', error.message);
+      }
     }
     
-    try {
-      console.log('[scanner] Creating new ZXingNativeScanner instance...');
-      zxingScanner = new window.ZXingNativeScanner();
-      console.log('[scanner] Instance created, calling waitUntilReady(3000)...');
-      
-      const ready = await zxingScanner.waitUntilReady(3000);
-      console.log('[scanner] waitUntilReady() returned:', ready);
-      
-      if (ready) {
-        console.log('[scanner] ✅ ZXing scanner ready');
-        console.log('[scanner] Scanner state - isInitialized:', zxingScanner.isInitialized);
-        console.log('[scanner] Scanner state - plugin exists:', zxingScanner.plugin !== null);
-        return zxingScanner;
-      } else {
-        console.error('[scanner] ❌ ZXing plugin not available after wait');
-        console.log('[scanner] Scanner state - isInitialized:', zxingScanner.isInitialized);
-        console.log('[scanner] Scanner state - plugin:', zxingScanner.plugin);
-        return null;
-      }
-    } catch (error) {
-      console.error('[scanner] ❌ Error initializing ZXing:', error);
-      console.log('[scanner] Error stack:', error.stack);
-      return null;
-    }
+    // No fallback - native only
+    console.error('[scanner] ❌ Native scanner not available. Requires updated APK.');
+    return null;
   }
 
   // ============================================================================

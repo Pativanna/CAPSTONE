@@ -83,12 +83,18 @@
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
 
+<!-- JavaScript scanner fallback (for when native plugin is not available) -->
+<script src="{% static 'parts/js/zxing-js-scanner.js' %}?v=20251206a"
+        data-page-script="parts:zxing-js"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}"></script>
+
 <script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205k"
         data-page-script="parts:scanner-feedback"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
         
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205k"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251206a"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"
