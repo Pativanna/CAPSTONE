@@ -10,8 +10,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Registrar plugin ML Kit Scanner BUNDLED (escaneo continuo, sin Play Services)
-        registerPlugin(MLKitScannerPlugin.class);
+        // MLKit plugin removed - using web-based scanner with ZXing.js
+        // See: Documentacion/Procedimientos/PROC_20251205_1600_eliminacion_mlkit.md
         
         // Configuración para desarrollo: deshabilitar cache de WebView
         WebView webView = getBridge().getWebView();
