@@ -16,12 +16,6 @@
             height: 100%;
             overflow: hidden;
         }
-        #app-frame {
-            width: 100%;
-            height: 100%;
-            border: none;
-            display: block;
-        }
         .loading {
             position: fixed;
             top: 50%;
@@ -31,9 +25,6 @@
             color: #333;
             text-align: center;
             z-index: 9999;
-        }
-        .loading.hidden {
-            display: none;
         }
         .spinner {
             border: 3px solid #f3f3f3;
@@ -55,26 +46,11 @@
         <div class="spinner"></div>
         <p>Cargando Car Inventory...</p>
     </div>
-    <iframe id="app-frame" src="/parts/dashboard/"></iframe>
 
     <script>
-        // Ocultar loading cuando el iframe cargue
-        const frame = document.getElementById('app-frame');
-        const loading = document.getElementById('loading');
-        
-        frame.addEventListener('load', function() {
-            loading.classList.add('hidden');
-        });
-
-        // Timeout de seguridad
-        setTimeout(function() {
-            loading.classList.add('hidden');
-        }, 5000);
-
-        // Prevenir gestos que puedan salir de la app
-        document.addEventListener('gesturestart', function(e) {
-            e.preventDefault();
-        });
+        // Redirigir inmediatamente al servidor remoto
+        // La app móvil funciona como wrapper del sitio web
+        window.location.href = 'https://www.transervis.cl/parts/dashboard/';
     </script>
 </body>
 </html>
