@@ -140,9 +140,8 @@ public class MLKitScannerPlugin extends Plugin {
         
         ViewGroup parent = (ViewGroup) webView.getParent();
         
-        // Hacer WebView transparente
-        webView.setBackgroundColor(0x00000000);
-        webView.setLayerType(WebView.LAYER_TYPE_SOFTWARE, null);
+        // Ocultar WebView temporalmente (no transparente, sino invisible)
+        webView.setVisibility(View.GONE);
         
         // Crear contenedor principal con layout vertical
         scannerContainer = new LinearLayout(getContext());
@@ -153,8 +152,8 @@ public class MLKitScannerPlugin extends Plugin {
         ));
         scannerContainer.setBackgroundColor(Color.BLACK);
         
-        // Agregar contenedor DETRÁS del WebView
-        parent.addView(scannerContainer, 0);
+        // Agregar contenedor ENCIMA (último índice = más al frente)
+        parent.addView(scannerContainer);
         
         // Crear vista de cámara (80% de altura)
         cameraPreview = new CameraSourcePreview(getContext(), null);
@@ -262,8 +261,7 @@ public class MLKitScannerPlugin extends Plugin {
             // Restaurar WebView
             WebView webView = getBridge().getWebView();
             if (webView != null) {
-                webView.setBackgroundColor(0xFFFFFFFF);
-                webView.setLayerType(WebView.LAYER_TYPE_HARDWARE, null);
+                webView.setVisibility(View.VISIBLE);
             }
         });
     }
