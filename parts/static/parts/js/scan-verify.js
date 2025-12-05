@@ -54,6 +54,113 @@
   }
 
   // ============================================================================
+  // INITIAL DATA & SEARCH INDEX
+  // ============================================================================
+  
+  const initialPartsScript = document.getElementById('scan-initial-parts');
+  const initialParts = initialPartsScript ? JSON.parse(initialPartsScript.textContent || '[]') : [];
+
+  function normalizeText(text) {
+    if (!text) return '';
+    return String(text)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  function normalizeBarcode(code) {
+    if (!code) return '';
+    return String(code).replace(/\s+/g, '').toUpperCase();
+  }
+
+  const SearchIndex = (() => {
+    const store = new Map();
+    const barcodeMap = new Map();
+
+    const enrich = (part) => {
+      if (!part) return null;
+      const clone = { ...part };
+      clone.photos = Array.isArray(clone.photos) ? clone.photos : [];
+      clone._normalized = normalizeText(`${clone.name || ''} ${clone.auto || ''}`);
+      clone._barcode = normalizeBarcode(clone.barcode);
+      clone._hasPhoto = clone.photos.length > 0;
+      return clone;
+    };
+
+    const upsert = (list) => {
+      if (!Array.isArray(list)) return;
+      list.forEach((item) => {
+        const enriched = enrich(item);
+        if (!enriched) return;
+        store.set(String(enriched.id), enriched);
+        if (enriched._barcode) {
+          barcodeMap.set(enriched._barcode, enriched);
+        }
+      });
+    };
+
+    const all = () => Array.from(store.values());
+
+    const compareUpdated = (a, b) => {
+      const aTs = Date.parse(a.updated_at || '') || 0;
+      const bTs = Date.parse(b.updated_at || '') || 0;
+      return aTs - bTs;
+    };
+
+    const search = (term, limit = 25) => {
+      const normalized = normalizeText(term);
+      if (!normalized) {
+        return all().slice(0, limit);
+      }
+      const stripped = normalized.replace(/\s+/g, '');
+      const tokens = normalized.split(/\s+/).filter(Boolean);
+      const scored = [];
+      store.forEach((part) => {
+        let score = 0;
+        if (stripped && part._barcode && part._barcode.startsWith(stripped)) {
+          score += 15;
+        }
+        if (normalized && part._normalized.includes(normalized)) {
+          score += 8;
+        }
+        tokens.forEach((tok) => {
+          if (tok && part._normalized.includes(tok)) {
+            score += 2;
+          }
+        });
+        if (score > 0) {
+          scored.push({ part, score });
+        }
+      });
+      scored.sort((a, b) => (b.score - a.score) || compareUpdated(b.part, a.part));
+      return scored.slice(0, limit).map((entry) => entry.part);
+    };
+
+    return {
+      bootstrap(list) {
+        upsert(list);
+      },
+      upsert,
+      search,
+      get(partId) {
+        return store.get(String(partId)) || null;
+      },
+      findByBarcode(barcode) {
+        if (!barcode) return null;
+        const normalized = normalizeBarcode(barcode);
+        return barcodeMap.get(normalized) || null;
+      },
+      count() {
+        return store.size;
+      },
+      all,
+    };
+  })();
+
+  SearchIndex.bootstrap(initialParts || []);
+
+  // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
   
@@ -63,6 +170,8 @@
     lastDetectedCode: null,
     scannerState: 'SCANNING', // SCANNING | DETECTED | CONFIRMED
     cameraStatus: 'Esperando...',
+    filtered: [],
+    searchQuery: '',
   };
 
   // ============================================================================
@@ -76,6 +185,8 @@
     statusBanner: document.querySelector('.scanner-status-banner'),
     resultsContainer: document.getElementById('results-container'),
     resultsStatus: document.getElementById('results-status'),
+    searchInput: document.getElementById('search-parts-input'),
+    searchButton: document.getElementById('search-parts-btn'),
   };
 
   // ============================================================================
@@ -229,6 +340,56 @@
   }
 
   // ============================================================================
+  // SEARCH FUNCTIONALITY
+  // ============================================================================
+  
+  function performSearch(query) {
+    state.searchQuery = query;
+    
+    if (!query || query.trim().length === 0) {
+      state.filtered = [];
+      renderResults([]);
+      setResultsStatus(`${SearchIndex.count()} piezas disponibles`, 'muted');
+      return;
+    }
+
+    const results = SearchIndex.search(query, 25);
+    state.filtered = results;
+    renderResults(results);
+    
+    if (results.length > 0) {
+      setResultsStatus(`${results.length} coincidencia${results.length !== 1 ? 's' : ''}`, 'success');
+    } else {
+      setResultsStatus('No se encontraron resultados', 'muted');
+    }
+  }
+
+  function renderResults(parts) {
+    if (!els.resultsContainer) return;
+
+    if (!parts || parts.length === 0) {
+      els.resultsContainer.innerHTML = '<p class="text-muted text-center">No hay resultados</p>';
+      return;
+    }
+
+    const html = parts.map(part => `
+      <div class="card mb-2">
+        <div class="card-body">
+          <h6 class="card-title">${escapeHtml(part.name || 'Sin nombre')}</h6>
+          <p class="card-text small">
+            ${part.barcode ? `<strong>Código:</strong> ${escapeHtml(part.barcode)}<br>` : ''}
+            ${part.auto ? `<strong>Auto:</strong> ${escapeHtml(part.auto)}<br>` : ''}
+            ${part.stock_quantity !== undefined ? `<strong>Stock:</strong> ${part.stock_quantity}<br>` : ''}
+            ${part.location ? `<strong>Ubicación:</strong> ${escapeHtml(part.location)}` : ''}
+          </p>
+        </div>
+      </div>
+    `).join('');
+
+    els.resultsContainer.innerHTML = html;
+  }
+
+  // ============================================================================
   // CAMERA CONTROL
   // ============================================================================
   
@@ -320,11 +481,40 @@
     els.stopCameraBtn.addEventListener('click', stopCamera);
   }
 
+  // Búsqueda de piezas
+  if (els.searchInput) {
+    els.searchInput.addEventListener('input', (e) => {
+      performSearch(e.target.value);
+    });
+    
+    els.searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        performSearch(els.searchInput.value);
+      }
+    });
+  }
+
+  if (els.searchButton) {
+    els.searchButton.addEventListener('click', () => {
+      if (els.searchInput) {
+        performSearch(els.searchInput.value);
+      }
+    });
+  }
+
   // ============================================================================
   // INITIALIZATION
   // ============================================================================
   
   console.log('[scanner] MLKit-only scanner module initialized');
+  console.log(`[scanner] SearchIndex loaded with ${SearchIndex.count()} parts`);
+  
+  // Mostrar todas las piezas inicialmente
+  if (SearchIndex.count() > 0) {
+    renderResults(SearchIndex.all().slice(0, 25));
+    setResultsStatus(`${SearchIndex.count()} piezas disponibles`, 'muted');
+  }
   
   // Auto-start en plataforma nativa
   if (isNativePlatform) {
