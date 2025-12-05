@@ -4,6 +4,9 @@
  * Integrado en la app (no full-screen)
  */
 
+// Prevenir doble inicialización (Turbo puede cargar el script múltiples veces)
+if (typeof window.MLKitNativeScanner === 'undefined') {
+
 class MLKitNativeScanner {
   constructor() {
     this.plugin = null;
@@ -16,7 +19,6 @@ class MLKitNativeScanner {
   
   initialize() {
     try {
-      // Verificar que Capacitor esté disponible
       if (typeof window.Capacitor === 'undefined') {
         console.error('[MLKitScanner] Capacitor not available');
         return;
@@ -25,25 +27,58 @@ class MLKitNativeScanner {
       console.log('[MLKitScanner] Capacitor available, platform:', window.Capacitor.getPlatform());
       console.log('[MLKitScanner] Available plugins:', Object.keys(window.Capacitor.Plugins || {}));
       
-      // Obtener plugin desde Capacitor.Plugins
-      this.plugin = window.Capacitor.Plugins.MLKitScanner;
-      
-      if (!this.plugin) {
-        console.error('[MLKitScanner] Plugin NOT found in Capacitor.Plugins');
-        console.error('[MLKitScanner] This means the native plugin was not compiled or registered');
-        console.error('[MLKitScanner] Available plugins are:', Object.keys(window.Capacitor.Plugins || {}));
-        return;
+      if (this.refreshPluginReference()) {
+        console.log('[MLKitScanner] ✅ Plugin initialized successfully');
+      } else {
+        console.warn('[MLKitScanner] Plugin not ready yet, will retry lazily');
       }
-      
-      this.isInitialized = true;
-      console.log('[MLKitScanner] ✅ Plugin initialized successfully');
-      
     } catch (error) {
       console.error('[MLKitScanner] Initialization error:', error);
     }
   }
+
+  refreshPluginReference() {
+    if (typeof window.Capacitor === 'undefined') {
+      return false;
+    }
+    
+    const plugins = window.Capacitor.Plugins || {};
+    if (!plugins.MLKitScanner) {
+      return false;
+    }
+    
+    if (!this.plugin) {
+      console.log(
+        '[MLKitScanner] Attaching native plugin. Available plugins:',
+        Object.keys(plugins)
+      );
+    }
+    
+    this.plugin = plugins.MLKitScanner;
+    this.isInitialized = true;
+    return true;
+  }
+  
+  async waitUntilReady(timeoutMs = 2000, pollMs = 75) {
+    if (this.isSupported()) {
+      return true;
+    }
+    
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, pollMs));
+      if (this.refreshPluginReference() && this.isSupported()) {
+        console.log('[MLKitScanner] Plugin detected after delay');
+        return true;
+      }
+    }
+    return this.isSupported();
+  }
   
   isSupported() {
+    if (!this.plugin) {
+      this.refreshPluginReference();
+    }
     return this.isInitialized && this.plugin !== null;
   }
   
@@ -160,3 +195,5 @@ class MLKitNativeScanner {
 
 // Exponer globalmente
 window.MLKitNativeScanner = MLKitNativeScanner;
+
+} // Fin de prevención de doble inicialización

@@ -57,6 +57,12 @@ body.scanner-fullscreen-active nav.navbar {
   padding-left: calc(1.25rem - 4px);
 }
 
+.scanner-result-action {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+}
+
 .scanner-result-main {
   display: flex;
   flex-direction: column;

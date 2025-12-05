@@ -3,6 +3,9 @@
  * Maneja vibraciones, sonidos y animaciones para feedback de detección
  */
 
+// Prevenir doble inicialización
+if (typeof window.ScannerFeedback === 'undefined') {
+
 class ScannerFeedback {
   constructor() {
     this.audioContext = null;
@@ -165,6 +168,10 @@ class ScannerFeedback {
 }
 
 // Crear instancia global
-window.scannerFeedback = new ScannerFeedback();
+if (!window.scannerFeedback) {
+  window.scannerFeedback = new ScannerFeedback();
+}
+
+} // Fin de prevención de doble inicialización
 
 console.log('[ScannerFeedback] Module loaded');
