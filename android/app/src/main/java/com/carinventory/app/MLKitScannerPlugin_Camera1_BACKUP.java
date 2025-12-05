@@ -42,7 +42,7 @@ import java.io.IOException;
     }
 )
 @SuppressWarnings({"unused", "RedundantSuppression"})
-public class MLKitScannerPlugin extends Plugin {
+class MLKitScannerPlugin_Camera1_BACKUP extends Plugin {
     
     private CameraSource cameraSource;
     private CameraSourcePreview cameraPreview;
