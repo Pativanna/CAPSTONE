@@ -97,28 +97,46 @@ public class MLKitScannerPlugin extends Plugin {
     
     @Override
     public void load() {
-        super.load();
-        setupBarcodeScanner();
-        cameraExecutor = Executors.newSingleThreadExecutor();
-        Log.i(TAG, "Plugin loaded with CameraX");
+        try {
+            super.load();
+            Log.i(TAG, "MLKitScanner plugin loading...");
+            setupBarcodeScanner();
+            cameraExecutor = Executors.newSingleThreadExecutor();
+            Log.i(TAG, "✅ Plugin loaded successfully with CameraX");
+            
+            // Notificar al JS que el plugin está listo
+            getBridge().execute(() -> {
+                getBridge().eval("console.log('[scanner] ✅ MLKitScanner native plugin loaded successfully')", null);
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "❌ FATAL: Plugin load failed", e);
+            getBridge().execute(() -> {
+                getBridge().eval("console.error('[scanner] ❌ MLKitScanner plugin failed to load: " + e.getMessage() + "')", null);
+            });
+        }
     }
     
     private void setupBarcodeScanner() {
-        BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(
-                Barcode.FORMAT_CODE_128,
-                Barcode.FORMAT_CODE_39,
-                Barcode.FORMAT_CODE_93,
-                Barcode.FORMAT_EAN_8,
-                Barcode.FORMAT_EAN_13,
-                Barcode.FORMAT_QR_CODE,
-                Barcode.FORMAT_UPC_A,
-                Barcode.FORMAT_UPC_E
-            )
-            .build();
-        
-        barcodeScanner = BarcodeScanning.getClient(options);
-        Log.i(TAG, "BarcodeScanner initialized with common formats");
+        try {
+            BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(
+                    Barcode.FORMAT_CODE_128,
+                    Barcode.FORMAT_CODE_39,
+                    Barcode.FORMAT_CODE_93,
+                    Barcode.FORMAT_EAN_8,
+                    Barcode.FORMAT_EAN_13,
+                    Barcode.FORMAT_QR_CODE,
+                    Barcode.FORMAT_UPC_A,
+                    Barcode.FORMAT_UPC_E
+                )
+                .build();
+            
+            barcodeScanner = BarcodeScanning.getClient(options);
+            Log.i(TAG, "BarcodeScanner initialized with common formats");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to setup barcode scanner", e);
+            throw e;
+        }
     }
     
     @PluginMethod
