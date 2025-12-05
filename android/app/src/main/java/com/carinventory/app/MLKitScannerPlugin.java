@@ -174,10 +174,8 @@ public class MLKitScannerPlugin extends Plugin {
         
         codeDetectionTimes.clear();
         
-        // Ejecutar en main thread
-        getActivity().runOnUiThread(() -> {
-            startCamera(call);
-        });
+        // startCamera uses MainExecutor, no need for extra runOnUiThread
+        startCamera(call);
     }
     
     @PluginMethod
@@ -223,8 +221,21 @@ public class MLKitScannerPlugin extends Plugin {
     @SuppressLint("ClickableViewAccessibility")
     private void createScannerUI(@NonNull PluginCall call) {
         WebView webView = getBridge().getWebView();
-        if (webView == null || webView.getParent() == null) {
+        if (webView == null) {
+            Log.e(TAG, "WebView is null");
             call.reject("WebView not available");
+            return;
+        }
+        
+        if (webView.getParent() == null) {
+            Log.e(TAG, "WebView parent is null");
+            call.reject("WebView parent not available");
+            return;
+        }
+        
+        if (!(webView.getParent() instanceof ViewGroup)) {
+            Log.e(TAG, "WebView parent is not a ViewGroup");
+            call.reject("Invalid WebView parent");
             return;
         }
         
@@ -417,9 +428,19 @@ public class MLKitScannerPlugin extends Plugin {
             updateTorch(shouldEnableTorch);
         }
         
+        // Validate image is available
+        @SuppressLint("UnsafeOptInUsageError")
+        android.media.Image mediaImage = imageProxy.getImage();
+        if (mediaImage == null) {
+            Log.w(TAG, "ImageProxy.getImage() returned null");
+            isProcessing = false;
+            imageProxy.close();
+            return;
+        }
+        
         @SuppressLint("UnsafeOptInUsageError")
         InputImage image = InputImage.fromMediaImage(
-            imageProxy.getImage(),
+            mediaImage,
             imageProxy.getImageInfo().getRotationDegrees()
         );
         
@@ -448,8 +469,23 @@ public class MLKitScannerPlugin extends Plugin {
             android.media.Image image = imageProxy.getImage();
             if (image == null) return 0.5;
             
-            android.media.Image.Plane yPlane = image.getPlanes()[0];
+            android.media.Image.Plane[] planes = image.getPlanes();
+            if (planes == null || planes.length == 0) {
+                Log.w(TAG, "No image planes available");
+                return 0.5;
+            }
+            
+            android.media.Image.Plane yPlane = planes[0];
+            if (yPlane == null) {
+                Log.w(TAG, "Y plane is null");
+                return 0.5;
+            }
+            
             java.nio.ByteBuffer yBuffer = yPlane.getBuffer();
+            if (yBuffer == null || yBuffer.remaining() == 0) {
+                Log.w(TAG, "Y buffer is null or empty");
+                return 0.5;
+            }
             
             // CRITICAL: Save position and restore it to avoid buffer exhaustion
             int originalPosition = yBuffer.position();
@@ -628,13 +664,42 @@ public class MLKitScannerPlugin extends Plugin {
     
     @Override
     protected void handleOnDestroy() {
-        stopCamera();
-        if (cameraExecutor != null) {
+        // Stop scanning immediately to prevent new frames
+        isScanning = false;
+        isProcessing = false;
+        
+        // Shutdown executor gracefully
+        if (cameraExecutor != null && !cameraExecutor.isShutdown()) {
             cameraExecutor.shutdown();
+            try {
+                // Wait for ongoing tasks to complete
+                if (!cameraExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+                    Log.w(TAG, "Executor did not terminate in time, forcing shutdown");
+                    cameraExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Log.w(TAG, "Interrupted while waiting for executor shutdown", e);
+                cameraExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
+        
+        // Close barcode scanner
         if (barcodeScanner != null) {
-            barcodeScanner.close();
+            try {
+                barcodeScanner.close();
+            } catch (Exception e) {
+                Log.w(TAG, "Error closing barcode scanner", e);
+            }
         }
+        
+        // Stop camera on main thread if activity is still available
+        if (getActivity() != null) {
+            stopCamera();
+        } else {
+            Log.w(TAG, "Activity null during destroy, skipping camera cleanup UI");
+        }
+        
         super.handleOnDestroy();
     }
 }
