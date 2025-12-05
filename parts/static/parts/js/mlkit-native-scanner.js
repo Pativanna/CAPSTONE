@@ -107,13 +107,13 @@ class MLKitNativeScanner {
     
     // Registrar event listener para detecciones continuas
     if (!this.eventListener) {
-      this.eventListener = await this.plugin.addListener('barcodeDetected', (data) => {
-        console.log('[MLKitScanner] Barcode detected:', data);
+      this.eventListener = await this.plugin.addListener('barcodeScanned', (data) => {
+        console.log('[MLKitScanner] Barcode scanned:', data);
         if (this.onBarcodeDetected) {
           this.onBarcodeDetected(data);
         }
       });
-      console.log('[MLKitScanner] Event listener registered');
+      console.log('[MLKitScanner] Event listener registered for barcodeScanned');
     }
     
     try {
