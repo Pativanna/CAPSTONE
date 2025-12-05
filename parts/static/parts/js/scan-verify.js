@@ -34,9 +34,6 @@
   
   const isNativePlatform = typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform();
   const isAndroid = isNativePlatform && window.Capacitor.getPlatform() === 'android';
-  const HAVE_ENOUGH_DATA = typeof HTMLMediaElement !== 'undefined'
-    ? HTMLMediaElement.HAVE_ENOUGH_DATA
-    : 4;
   
   debugLog(`Platform: ${isNativePlatform ? 'Native Mobile' : 'Web Browser'}`);
   console.log('[scanner] Platform:', isNativePlatform ? 'Native Mobile' : 'Web Browser');
@@ -240,28 +237,6 @@
     filtered: [],
     searchQuery: '',
     selectedParts: new Set(), // IDs de piezas seleccionadas para búsqueda
-    webScannerActive: false,
-    mediaStream: null,
-    frameRequestId: null,
-    barcodeDetector: null,
-    webDetectionInFlight: false,
-    detectorFormats: [
-      'ean_13',
-      'ean_8',
-      'code_128',
-      'code_39',
-      'codabar',
-      'upc_a',
-      'upc_e',
-      'itf',
-      'qr_code',
-    ],
-    overlayCtx: null,
-    captureCanvas: null,
-    captureCtx: null,
-    zxingReader: null,
-    zxingContinuousReader: null,
-    zxingContinuousActive: false,
   };
 
   // ============================================================================
@@ -281,8 +256,6 @@
     workspace: document.getElementById('scanner-workspace'),
     searchShell: document.getElementById('scanner-search-shell'),
     pieceName: document.getElementById('scanner-piece-name'),
-    video: document.getElementById('scanner-video'),
-    overlay: document.getElementById('scanner-overlay'),
   };
 
   // ============================================================================
@@ -324,242 +297,6 @@
     } else {
       els.resultsStatus.classList.add('text-muted');
     }
-  }
-
-  function getSelectedPartInfo() {
-    const selectedPartId = Array.from(state.selectedParts)[0];
-    const selectedPart = selectedPartId ? SearchIndex.get(selectedPartId) : null;
-    return {
-      id: selectedPartId || null,
-      name: selectedPart ? selectedPart.name : 'Sin seleccionar',
-    };
-  }
-
-  function enterScannerUi(partName) {
-    if (els.workspace) {
-      els.workspace.classList.remove('d-none');
-      debugLog('Workspace mostrado ✓');
-      console.log('[scanner] Workspace shown');
-    } else {
-      debugLog('ERROR: workspace element no encontrado');
-    }
-
-    if (els.searchShell) {
-      els.searchShell.classList.add('d-none');
-      debugLog('Search shell ocultado ✓');
-      console.log('[scanner] Search shell hidden');
-    } else {
-      debugLog('ERROR: searchShell element no encontrado');
-    }
-
-    if (els.pieceName) {
-      els.pieceName.textContent = partName;
-      debugLog('Nombre de pieza actualizado ✓');
-      console.log('[scanner] Piece name set to:', partName);
-    }
-
-    if (document.body) {
-      document.body.classList.add('scanner-fullscreen-active');
-      debugLog('Modo pantalla completa activado ✓');
-      console.log('[scanner] Fullscreen mode activated');
-    }
-
-    if (els.toggleCameraBtn) {
-      els.toggleCameraBtn.disabled = true;
-      els.toggleCameraBtn.setAttribute('aria-busy', 'true');
-    }
-  }
-
-  function leaveScannerUi() {
-    if (els.workspace) {
-      els.workspace.classList.add('d-none');
-    }
-    if (els.searchShell) {
-      els.searchShell.classList.remove('d-none');
-    }
-    if (document.body) {
-      document.body.classList.remove('scanner-fullscreen-active');
-    }
-    if (els.toggleCameraBtn) {
-      els.toggleCameraBtn.disabled = false;
-      els.toggleCameraBtn.removeAttribute('aria-busy');
-    }
-  }
-
-  function ensureOverlayContext() {
-    if (!els.overlay) return null;
-    const width = els.video?.videoWidth || els.overlay.clientWidth || 0;
-    const height = els.video?.videoHeight || els.overlay.clientHeight || 0;
-    if (!width || !height) {
-      return null;
-    }
-    if (!state.overlayCtx) {
-      state.overlayCtx = els.overlay.getContext('2d');
-    }
-    if (els.overlay.width !== width || els.overlay.height !== height) {
-      els.overlay.width = width;
-      els.overlay.height = height;
-    }
-    return state.overlayCtx;
-  }
-
-  function clearOverlay() {
-    const ctx = ensureOverlayContext();
-    if (!ctx) return;
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  }
-
-  function drawBoundingBox(box) {
-    const ctx = ensureOverlayContext();
-    if (!ctx || !box) return;
-    clearOverlay();
-    ctx.strokeStyle = '#00ffb2';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(box.x, box.y, box.width, box.height);
-  }
-
-  function getCaptureContext(videoElement) {
-    if (!state.captureCanvas) {
-      state.captureCanvas = document.createElement('canvas');
-      state.captureCtx = state.captureCanvas.getContext('2d', { willReadFrequently: true });
-    }
-    if (!state.captureCanvas || !state.captureCtx || !videoElement) {
-      return null;
-    }
-    const width = videoElement.videoWidth || 0;
-    const height = videoElement.videoHeight || 0;
-    if (!width || !height) {
-      return null;
-    }
-    if (state.captureCanvas.width !== width || state.captureCanvas.height !== height) {
-      state.captureCanvas.width = width;
-      state.captureCanvas.height = height;
-    }
-    return state.captureCtx;
-  }
-
-  function scaleBoundingBox(box) {
-    if (!box) return null;
-    const overlayWidth = els.overlay?.width || els.video?.videoWidth || 1;
-    const overlayHeight = els.overlay?.height || els.video?.videoHeight || 1;
-    const videoWidth = els.video?.videoWidth || overlayWidth;
-    const videoHeight = els.video?.videoHeight || overlayHeight;
-    const scaleX = overlayWidth / videoWidth;
-    const scaleY = overlayHeight / videoHeight;
-    return {
-      x: box.x * scaleX,
-      y: box.y * scaleY,
-      width: Math.max(2, box.width * scaleX),
-      height: Math.max(2, box.height * scaleY),
-    };
-  }
-
-  function setupZxingReaders() {
-    if (state.zxingReader) {
-      return true;
-    }
-    if (typeof window.ZXingBrowser === 'undefined') {
-      debugLog('ZXingBrowser no está disponible en esta build');
-      return false;
-    }
-    try {
-      const hints = new Map();
-      const formats = [
-        window.ZXingBrowser.BarcodeFormat.CODE_128,
-        window.ZXingBrowser.BarcodeFormat.CODE_39,
-        window.ZXingBrowser.BarcodeFormat.EAN_13,
-        window.ZXingBrowser.BarcodeFormat.EAN_8,
-        window.ZXingBrowser.BarcodeFormat.UPC_A,
-        window.ZXingBrowser.BarcodeFormat.UPC_E,
-        window.ZXingBrowser.BarcodeFormat.ITF,
-        window.ZXingBrowser.BarcodeFormat.QR_CODE,
-      ];
-      hints.set(window.ZXingBrowser.DecodeHintType.POSSIBLE_FORMATS, formats);
-      hints.set(window.ZXingBrowser.DecodeHintType.TRY_HARDER, true);
-      hints.set(window.ZXingBrowser.DecodeHintType.PURE_BARCODE, false);
-      state.zxingReader = new window.ZXingBrowser.BrowserMultiFormatReader(hints, 400);
-      state.zxingContinuousReader = new window.ZXingBrowser.BrowserMultiFormatContinuousReader(hints, 400);
-      debugLog('ZXing JS inicializado ✓');
-      return true;
-    } catch (error) {
-      console.warn('[scanner] Error inicializando ZXingBrowser', error);
-      debugLog(`ZXing JS no se pudo inicializar: ${error.message}`);
-      state.zxingReader = null;
-      state.zxingContinuousReader = null;
-      return false;
-    }
-  }
-
-  function startZxingContinuous() {
-    if (!setupZxingReaders() || !els.video || state.zxingContinuousActive) {
-      return;
-    }
-    try {
-      state.zxingContinuousReader.decodeFromVideoElementContinuously(els.video, (result, err) => {
-        if (result) {
-          const points = typeof result.getResultPoints === 'function' ? result.getResultPoints() : null;
-          const bbox = bboxFromPoints(points);
-          if (bbox) {
-            drawBoundingBox(bbox);
-          }
-          handleDecodedValue(
-            (typeof result.getText === 'function' && result.getText()) || result.text || '',
-            bbox,
-            'zxing-js',
-            points || null
-          );
-        } else if (err && !(err instanceof window.ZXingBrowser.NotFoundException)) {
-          console.warn('[scanner] ZXing continuous error:', err);
-        }
-      });
-      state.zxingContinuousActive = true;
-      debugLog('ZXing continuo iniciado');
-    } catch (error) {
-      console.warn('[scanner] No se pudo iniciar ZXing continuo', error);
-      debugLog(`ZXing continuo falló: ${error.message}`);
-    }
-  }
-
-  function stopZxingContinuous() {
-    if (state.zxingContinuousReader && state.zxingContinuousActive) {
-      try {
-        state.zxingContinuousReader.stopContinuousDecode();
-      } catch (_err) {
-        /* ignore */
-      }
-    }
-    state.zxingContinuousActive = false;
-  }
-
-  function bboxFromPoints(points) {
-    if (!points || !points.length) {
-      return null;
-    }
-    const getCoord = (point) => {
-      if (!point) return { x: 0, y: 0 };
-      const x = typeof point.getX === 'function' ? point.getX() : point.x || 0;
-      const y = typeof point.getY === 'function' ? point.getY() : point.y || 0;
-      return { x, y };
-    };
-    const scaled = points.map(getCoord);
-    const xs = scaled.map((p) => p.x);
-    const ys = scaled.map((p) => p.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-    const overlayWidth = els.overlay?.width || els.video?.videoWidth || 1;
-    const overlayHeight = els.overlay?.height || els.video?.videoHeight || 1;
-    const videoWidth = els.video?.videoWidth || overlayWidth;
-    const videoHeight = els.video?.videoHeight || overlayHeight;
-    const scaleX = overlayWidth / videoWidth;
-    const scaleY = overlayHeight / videoHeight;
-    return {
-      x: minX * scaleX,
-      y: minY * scaleY,
-      width: Math.max(2, (maxX - minX) * scaleX),
-      height: Math.max(2, (maxY - minY) * scaleY),
-    };
   }
 
   // ============================================================================
@@ -845,246 +582,111 @@
     debugLog('--- startCamera() INICIADO ---');
     console.log('[scanner:startCamera] Starting...');
     
-    const { name: partName } = getSelectedPartInfo();
-    
-    try {
-      if (!isNativePlatform) {
-        debugLog('No es plataforma nativa, activando fallback web');
-        await startWebScanner(partName);
-        return;
-      }
-      
-      debugLog('Plataforma nativa detectada ✓');
-      debugLog('Inicializando scanner...');
-      
-      const scanner = await initMLKitScanner();
-      if (scanner) {
-        await startNativeScannerFlow(scanner, partName);
-        return;
-      }
-      
-      debugLog('Scanner nativo no disponible. Activando fallback web.');
-      await startWebScanner(partName);
-    } catch (error) {
-      debugLog(`ERROR general en startCamera: ${error.message}`);
-      console.error('[scanner] startCamera error:', error);
-      setCameraStatus('No se pudo iniciar el escáner: ' + error.message);
-      setStatusBanner('Error al iniciar escáner', 'warning');
-      leaveScannerUi();
+    // Solo ML Kit nativo - sin fallback web
+    if (!isNativePlatform) {
+      debugLog('ERROR: No es plataforma nativa');
+      console.error('[scanner] Esta app solo funciona en plataforma nativa (Android/iOS)');
+      setCameraStatus('Esta función solo está disponible en la aplicación móvil');
+      setStatusBanner('Usa la aplicación móvil para escanear', 'warning');
+      return;
     }
-  }
-
-  async function startNativeScannerFlow(scanner, partName) {
-    enterScannerUi(partName);
+    
+    debugLog('Plataforma nativa detectada ✓');
+    debugLog('Inicializando scanner...');
+    
+    const scanner = await initMLKitScanner();
+    if (!scanner) {
+      debugLog('ERROR: Scanner no disponible');
+      console.error('[scanner] ML Kit scanner not available');
+      setCameraStatus('Escáner no disponible. Verifica que estás usando la app correcta.');
+      setStatusBanner('Escáner no disponible', 'warning');
+      return;
+    }
+    
     debugLog('Scanner inicializado ✓');
     console.log('[scanner] Using ML Kit BUNDLED Native Scanner (continuous mode)');
+    
+    // Obtener nombre de la pieza seleccionada
+    const selectedPartId = Array.from(state.selectedParts)[0];
+    const selectedPart = selectedPartId ? SearchIndex.get(selectedPartId) : null;
+    const partName = selectedPart ? selectedPart.name : 'Sin seleccionar';
+    
+    debugLog(`Pieza a buscar: ${partName}`);
+    
+    // Actualizar UI: Mostrar workspace, ocultar búsqueda
+    debugLog('Actualizando UI...');
+    if (els.workspace) {
+      els.workspace.classList.remove('d-none');
+      debugLog('Workspace mostrado ✓');
+      console.log('[scanner] Workspace shown');
+    } else {
+      debugLog('ERROR: workspace element no encontrado');
+    }
+    
+    if (els.searchShell) {
+      els.searchShell.classList.add('d-none');
+      debugLog('Search shell ocultado ✓');
+      console.log('[scanner] Search shell hidden');
+    } else {
+      debugLog('ERROR: searchShell element no encontrado');
+    }
+    
+    if (els.pieceName) {
+      els.pieceName.textContent = partName;
+      debugLog('Nombre de pieza actualizado ✓');
+      console.log('[scanner] Piece name set to:', partName);
+    }
+    
+    // Activar modo pantalla completa en móvil
+    if (document.body) {
+      document.body.classList.add('scanner-fullscreen-active');
+      debugLog('Modo pantalla completa activado ✓');
+      console.log('[scanner] Fullscreen mode activated');
+    }
+    
+    if (els.toggleCameraBtn) {
+      els.toggleCameraBtn.disabled = true;
+      els.toggleCameraBtn.setAttribute('aria-busy', 'true');
+    }
     
     try {
       setCameraStatus('Iniciando escáner ML Kit...');
       debugLog('Solicitando permisos y iniciando scan...');
       console.log('[scanner] Requesting camera permissions and starting scan...');
       
+      // Iniciar escaneo continuo con callback
       await scanner.startScan((result) => {
         debugLog(`Código detectado: ${result.value}`);
         console.log('[scanner] ML Kit detected:', result);
+        // Procesar código detectado inmediatamente y continuar escaneando
         handleDecodedValue(result.value, null, 'mlkit-native', result.cornerPoints || null);
       });
       
       setCameraStatus('Escáner activo - Apunta al código de barras');
       setStatusBanner('Escaneando...', 'info');
-      debugLog('Scanner nativo iniciado exitosamente ✓');
+      debugLog('Scanner iniciado exitosamente ✓✓✓');
+      console.log('[scanner] Scanner started successfully');
+      
       if (els.stopCameraBtn) {
         els.stopCameraBtn.disabled = false;
       }
+      
     } catch (error) {
-      debugLog(`ERROR al iniciar nativo: ${error.message}`);
+      debugLog(`ERROR al iniciar: ${error.message}`);
       console.error('[scanner] ML Kit error:', error);
       setCameraStatus('Error en escáner nativo: ' + error.message);
       setStatusBanner('Error al iniciar escáner', 'warning');
-      leaveScannerUi();
-      throw error;
-    } finally {
-      if (els.toggleCameraBtn) {
-        els.toggleCameraBtn.disabled = false;
-        els.toggleCameraBtn.removeAttribute('aria-busy');
-      }
-    }
-  }
-
-  async function startWebScanner(partName) {
-    enterScannerUi(partName);
-    
-    if (state.webScannerActive) {
-      debugLog('Scanner web ya estaba activo');
-      return;
+      
+      // Revertir UI en caso de error
+      if (els.workspace) els.workspace.classList.add('d-none');
+      if (els.searchShell) els.searchShell.classList.remove('d-none');
+      if (document.body) document.body.classList.remove('scanner-fullscreen-active');
     }
     
-    if (!navigator.mediaDevices?.getUserMedia) {
-      debugLog('navigator.mediaDevices no disponible para fallback web');
-      setCameraStatus('Tu dispositivo no permite abrir la cámara desde el navegador.');
-      setStatusBanner('Actualiza la app con el plugin nativo para escanear', 'warning');
-      leaveScannerUi();
-      return;
+    if (els.toggleCameraBtn) {
+      els.toggleCameraBtn.disabled = false;
+      els.toggleCameraBtn.removeAttribute('aria-busy');
     }
-    
-    if (!els.video) {
-      debugLog('ERROR: Elemento de video no encontrado para fallback web');
-      setCameraStatus('No se encontró el contenedor de video.');
-      setStatusBanner('Contacta al equipo de desarrollo', 'warning');
-      leaveScannerUi();
-      return;
-    }
-    
-    try {
-      setCameraStatus('Activando cámara web...');
-      debugLog('Solicitando cámara via getUserMedia');
-      
-      const constraints = {
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      };
-      
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      state.mediaStream = stream;
-      state.webScannerActive = true;
-      
-      if (els.video) {
-        els.video.srcObject = stream;
-        try {
-          await els.video.play();
-        } catch (_err) {
-          // Algunos navegadores bloquean autoplay; ignorar
-        }
-      }
-      
-      const detectorReady = ensureBarcodeDetector();
-      const zxingReady = setupZxingReaders();
-      if (!detectorReady) {
-        debugLog('BarcodeDetector no soportado, usando ZXing JS si está disponible');
-      } else {
-        debugLog('BarcodeDetector inicializado ✓');
-      }
-      
-      startWebScanLoop(detectorReady);
-      if (zxingReady) {
-        startZxingContinuous();
-      }
-      
-      if (!detectorReady && !zxingReady) {
-        setStatusBanner('Tu WebView no soporta el lector. Usa la app actualizada.', 'warning');
-      }
-      
-      if (els.stopCameraBtn) {
-        els.stopCameraBtn.disabled = false;
-      }
-      
-      setCameraStatus('Cámara activa. Escaneando…');
-      setStatusBanner('Escaneando...', 'info');
-      debugLog('Fallback web activo ✓');
-    } catch (error) {
-      debugLog(`ERROR fallback web: ${error.message}`);
-      console.error('[scanner] Web scanner error:', error);
-      setCameraStatus('No se pudo iniciar la cámara web: ' + error.message);
-      setStatusBanner('Error al iniciar escáner', 'warning');
-      stopWebScanner();
-      leaveScannerUi();
-      throw error;
-    } finally {
-      if (els.toggleCameraBtn) {
-        els.toggleCameraBtn.disabled = false;
-        els.toggleCameraBtn.removeAttribute('aria-busy');
-      }
-    }
-  }
-
-  function ensureBarcodeDetector() {
-    if (state.barcodeDetector) {
-      return true;
-    }
-    if (typeof window.BarcodeDetector !== 'function') {
-      return false;
-    }
-    try {
-      state.barcodeDetector = new window.BarcodeDetector({ formats: state.detectorFormats });
-      return true;
-    } catch (error) {
-      console.warn('[scanner] BarcodeDetector init error:', error);
-      state.barcodeDetector = null;
-      return false;
-    }
-  }
-
-  function startWebScanLoop(detectorReady) {
-    if (state.frameRequestId) {
-      cancelAnimationFrame(state.frameRequestId);
-      state.frameRequestId = null;
-    }
-    
-    const loop = async () => {
-      if (!state.webScannerActive) {
-        clearOverlay();
-        return;
-      }
-      
-      if (!els.video || els.video.readyState < HAVE_ENOUGH_DATA) {
-        state.frameRequestId = requestAnimationFrame(loop);
-        return;
-      }
-      
-      if (state.barcodeDetector && !state.webDetectionInFlight) {
-        state.webDetectionInFlight = true;
-        try {
-          const detections = await state.barcodeDetector.detect(els.video);
-          if (detections && detections.length > 0) {
-            const detection = detections[0];
-            const value = detection.rawValue || detection.displayValue || '';
-            const bbox = scaleBoundingBox(detection.boundingBox || null);
-            if (bbox) {
-              drawBoundingBox(bbox);
-            }
-            if (value) {
-              handleDecodedValue(value, bbox, 'barcode-detector', detection.cornerPoints || null);
-            }
-          } else {
-            clearOverlay();
-          }
-        } catch (error) {
-          console.warn('[scanner] BarcodeDetector detect error:', error);
-        } finally {
-          state.webDetectionInFlight = false;
-        }
-      } else if (!state.barcodeDetector && !detectorReady) {
-        // Si no hay BarcodeDetector, intentamos ZXing si aún no corre
-        startZxingContinuous();
-      }
-      
-      state.frameRequestId = requestAnimationFrame(loop);
-    };
-    
-    state.frameRequestId = requestAnimationFrame(loop);
-  }
-
-  function stopWebScanner() {
-    state.webScannerActive = false;
-    if (state.frameRequestId) {
-      cancelAnimationFrame(state.frameRequestId);
-      state.frameRequestId = null;
-    }
-    if (state.mediaStream) {
-      state.mediaStream.getTracks().forEach((track) => track.stop());
-      state.mediaStream = null;
-    }
-    if (els.video) {
-      els.video.srcObject = null;
-    }
-    state.barcodeDetector = null;
-    state.webDetectionInFlight = false;
-    stopZxingContinuous();
-    clearOverlay();
   }
 
   function stopCamera() {
@@ -1094,8 +696,6 @@
         console.warn('[scanner] Error stopping ML Kit:', err);
       });
     }
-    
-    stopWebScanner();
     
     // Restaurar UI
     if (els.workspace) {
