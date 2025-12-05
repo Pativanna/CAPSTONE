@@ -10,8 +10,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Registrar plugin ZXing Scanner (escaneo continuo con CameraX)
-        registerPlugin(ZxingScannerPlugin.class);
+        // Registrar plugin ML Kit Scanner BUNDLED (escaneo continuo, sin Play Services)
+        registerPlugin(MLKitScannerPlugin.class);
         
         // Configuración para desarrollo: deshabilitar cache de WebView
         WebView webView = getBridge().getWebView();
