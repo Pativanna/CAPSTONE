@@ -20,18 +20,16 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# ML Kit Barcode Scanning (Google Play Services)
--keep class com.google.mlkit.vision.barcode.** { *; }
--keep class com.google.android.gms.internal.mlkit_vision_barcode.** { *; }
--dontwarn com.google.mlkit.vision.barcode.**
--dontwarn com.google.android.gms.**
+# ZXing barcode scanning library
+-keep class com.google.zxing.** { *; }
+-dontwarn com.google.zxing.**
 
 # CameraX library
 -keep class androidx.camera.** { *; }
 -dontwarn androidx.camera.**
 
 # Capacitor plugins
--keep class com.carinventory.app.MLKitScannerPlugin { *; }
--keepclassmembers class com.carinventory.app.MLKitScannerPlugin {
+-keep class com.carinventory.app.ZxingScannerPlugin { *; }
+-keepclassmembers class com.carinventory.app.ZxingScannerPlugin {
     @com.getcapacitor.PluginMethod *;
 }
