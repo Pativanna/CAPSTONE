@@ -58,7 +58,19 @@
   // ============================================================================
   
   const initialPartsScript = document.getElementById('scan-initial-parts');
-  const initialParts = initialPartsScript ? JSON.parse(initialPartsScript.textContent || '[]') : [];
+  let initialParts = [];
+  
+  if (initialPartsScript) {
+    try {
+      initialParts = JSON.parse(initialPartsScript.textContent || '[]');
+      console.log('[scanner] Loaded', initialParts.length, 'initial parts from script tag');
+    } catch (e) {
+      console.error('[scanner] Failed to parse initial parts:', e);
+      initialParts = [];
+    }
+  } else {
+    console.warn('[scanner] #scan-initial-parts script tag not found');
+  }
 
   function normalizeText(text) {
     if (!text) return '';
