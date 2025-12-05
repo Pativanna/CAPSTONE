@@ -827,14 +827,8 @@
     console.log('[scanner] Displaying initial 25 parts');
   }
   
-  // Auto-start en plataforma nativa
-  if (isNativePlatform) {
-    console.log('[scanner] Native platform detected, auto-starting scanner');
-    // Esperar un momento para que el DOM esté listo
-    setTimeout(() => {
-      startCamera();
-    }, 500);
-  } else {
+  // NO auto-start - esperar que el usuario seleccione piezas
+  if (!isNativePlatform) {
     setCameraStatus('Usa la aplicación móvil para escanear');
     setStatusBanner('Esta función requiere la app móvil', 'info');
   }
