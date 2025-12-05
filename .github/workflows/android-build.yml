@@ -44,9 +44,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        python manage.py collectstatic --noinput
-        # Copiar index.html a staticfiles para Capacitor
+        python manage.py collectstatic --noinput --clear
+    
+    - name: Copy index.html to staticfiles
+      run: |
         cp car_inventory/static/index.html staticfiles/index.html
+        echo "✓ Copied index.html to staticfiles/"
+        ls -la staticfiles/index.html
     
     - name: Clean compressed files
       run: |
