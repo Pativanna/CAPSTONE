@@ -4,7 +4,7 @@ from . import auth_views
 from . import vosk_views
 from . import barcode_views  # Nuevo: vistas de códigos de barras
 from . import views as parts_views
-from .views.scanner_logs import receive_scanner_logs, view_scanner_logs
+from . import scanner_logs_views
 
 # Namespace de la aplicación
 app_name = 'parts'
@@ -69,8 +69,8 @@ urlpatterns = [
     path('parts/scan-verify/mlkit/', views.scan_verify_mlkit, name='scan_verify_mlkit'),
     
     # Scanner logs
-    path('api/scanner-logs/', receive_scanner_logs, name='receive_scanner_logs'),
-    path('parts/scanner-logs/', view_scanner_logs, name='view_scanner_logs'),
+    path('api/scanner-logs/', scanner_logs_views.receive_scanner_logs, name='receive_scanner_logs'),
+    path('parts/scanner-logs/', scanner_logs_views.view_scanner_logs, name='view_scanner_logs'),
     
     path('parts/api/catalog-cache/', views.parts_catalog_cache, name='parts_catalog_cache'),
     # Endpoints adicionales se habilitarán cuando el módulo esté listo
