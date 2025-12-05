@@ -10,20 +10,40 @@
     console.log('[scanner] Platform Details:', window.Capacitor.getPlatform());
   }
 
-  // Inicializar ML Kit Native Scanner BUNDLED (escaneo continuo, modelos incluidos)
+  // ML Kit Native Scanner BUNDLED (se inicializa cuando se necesita, no al cargar)
   let mlKitScanner = null;
-  if (isNativePlatform && window.MLKitNativeScanner) {
-    mlKitScanner = new window.MLKitNativeScanner();
-    if (mlKitScanner.isSupported()) {
-      console.log('[scanner] ✅ ML Kit BUNDLED Native Scanner initialized and ready');
-    } else {
-      console.error('[scanner] ❌ ML Kit plugin initialized but NOT supported (plugin missing from native code)');
-      console.error('[scanner] This APK does NOT have MLKitScannerPlugin compiled');
-      mlKitScanner = null;
+  
+  function initMLKitScanner() {
+    if (mlKitScanner !== null) {
+      return mlKitScanner;  // Ya inicializado
     }
-  } else {
-    if (isNativePlatform) {
-      console.error('[scanner] ❌ MLKitNativeScanner class not found (mlkit-native-scanner.js not loaded?)');
+    
+    if (!isNativePlatform) {
+      console.log('[scanner] Not on native platform, skipping ML Kit');
+      return null;
+    }
+    
+    if (!window.MLKitNativeScanner) {
+      console.error('[scanner] ❌ MLKitNativeScanner class not found');
+      console.error('[scanner] Check that mlkit-native-scanner.js loaded correctly');
+      return null;
+    }
+    
+    try {
+      mlKitScanner = new window.MLKitNativeScanner();
+      if (mlKitScanner.isSupported()) {
+        console.log('[scanner] ✅ ML Kit BUNDLED Native Scanner initialized and ready');
+        return mlKitScanner;
+      } else {
+        console.error('[scanner] ❌ ML Kit plugin initialized but NOT supported');
+        console.error('[scanner] This APK does NOT have MLKitScannerPlugin compiled');
+        mlKitScanner = null;
+        return null;
+      }
+    } catch (error) {
+      console.error('[scanner] ❌ Error initializing ML Kit:', error);
+      mlKitScanner = null;
+      return null;
     }
   }
 
@@ -777,39 +797,44 @@ function setupZxingReader(retries = 5) {
     console.log('[scanner:startCamera] Starting...');
     
     // Si estamos en Android con ML Kit nativo, usar escaneo continuo nativo
-    if (isNativePlatform && mlKitScanner) {
-      console.log('[scanner] Using ML Kit BUNDLED Native Scanner (continuous mode)');
-      
-      if (els.toggleCameraBtn) {
-        els.toggleCameraBtn.disabled = true;
-        els.toggleCameraBtn.setAttribute('aria-busy', 'true');
-      }
-      
-      try {
-        setCameraStatus('Iniciando escáner ML Kit...');
+    if (isNativePlatform) {
+      const scanner = initMLKitScanner();
+      if (scanner) {
+        console.log('[scanner] Using ML Kit BUNDLED Native Scanner (continuous mode)');
         
-        // Iniciar escaneo continuo con callback
-        await mlKitScanner.startScan((result) => {
-          console.log('[scanner] ML Kit detected:', result);
-          // Procesar código detectado inmediatamente y continuar escaneando
-          handleDecodedValue(result.value, null, 'mlkit-native', result.cornerPoints || null);
-        });
+        if (els.toggleCameraBtn) {
+          els.toggleCameraBtn.disabled = true;
+          els.toggleCameraBtn.setAttribute('aria-busy', 'true');
+        }
         
-        setCameraStatus('Escáner activo - Apunta al código de barras');
+        try {
+          setCameraStatus('Iniciando escáner ML Kit...');
+          
+          // Iniciar escaneo continuo con callback
+          await scanner.startScan((result) => {
+            console.log('[scanner] ML Kit detected:', result);
+            // Procesar código detectado inmediatamente y continuar escaneando
+            handleDecodedValue(result.value, null, 'mlkit-native', result.cornerPoints || null);
+          });
+          
+          setCameraStatus('Escáner activo - Apunta al código de barras');
+          
+        } catch (error) {
+          console.error('[scanner] ML Kit error:', error);
+          setCameraStatus('Error en escáner nativo: ' + error.message);
+          // Fallback a escáner web
+          console.warn('[scanner] Falling back to web scanner');
+          await startWebCamera();
+        }
         
-      } catch (error) {
-        console.error('[scanner] ML Kit error:', error);
-        setCameraStatus('Error en escáner nativo: ' + error.message);
-        // Fallback a escáner web
-        console.warn('[scanner] Falling back to web scanner');
-        await startWebCamera();
+        if (els.toggleCameraBtn) {
+          els.toggleCameraBtn.disabled = false;
+          els.toggleCameraBtn.removeAttribute('aria-busy');
+        }
+        return;
+      } else {
+        console.warn('[scanner] ML Kit not available, falling back to web scanner');
       }
-      
-      if (els.toggleCameraBtn) {
-        els.toggleCameraBtn.disabled = false;
-        els.toggleCameraBtn.removeAttribute('aria-busy');
-      }
-      return;
     }
     
     // Navegador web o fallback: usar escáner web tradicional
