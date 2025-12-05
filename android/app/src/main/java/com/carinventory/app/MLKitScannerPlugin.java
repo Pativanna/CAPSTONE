@@ -167,8 +167,17 @@ public class MLKitScannerPlugin extends Plugin {
             return;
         }
         
+        if (getActivity() == null) {
+            call.reject("Activity not available");
+            return;
+        }
+        
         codeDetectionTimes.clear();
-        startCamera(call);
+        
+        // Ejecutar en main thread
+        getActivity().runOnUiThread(() -> {
+            startCamera(call);
+        });
     }
     
     @PluginMethod
@@ -283,6 +292,16 @@ public class MLKitScannerPlugin extends Plugin {
     }
     
     private void bindCameraUseCases(@NonNull PluginCall call) {
+        if (cameraProvider == null) {
+            call.reject("Camera provider not initialized");
+            return;
+        }
+        
+        if (!(getActivity() instanceof LifecycleOwner)) {
+            call.reject("Activity does not implement LifecycleOwner");
+            return;
+        }
+        
         CameraSelector cameraSelector = new CameraSelector.Builder()
             .requireLensFacing(CameraSelector.LENS_FACING_BACK)
             .build();
@@ -324,9 +343,9 @@ public class MLKitScannerPlugin extends Plugin {
     }
     
     private void enableContinuousAutofocus() {
-        if (camera == null || cameraPreview == null) return;
+        if (camera == null || cameraPreview == null || getActivity() == null) return;
         
-        getBridge().executeOnMainThread(() -> {
+        getActivity().runOnUiThread(() -> {
             try {
                 CameraControl cameraControl = camera.getCameraControl();
                 MeteringPointFactory factory = cameraPreview.getMeteringPointFactory();
@@ -348,9 +367,9 @@ public class MLKitScannerPlugin extends Plugin {
     }
     
     private void focusOnPoint(float x, float y) {
-        if (camera == null || cameraPreview == null) return;
+        if (camera == null || cameraPreview == null || getActivity() == null) return;
         
-        getBridge().executeOnMainThread(() -> {
+        getActivity().runOnUiThread(() -> {
             try {
                 CameraControl cameraControl = camera.getCameraControl();
                 MeteringPointFactory factory = cameraPreview.getMeteringPointFactory();
@@ -470,7 +489,7 @@ public class MLKitScannerPlugin extends Plugin {
     }
     
     private void handleBarcodeDetected(Barcode barcode) {
-        if (!isScanning) return;
+        if (!isScanning || getActivity() == null) return;
         
         String code = barcode.getRawValue();
         if (code == null || code.isEmpty()) return;
@@ -489,7 +508,7 @@ public class MLKitScannerPlugin extends Plugin {
         
         lastScannedCode = code;
         
-        getBridge().executeOnMainThread(() -> {
+        getActivity().runOnUiThread(() -> {
             String displayText = String.format(
                 "✅ Código: %s\nFormato: %s\nEscanea otro código...",
                 code,
@@ -524,9 +543,9 @@ public class MLKitScannerPlugin extends Plugin {
     }
     
     private void updateTorch(boolean enable) {
-        if (camera == null || !camera.getCameraInfo().hasFlashUnit()) return;
+        if (camera == null || !camera.getCameraInfo().hasFlashUnit() || getActivity() == null) return;
         
-        getBridge().executeOnMainThread(() -> {
+        getActivity().runOnUiThread(() -> {
             try {
                 camera.getCameraControl().enableTorch(enable);
                 torchEnabled = enable;
@@ -551,7 +570,9 @@ public class MLKitScannerPlugin extends Plugin {
         lastScannedCode = "";
         codeDetectionTimes.clear();
         
-        getBridge().executeOnMainThread(() -> {
+        if (getActivity() == null) return;
+        
+        getActivity().runOnUiThread(() -> {
             if (torchEnabled && camera != null) {
                 updateTorch(false);
             }
