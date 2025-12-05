@@ -145,19 +145,19 @@
 
 <!-- Scripts de la página (mantener dentro del bloque de contenido para Turbo) -->
 <!-- Los plugins nativos se cargan SIN defer para estar disponibles antes del script principal -->
-<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205h"
+<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205i"
         data-page-script="parts:mlkit-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
 
 <!-- Módulo de feedback (vibraciones, beeps, animaciones) -->
-<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205h"
+<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205i"
         data-page-script="parts:scanner-feedback"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
         
 <!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205h"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205i"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"
