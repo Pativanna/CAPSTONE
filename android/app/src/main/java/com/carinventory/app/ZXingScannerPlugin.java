@@ -30,6 +30,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 
 import com.carinventory.app.scanner.ZXingBarcodeProcessor;
 import com.carinventory.app.scanner.BarcodeProcessor;
+import com.carinventory.app.scanner.FrameMetadata;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -271,18 +272,18 @@ public class ZXingScannerPlugin extends Plugin {
             // Get Y plane (luminance) for barcode detection
             Image.Plane[] planes = image.getPlanes();
             ByteBuffer buffer = planes[0].getBuffer();
-            byte[] data = new byte[buffer.remaining()];
-            buffer.get(data);
             
             int rotation = imageProxy.getImageInfo().getRotationDegrees();
             
+            // Create FrameMetadata
+            FrameMetadata frameMetadata = new FrameMetadata.Builder()
+                .setWidth(imageProxy.getWidth())
+                .setHeight(imageProxy.getHeight())
+                .setRotation(rotation)
+                .build();
+            
             // Process with ZXing
-            barcodeProcessor.process(
-                data,
-                imageProxy.getWidth(),
-                imageProxy.getHeight(),
-                rotation
-            );
+            barcodeProcessor.processByteBuffer(buffer, frameMetadata);
             
         } catch (Exception e) {
             Log.e(TAG, "Error processing image", e);
