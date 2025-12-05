@@ -68,10 +68,9 @@ jobs:
       run: |
         npx cap sync android
         
-    - name: Inject MLKit plugin registration
-      run: |
-        node scripts/inject-mlkit-plugin.js
-        cat android/app/src/main/assets/capacitor.plugins.json
+    # ZXing plugin auto-registered in MainActivity.java
+    # No injection script needed (plugin compiled with app)
+    # See: ANALISIS_MLKIT_ZXING.md
         
     - name: Build Android APK
       run: |
