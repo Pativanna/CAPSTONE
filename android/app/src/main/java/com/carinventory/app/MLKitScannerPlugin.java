@@ -103,16 +103,8 @@ public class MLKitScannerPlugin extends Plugin {
             setupBarcodeScanner();
             cameraExecutor = Executors.newSingleThreadExecutor();
             Log.i(TAG, "✅ Plugin loaded successfully with CameraX");
-            
-            // Notificar al JS que el plugin está listo
-            getBridge().execute(() -> {
-                getBridge().eval("console.log('[scanner] ✅ MLKitScanner native plugin loaded successfully')", null);
-            });
         } catch (Exception e) {
             Log.e(TAG, "❌ FATAL: Plugin load failed", e);
-            getBridge().execute(() -> {
-                getBridge().eval("console.error('[scanner] ❌ MLKitScanner plugin failed to load: " + e.getMessage() + "')", null);
-            });
         }
     }
     
