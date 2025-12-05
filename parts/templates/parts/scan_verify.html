@@ -17,12 +17,6 @@
 
   <section class="scanner-controls card shadow-sm mb-4" id="scanner-search-shell">
     <div class="card-body">
-      <!-- Debug logs panel -->
-      <div class="alert alert-info mb-3" id="debug-logs-panel" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.75rem;">
-        <strong>Debug Logs:</strong>
-        <div id="debug-logs"></div>
-      </div>
-      
       <div class="scanner-search">
         <label for="scanner-search-input" class="form-label text-muted small mb-1">Buscar pieza</label>
         <div class="input-group input-group-lg global-search-with-voice">
@@ -151,19 +145,19 @@
 
 <!-- Scripts de la página (mantener dentro del bloque de contenido para Turbo) -->
 <!-- Los plugins nativos se cargan SIN defer para estar disponibles antes del script principal -->
-<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205q"
+<script src="{% static 'parts/js/mlkit-native-scanner.js' %}?v=20251205i"
         data-page-script="parts:mlkit-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
 
 <!-- Módulo de feedback (vibraciones, beeps, animaciones) -->
-<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205q"
+<script src="{% static 'parts/js/scanner-feedback.js' %}?v=20251205i"
         data-page-script="parts:scanner-feedback"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
         
 <!-- Script principal (con defer, ejecuta cuando plugins estén listos) -->
-<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205q"
+<script src="{% static 'parts/js/scan-verify.js' %}?v=20251205i"
         defer
         data-page-script="parts:scan-verify"
         data-turbo-track="reload"
