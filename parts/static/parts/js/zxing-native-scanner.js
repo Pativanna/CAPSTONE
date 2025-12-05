@@ -6,12 +6,33 @@
  * Replaces MLKit with lighter alternative
  * ZXing: ~500 KB vs MLKit: ~8-10 MB
  * 
+ * Compatible with Capacitor 7+
+ * 
  * @see ANALISIS_MLKIT_ZXING.md
  * @see ZXingScannerPlugin.java
  */
 
 // Prevent double initialization (Turbo may load script multiple times)
 if (typeof window.ZXingNativeScanner === 'undefined') {
+
+// Register the plugin with Capacitor 7+ if not already done
+(function registerZXingPlugin() {
+  if (typeof window.Capacitor === 'undefined') return;
+  if (!window.Capacitor.isNativePlatform()) return;
+  
+  // Check if registerPlugin function exists (Capacitor 7+)
+  if (typeof window.Capacitor.registerPlugin === 'function') {
+    // Only register if not already in Plugins
+    if (!window.Capacitor.Plugins?.ZXingScanner) {
+      console.log('[ZXingScanner] Registering plugin with Capacitor.registerPlugin()...');
+      const ZXingScanner = window.Capacitor.registerPlugin('ZXingScanner');
+      // Ensure Plugins object exists
+      window.Capacitor.Plugins = window.Capacitor.Plugins || {};
+      window.Capacitor.Plugins.ZXingScanner = ZXingScanner;
+      console.log('[ZXingScanner] ✅ Plugin registered via Capacitor.registerPlugin()');
+    }
+  }
+})();
 
 class ZXingNativeScanner {
   constructor() {

@@ -72,7 +72,13 @@
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
 
-<script src="{% static 'parts/js/zxing-native-scanner.js' %}?v=20251205k"
+<!-- Register ZXing plugin with Capacitor 7+ bridge (MUST be before scanner) -->
+<script src="{% static 'parts/js/zxing-plugin-register.js' %}?v=20251205m"
+        data-page-script="parts:zxing-register"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}"></script>
+
+<script src="{% static 'parts/js/zxing-native-scanner.js' %}?v=20251205m"
         data-page-script="parts:zxing-native"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}"></script>
