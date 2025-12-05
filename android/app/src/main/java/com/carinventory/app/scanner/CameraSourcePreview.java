@@ -96,26 +96,36 @@ public class CameraSourcePreview extends ViewGroup {
         int height = bottom - top;
         
         if (previewWidth != 0 && previewHeight != 0) {
-            // Calcular escala para llenar el espacio
-            float scale = Math.max(
-                (float) width / previewWidth,
-                (float) height / previewHeight
-            );
+            // IMPORTANTE: La cámara puede rotar las dimensiones
+            // Calcular aspect ratio correctamente
+            float previewAspect = (float) previewHeight / (float) previewWidth;
+            float viewAspect = (float) height / (float) width;
             
-            int scaledWidth = (int) (previewWidth * scale);
-            int scaledHeight = (int) (previewHeight * scale);
+            int childWidth, childHeight;
+            
+            if (viewAspect > previewAspect) {
+                // View es más alto que el preview - ajustar por ancho
+                childWidth = width;
+                childHeight = (int) (width * previewAspect);
+            } else {
+                // View es más ancho que el preview - ajustar por alto
+                childHeight = height;
+                childWidth = (int) (height / previewAspect);
+            }
             
             // Centrar el preview
-            int layoutWidth = scaledWidth;
-            int layoutHeight = scaledHeight;
+            int xOffset = (width - childWidth) / 2;
+            int yOffset = (height - childHeight) / 2;
             
-            // Ajustar SurfaceView
-            for (int i = 0; i < getChildCount(); ++i) {
-                getChildAt(i).layout(0, 0, layoutWidth, layoutHeight);
+            for (int i = 0; i < getChildCount(); i++) {
+                getChildAt(i).layout(xOffset, yOffset, xOffset + childWidth, yOffset + childHeight);
             }
+            
+            Log.d(TAG, String.format("Preview layout: view=%dx%d, preview=%dx%d, child=%dx%d",
+                width, height, previewWidth, previewHeight, childWidth, childHeight));
         } else {
             // Sin tamaño de preview, usar todo el espacio
-            for (int i = 0; i < getChildCount(); ++i) {
+            for (int i = 0; i < getChildCount(); i++) {
                 getChildAt(i).layout(0, 0, width, height);
             }
         }

@@ -66,6 +66,7 @@ public class MLKitBarcodeProcessor implements BarcodeProcessor {
             .build();
         
         this.barcodeScanner = BarcodeScanning.getClient(options);
+        Log.i(TAG, "MLKitBarcodeProcessor initialized with common formats");
     }
     
     @Override
@@ -101,6 +102,14 @@ public class MLKitBarcodeProcessor implements BarcodeProcessor {
         
         isProcessing = true;
         
+        // Log cada 30 frames (aproximadamente cada 3 segundos a 10 FPS)
+        if (Math.random() < 0.033) {
+            Log.d(TAG, String.format("Processing frame: %dx%d, rotation=%d", 
+                processingFrameMetadata.getWidth(),
+                processingFrameMetadata.getHeight(),
+                processingFrameMetadata.getRotation()));
+        }
+        
         // Crear InputImage
         InputImage image = InputImage.fromByteBuffer(
             processingFrame,
@@ -124,6 +133,8 @@ public class MLKitBarcodeProcessor implements BarcodeProcessor {
     }
     
     private void onSuccess(@NonNull List<Barcode> barcodes) {
+        Log.d(TAG, "ML Kit processing complete - found " + barcodes.size() + " barcodes");
+        
         if (barcodes.isEmpty()) {
             return;
         }
@@ -135,12 +146,13 @@ public class MLKitBarcodeProcessor implements BarcodeProcessor {
         
         if (mostCentered != null && mostCentered.getRawValue() != null) {
             String code = mostCentered.getRawValue();
+            Log.i(TAG, "Detected barcode: " + code + " (format: " + getBarcodeFormatName(mostCentered.getFormat()) + ")");
             
             // Verificar cooldown para este código específico
             Long lastDetectionTime = codeDetectionTimes.get(code);
             if (lastDetectionTime != null && 
                 (currentTime - lastDetectionTime) < CODE_COOLDOWN_MS) {
-                // Todavía en cooldown para este código
+                Log.d(TAG, "Code still in cooldown: " + code);
                 return;
             }
             
@@ -150,7 +162,8 @@ public class MLKitBarcodeProcessor implements BarcodeProcessor {
             // Limpiar códigos antiguos (más de 10 segundos)
             cleanupOldCodes(currentTime);
             
-            // Enviar código a Flutter
+            // Enviar código a JavaScript
+            Log.i(TAG, "Sending code to JavaScript: " + code);
             sendCodeToFlutter(code, mostCentered.getFormat());
         }
     }
