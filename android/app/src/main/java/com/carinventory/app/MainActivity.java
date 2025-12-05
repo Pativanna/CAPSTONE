@@ -8,14 +8,14 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        
-        // ZXing native scanner plugin
-        // Replaces MLKit with lighter alternative (~500 KB vs ~8-10 MB)
-        // See: ANALISIS_MLKIT_ZXING.md
+        // IMPORTANT: Register plugins BEFORE super.onCreate()
+        // The bridge is created in super.onCreate() -> load()
+        // After that, bridgeBuilder.addPlugin() has no effect
         registerPlugin(ZXingScannerPlugin.class);
         
-        // Configuración para desarrollo: deshabilitar cache de WebView
+        super.onCreate(savedInstanceState);
+        
+        // Development configuration: disable WebView cache
         WebView webView = getBridge().getWebView();
         if (webView != null) {
             WebSettings webSettings = webView.getSettings();

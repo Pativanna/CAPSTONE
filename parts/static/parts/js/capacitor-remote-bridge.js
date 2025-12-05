@@ -144,6 +144,17 @@
     // Create plugin proxy
     const plugin = new Proxy({}, {
       get: function(target, methodName) {
+        // Handle Symbol.toPrimitive and valueOf to avoid "Cannot convert object to primitive value"
+        if (methodName === Symbol.toPrimitive || methodName === 'valueOf') {
+          return function() { return '[Plugin:' + pluginName + ']'; };
+        }
+        if (methodName === 'toString' || methodName === Symbol.toStringTag) {
+          return function() { return '[Plugin:' + pluginName + ']'; };
+        }
+        // Handle then to avoid being treated as a Promise
+        if (methodName === 'then') {
+          return undefined;
+        }
         if (methodName === 'addListener') {
           return function(eventName, callback) {
             return cap.addListener(pluginName, eventName, callback);
