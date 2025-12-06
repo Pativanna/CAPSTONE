@@ -430,8 +430,6 @@ public class ZXingScannerPlugin extends Plugin {
             e.printStackTrace();
         }
     }
-        }
-    }
     
     private void processImageProxy(ImageProxy imageProxy) {
         if (!isScanning || barcodeProcessor == null) {
