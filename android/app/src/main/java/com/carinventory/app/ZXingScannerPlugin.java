@@ -165,6 +165,7 @@ public class ZXingScannerPlugin extends Plugin {
                 // Create main layout (vertical: camera 80%, info 20%)
                 LinearLayout mainLayout = new LinearLayout(getContext());
                 mainLayout.setOrientation(LinearLayout.VERTICAL);
+                mainLayout.setWeightSum(5f);  // Total weight: 4 (camera) + 1 (info) = 5
                 mainLayout.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -173,6 +174,7 @@ public class ZXingScannerPlugin extends Plugin {
                 // Camera preview (80% height)
                 previewView = new PreviewView(getContext());
                 previewView.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
+                previewView.setBackgroundColor(Color.DKGRAY);  // Dark gray until camera starts
                 LinearLayout.LayoutParams previewParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, 0, 4f);  // weight 4
                 previewView.setLayoutParams(previewParams);
@@ -210,9 +212,11 @@ public class ZXingScannerPlugin extends Plugin {
                 // Add container ON TOP of webview
                 FrameLayout rootContainer = (FrameLayout) getBridge().getWebView().getParent();
                 rootContainer.addView(scannerContainer);
+                scannerContainer.bringToFront();  // Ensure it's on top
+                scannerContainer.setClickable(true);  // Intercept touch events
                 Log.i(TAG, "📸 Scanner container added to root. Children count: " + rootContainer.getChildCount());
                 
-                // Start camera
+                // Start camera and wait for it
                 Log.i(TAG, "📸 Calling startCamera()...");
                 startCamera();
                 
@@ -220,9 +224,10 @@ public class ZXingScannerPlugin extends Plugin {
                 
                 JSObject result = new JSObject();
                 result.put("started", true);
+                result.put("overlayVisible", true);
                 call.resolve(result);
                 
-                Log.i(TAG, "✅ ZXing scan started successfully");
+                Log.i(TAG, "✅ ZXing scan UI created successfully");
                 
             } catch (Exception e) {
                 Log.e(TAG, "❌ Error starting scan", e);
