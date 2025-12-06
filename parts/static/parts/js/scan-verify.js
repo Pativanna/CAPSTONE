@@ -298,16 +298,34 @@
     try {
       console.log('[scanner] Scanner available, setting status...');
       setCameraStatus('Iniciando escáner...');
-      setStatusBanner('Escaneando...', 'info');
+      setStatusBanner('Escaneando... (toca aquí para cerrar)', 'info');
+      
+      // Make status banner clickable to close scanner
+      if (els.statusBanner) {
+        els.statusBanner.style.cursor = 'pointer';
+        els.statusBanner.onclick = () => {
+          console.log('[scanner] User clicked banner to close');
+          stopCamera();
+        };
+      }
 
       console.log('[scanner] Activating fullscreen mode...');
       document.body.classList.add('scanner-fullscreen-active');
+      
+      // Safety timeout - if camera doesn't work in 5 seconds, show error
+      const safetyTimeout = setTimeout(() => {
+        console.warn('[scanner] ⚠️ Safety timeout reached - camera may not be working');
+        setStatusBanner('⚠️ Cámara no responde. Toca para cerrar.', 'warning');
+      }, 5000);
 
       console.log('[scanner] Calling scanner.startScan()...');
       await scanner.startScan((result) => {
+        clearTimeout(safetyTimeout);
         console.log('[scanner] Detected:', result.value);
         handleDecodedValue(result.value);
       });
+      
+      clearTimeout(safetyTimeout);
 
       state.isScanning = true;
       setCameraStatus('Escáner activo');

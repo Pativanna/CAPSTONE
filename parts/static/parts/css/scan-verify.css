@@ -9,6 +9,19 @@ body.scanner-fullscreen-active {
   overflow-x: hidden;
 }
 
+/* Keep status banner visible in fullscreen mode */
+body.scanner-fullscreen-active #scanner-status-banner {
+  position: fixed !important;
+  top: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 99999 !important;
+  padding: 15px 30px !important;
+  font-size: 18px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+}
+
 body.scanner-fullscreen-active nav.navbar {
   display: none !important;
 }
