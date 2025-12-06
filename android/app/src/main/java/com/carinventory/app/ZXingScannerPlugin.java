@@ -172,9 +172,11 @@ public class ZXingScannerPlugin extends Plugin {
                 
                 // Camera preview (80% height)
                 previewView = new PreviewView(getContext());
+                previewView.setImplementationMode(PreviewView.ImplementationMode.COMPATIBLE);
                 LinearLayout.LayoutParams previewParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, 0, 4f);  // weight 4
                 previewView.setLayoutParams(previewParams);
+                Log.i(TAG, "📸 PreviewView created with COMPATIBLE mode");
                 
                 // Info panel (20% height)
                 infoPanel = createInfoPanel();
@@ -208,8 +210,10 @@ public class ZXingScannerPlugin extends Plugin {
                 // Add container ON TOP of webview
                 FrameLayout rootContainer = (FrameLayout) getBridge().getWebView().getParent();
                 rootContainer.addView(scannerContainer);
+                Log.i(TAG, "📸 Scanner container added to root. Children count: " + rootContainer.getChildCount());
                 
                 // Start camera
+                Log.i(TAG, "📸 Calling startCamera()...");
                 startCamera();
                 
                 isScanning = true;
@@ -344,48 +348,73 @@ public class ZXingScannerPlugin extends Plugin {
     }
     
     private void startCamera() {
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = 
-            ProcessCameraProvider.getInstance(getContext());
+        Log.i(TAG, "📸 startCamera() called");
         
-        cameraProviderFuture.addListener(() -> {
-            try {
-                cameraProvider = cameraProviderFuture.get();
-                bindCameraUseCases();
-            } catch (ExecutionException | InterruptedException e) {
-                Log.e(TAG, "Error binding camera", e);
-            }
-        }, ContextCompat.getMainExecutor(getContext()));
+        try {
+            ListenableFuture<ProcessCameraProvider> cameraProviderFuture = 
+                ProcessCameraProvider.getInstance(getContext());
+            
+            Log.i(TAG, "📸 Got cameraProviderFuture, adding listener...");
+            
+            cameraProviderFuture.addListener(() -> {
+                try {
+                    Log.i(TAG, "📸 cameraProviderFuture listener executing...");
+                    cameraProvider = cameraProviderFuture.get();
+                    Log.i(TAG, "📸 Got cameraProvider: " + cameraProvider);
+                    bindCameraUseCases();
+                } catch (ExecutionException | InterruptedException e) {
+                    Log.e(TAG, "❌ Error getting camera provider", e);
+                }
+            }, ContextCompat.getMainExecutor(getContext()));
+            
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Error in startCamera()", e);
+        }
     }
     
     private void bindCameraUseCases() {
+        Log.i(TAG, "📸 bindCameraUseCases() called");
+        
         if (cameraProvider == null) {
+            Log.e(TAG, "❌ cameraProvider is null!");
             return;
         }
         
-        // Preview
-        Preview preview = new Preview.Builder().build();
-        preview.setSurfaceProvider(previewView.getSurfaceProvider());
-        
-        // Image Analysis for ZXing
-        imageAnalysis = new ImageAnalysis.Builder()
-            .setTargetResolution(new Size(1280, 720))
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build();
-        
-        imageAnalysis.setAnalyzer(cameraExecutor, new ImageAnalysis.Analyzer() {
-            @Override
-            public void analyze(@NonNull ImageProxy imageProxy) {
-                processImageProxy(imageProxy);
-            }
-        });
-        
-        // Camera selector (back camera)
-        CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+        if (previewView == null) {
+            Log.e(TAG, "❌ previewView is null!");
+            return;
+        }
         
         try {
+            Log.i(TAG, "📸 Building Preview...");
+            // Preview
+            Preview preview = new Preview.Builder().build();
+            
+            Log.i(TAG, "📸 Setting surface provider...");
+            preview.setSurfaceProvider(previewView.getSurfaceProvider());
+            
+            Log.i(TAG, "📸 Building ImageAnalysis...");
+            // Image Analysis for ZXing
+            imageAnalysis = new ImageAnalysis.Builder()
+                .setTargetResolution(new Size(1280, 720))
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build();
+            
+            imageAnalysis.setAnalyzer(cameraExecutor, new ImageAnalysis.Analyzer() {
+                @Override
+                public void analyze(@NonNull ImageProxy imageProxy) {
+                    processImageProxy(imageProxy);
+                }
+            });
+            
+            // Camera selector (back camera)
+            CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+            
+            Log.i(TAG, "📸 Unbinding all previous use cases...");
             // Unbind previous use cases
             cameraProvider.unbindAll();
             
+            Log.i(TAG, "📸 Binding to lifecycle...");
             // Bind new use cases
             cameraProvider.bindToLifecycle(
                 (LifecycleOwner) getActivity(),
@@ -398,6 +427,9 @@ public class ZXingScannerPlugin extends Plugin {
             
         } catch (Exception e) {
             Log.e(TAG, "❌ Use case binding failed", e);
+            e.printStackTrace();
+        }
+    }
         }
     }
     
