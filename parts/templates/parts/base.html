@@ -148,6 +148,13 @@
               <i class="fas fa-chart-line"></i> Dashboard
             </a>
           </li>
+          <li class="nav-item mx-2">
+            <a class="nav-link"
+               href="{% url 'parts:verificador' %}"
+               data-turbo-frame="app-frame">
+              <i class="bi bi-upc-scan"></i> Lector
+            </a>
+          </li>
           {% if user.profile.is_admin %}
           <li class="nav-item mx-2">
             <a class="nav-link"

@@ -3791,3 +3791,170 @@ def part_publish_download_photos(request, pk):
     response = HttpResponse(buffer.read(), content_type='application/zip')
     response['Content-Disposition'] = f'attachment; filename="{nombre_zip}"'
     return response
+
+
+# ===================================
+# VERIFICADOR DE CÓDIGO DE BARRAS
+# ===================================
+from .models import VerificacionLog
+
+@login_required
+def verificador_view(request):
+    """Vista principal del verificador de códigos de barras."""
+    return render(request, 'parts/verificador.html', {
+        'titulo': 'Lector de Código de Barras',
+    })
+
+
+@login_required
+def verificador_search(request):
+    """API de búsqueda para el verificador - retorna piezas CON código de barras."""
+    q = request.GET.get('q', '').strip()
+    limit = min(int(request.GET.get('limit', 50)), 100)
+    
+    # Solo piezas con código de barras asignado
+    piezas = Part.objects.filter(
+        barcode__isnull=False
+    ).exclude(
+        barcode__exact=''
+    ).select_related('auto', 'workshop').order_by('-date_added')
+    
+    if q:
+        # Búsqueda en nombre, auto, código de barras
+        filter_terms = _build_filter_terms(q)
+        if not filter_terms:
+            filter_terms = [q]
+        
+        filtro = Q()
+        for term in filter_terms:
+            filtro |= (
+                Q(name__icontains=term)
+                | Q(details__icontains=term)
+                | Q(auto__brand_model__icontains=term)
+                | Q(auto__year__icontains=term)
+                | Q(barcode__icontains=term)
+                | Q(workshop__name__icontains=term)
+            )
+        piezas = piezas.filter(filtro)
+    
+    piezas = piezas[:limit]
+    
+    # Serializar resultados
+    results = []
+    for p in piezas:
+        # Obtener primera foto si existe
+        foto_url = None
+        primera_foto = p.photos.first() if hasattr(p, 'photos') else None
+        if primera_foto and primera_foto.image:
+            foto_url = primera_foto.image.url
+        elif p.image:
+            foto_url = p.image.url
+        
+        results.append({
+            'id': p.id,
+            'name': p.name,
+            'barcode': p.barcode,
+            'auto': f"{p.auto.brand_model} {p.auto.year}" if p.auto else '',
+            'workshop': p.workshop.name if p.workshop else '',
+            'min_value': float(p.min_value) if p.min_value else 0,
+            'foto_url': foto_url,
+            'sold': p.sold,
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'results': results,
+        'count': len(results),
+        'has_more': piezas.count() == limit,
+    })
+
+
+@login_required
+@require_POST
+def verificador_log(request):
+    """Registra una verificación de código de barras."""
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+    
+    codigo_escaneado = data.get('codigo_escaneado', '').strip()
+    formato_codigo = data.get('formato_codigo', '').strip()
+    pieza_buscada_id = data.get('pieza_buscada_id')
+    codigo_esperado = data.get('codigo_esperado', '').strip()
+    
+    if not codigo_escaneado:
+        return JsonResponse({'success': False, 'error': 'Código escaneado requerido'}, status=400)
+    
+    # Determinar resultado
+    pieza_buscada = None
+    pieza_encontrada = None
+    resultado = VerificacionLog.Resultado.SCAN_ONLY
+    
+    if pieza_buscada_id:
+        try:
+            pieza_buscada = Part.objects.get(pk=pieza_buscada_id)
+        except Part.DoesNotExist:
+            pass
+    
+    # Buscar si el código coincide con alguna pieza
+    try:
+        pieza_encontrada = Part.objects.get(barcode=codigo_escaneado)
+    except Part.DoesNotExist:
+        pass
+    
+    # Determinar resultado
+    if pieza_buscada:
+        if codigo_esperado and codigo_escaneado == codigo_esperado:
+            resultado = VerificacionLog.Resultado.MATCH
+        elif pieza_encontrada:
+            resultado = VerificacionLog.Resultado.MISMATCH
+        else:
+            resultado = VerificacionLog.Resultado.NOT_FOUND
+    elif pieza_encontrada:
+        resultado = VerificacionLog.Resultado.SCAN_ONLY
+    else:
+        resultado = VerificacionLog.Resultado.NOT_FOUND
+    
+    # Crear registro
+    verificacion = VerificacionLog.objects.create(
+        codigo_escaneado=codigo_escaneado,
+        formato_codigo=formato_codigo,
+        pieza_buscada=pieza_buscada,
+        codigo_esperado=codigo_esperado,
+        pieza_encontrada=pieza_encontrada,
+        resultado=resultado,
+        usuario=request.user if request.user.is_authenticated else None,
+        ip_origen=anonymize_ip(request.META.get('REMOTE_ADDR', '')),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:256],
+    )
+    
+    # Serializar pieza encontrada si existe
+    pieza_data = None
+    if pieza_encontrada:
+        foto_url = None
+        primera_foto = pieza_encontrada.photos.first() if hasattr(pieza_encontrada, 'photos') else None
+        if primera_foto and primera_foto.image:
+            foto_url = primera_foto.image.url
+        elif pieza_encontrada.image:
+            foto_url = pieza_encontrada.image.url
+        
+        pieza_data = {
+            'id': pieza_encontrada.id,
+            'name': pieza_encontrada.name,
+            'barcode': pieza_encontrada.barcode,
+            'auto': f"{pieza_encontrada.auto.brand_model} {pieza_encontrada.auto.year}" if pieza_encontrada.auto else '',
+            'workshop': pieza_encontrada.workshop.name if pieza_encontrada.workshop else '',
+            'min_value': float(pieza_encontrada.min_value) if pieza_encontrada.min_value else 0,
+            'foto_url': foto_url,
+            'sold': pieza_encontrada.sold,
+        }
+    
+    return JsonResponse({
+        'success': True,
+        'verificacion_id': verificacion.id,
+        'resultado': resultado,
+        'is_match': resultado == VerificacionLog.Resultado.MATCH,
+        'pieza_encontrada': pieza_data,
+    })
+

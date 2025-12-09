@@ -115,6 +115,11 @@ urlpatterns = [
     # Hub de impresora Bluetooth (ventana dedicada)
     path('parts/impresora/hub/', views.printer_hub, name='printer_hub'),
 
+    # Verificador de Código de Barras (ML Kit Scanner)
+    path('verificador/', views.verificador_view, name='verificador'),
+    path('verificador/search/', views.verificador_search, name='verificador_search'),
+    path('verificador/log/', views.verificador_log, name='verificador_log'),
+
     # Asistente para publicaciones externas
     path('parts/publicar/', views.part_publish_redirect, name='part_publish_root'),
     path('parts/publicar/<int:pk>/', views.part_publish_helper, name='part_publish'),

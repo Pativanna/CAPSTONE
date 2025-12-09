@@ -793,3 +793,60 @@ class AlertaSistema(models.Model):
 
     def __str__(self):
         return f"Alerta({self.get_severidad_display()} - {self.tipo})"
+
+
+# === Sistema de Verificación de Inventario ===
+class VerificacionLog(models.Model):
+    """Registro de verificaciones de código de barras.
+    
+    Cada vez que un usuario escanea un código de barras para verificar
+    una pieza, se registra aquí. Útil para:
+    - Auditoría de inventario
+    - Detección de errores de etiquetado
+    - Control de calidad
+    - Trazabilidad
+    """
+    
+    class Resultado(models.TextChoices):
+        MATCH = 'match', 'Coincide'
+        MISMATCH = 'mismatch', 'No coincide'
+        NOT_FOUND = 'not_found', 'Código no encontrado'
+        SCAN_ONLY = 'scan_only', 'Solo escaneo (sin pieza seleccionada)'
+    
+    # Datos del escaneo
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    codigo_escaneado = models.CharField(max_length=100, help_text="Código de barras leído por el escáner")
+    formato_codigo = models.CharField(max_length=50, blank=True, default='', help_text="Formato del código (EAN_13, CODE_128, etc.)")
+    
+    # Pieza buscada (si había una seleccionada)
+    pieza_buscada = models.ForeignKey('Part', null=True, blank=True, on_delete=models.SET_NULL, 
+                                       related_name='verificaciones_buscada',
+                                       help_text="Pieza que el usuario buscaba")
+    codigo_esperado = models.CharField(max_length=100, blank=True, default='', 
+                                        help_text="Código de barras que se esperaba encontrar")
+    
+    # Pieza encontrada (si el código coincide con alguna)
+    pieza_encontrada = models.ForeignKey('Part', null=True, blank=True, on_delete=models.SET_NULL,
+                                          related_name='verificaciones_encontrada',
+                                          help_text="Pieza cuyo código coincide con el escaneado")
+    
+    # Resultado
+    resultado = models.CharField(max_length=20, choices=Resultado.choices, db_index=True)
+    
+    # Contexto
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='verificaciones')
+    ip_origen = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=256, blank=True, default='')
+    
+    class Meta:
+        verbose_name = "Verificación de Inventario"
+        verbose_name_plural = "Verificaciones de Inventario"
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['-timestamp', 'resultado']),
+            models.Index(fields=['codigo_escaneado']),
+        ]
+    
+    def __str__(self):
+        return f"Verificación({self.resultado} - {self.codigo_escaneado[:20]})"
+

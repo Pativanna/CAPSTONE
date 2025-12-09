@@ -8,6 +8,9 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Register ML Kit Scanner plugin BEFORE super.onCreate()
+        registerPlugin(MLKitScannerPlugin.class);
+        
         super.onCreate(savedInstanceState);
         
         // Development configuration: disable WebView cache
