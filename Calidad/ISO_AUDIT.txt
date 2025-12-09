@@ -1,0 +1,195 @@
+================================================================================
+                    AUDITORÍA DE CUMPLIMIENTO ISO
+                    Sistema de Inventario - Transervis
+================================================================================
+Fecha: 2025-12-09
+Versión: 1.0
+Auditor: Sistema Automatizado
+
+================================================================================
+                           RESUMEN EJECUTIVO
+================================================================================
+
+El proyecto cumple con las siguientes normas ISO:
+
+┌──────────────────────┬────────────────────────────────┬──────────┐
+│ NORMA                │ ARCHIVOS RELACIONADOS          │ ESTADO   │
+├──────────────────────┼────────────────────────────────┼──────────┤
+│ ISO/IEC 27001/27002  │ middleware.py, auditoria.py    │ ✅ OK    │
+│ ISO/IEC 27701        │ privacy.py, auditoria.py       │ ✅ OK    │
+│ ISO/IEC 25010        │ tests.py, healthcheck.sh       │ ✅ OK    │
+│ ISO/IEC 20000-1      │ Scripts operativos, Docs       │ ⚠️ PARCIAL│
+│ ISO 9001             │ auditoria.py, audit_alerts.py  │ ✅ OK    │
+│ ISO 9241-171         │ design-system.css, templates   │ ✅ OK    │
+│ ISO 22301            │ backup_db.sh, backups/         │ ✅ OK    │
+└──────────────────────┴────────────────────────────────┴──────────┘
+
+================================================================================
+                    1. ISO/IEC 27001 y 27002 - SEGURIDAD
+================================================================================
+
+UBICACIÓN: parts/middleware.py (266 líneas)
+
+IMPLEMENTADO:
+  ✅ Content-Security-Policy con nonce dinámico
+  ✅ Referrer-Policy: strict-origin-when-cross-origin
+  ✅ Permissions-Policy (camera, microphone, geolocation)
+  ✅ Cross-Origin-Opener-Policy: same-origin
+  ✅ Hashes SHA256 para estilos inline
+  ✅ Detección de sesiones expiradas (AJAX/Turbo)
+  ✅ Manejo de errores como JSON (PermissionDenied, Http404)
+
+NO VERIFICABLE (requiere revisión manual):
+  ⚪ Configuración SSL/TLS en nginx
+  ⚪ Hardening de headers en producción
+  ⚪ Rotación de claves y secretos
+
+================================================================================
+                    2. ISO/IEC 27701 - PRIVACIDAD
+================================================================================
+
+UBICACIÓN: parts/utils/privacy.py (19 líneas)
+
+IMPLEMENTADO:
+  ✅ Anonimización de IPv4 (preserva /24)
+  ✅ Anonimización de IPv6 (preserva /48)
+  ✅ Usado en auditoria.py y activity-logger.js
+  ✅ Variables configurables: LOG_RETENTION_DAYS, VOICE_LOG_RETENTION_DAYS
+  ✅ Logs estructurados con request/correlation-id
+
+NO VERIFICABLE:
+  ⚪ Política de retención efectiva en producción
+  ⚪ Consentimiento de usuarios (GDPR si aplica)
+
+================================================================================
+                    3. ISO/IEC 25010 - CALIDAD DE SOFTWARE
+================================================================================
+
+UBICACIÓN: parts/tests.py (340 líneas)
+
+CLASES DE TEST IMPLEMENTADAS:
+  ✅ NavigationAccessTests - Acceso a páginas críticas
+  ✅ ReportPermissionTests - Permisos PDF/email
+  ✅ AdminOnlyViewsTests - Solo admin accede logs
+  ✅ PartImageUploadTests - Subida de imágenes
+  ✅ WebRTCPhotoLabelTests - Etiquetas y WebSocket
+  ✅ AjaxPermissionsTests - Permisos AJAX por rol
+  ✅ VoiceExtractionTests - Ollama mock
+  ✅ OpenAIWebRTCTests - Flujo OpenAI/WebRTC
+
+SMOKE TEST: scripts/healthcheck.sh
+  ✅ Verifica /parts/ y /workshops/
+  ✅ Verifica presencia de <turbo-frame>
+  ✅ Integrable en CI/CD
+
+NO VERIFICABLE:
+  ⚪ Cobertura de código (no hay reporte)
+  ⚪ Tests de rendimiento/carga
+  ⚪ Tests E2E en dispositivo móvil
+
+================================================================================
+                    4. ISO/IEC 20000-1 - GESTIÓN DE SERVICIOS
+================================================================================
+
+SCRIPTS OPERATIVOS:
+  ✅ docker-manage.ps1 - Gestión de contenedores Windows
+  ✅ verificar_redis.sh - Verificación de Redis
+  ✅ aplicar_cambios.sh - Deploy automatizado
+  ✅ build-apk-docker.sh - Build de APK
+
+DOCUMENTACIÓN DE PROCEDIMIENTOS:
+  ⚠️ Documentacion/Procedimientos/README.md - VACÍO
+     Estructura lista pero sin procedimientos registrados
+     ACCIÓN REQUERIDA: Documentar procedimientos de cambio
+
+================================================================================
+                    5. ISO 9001 - GESTIÓN DE CALIDAD
+================================================================================
+
+UBICACIÓN: parts/auditoria.py (514 líneas)
+
+SISTEMA DE AUDITORÍA:
+  ✅ Clase AuditLogger con métodos estáticos
+  ✅ Trazabilidad: request_id, correlation_id, IP, user_agent
+  ✅ Eventos específicos: part_created, part_updated, part_deleted
+  ✅ Soporte códigos de barras: barcode_generated, barcode_printed
+  ✅ Soporte voz: voice_session_start/end, voice_command_success/error
+  ✅ Decorador @audit_action para auditoría automática
+  ✅ Context manager audit_context para correlation_id
+
+ALERTAS: parts/audit_alerts.py (76 líneas)
+  ✅ bulk_delete_piezas - ≥5 eliminaciones en 10 min
+  ✅ voice_command_failures - ≥3 errores en 5 min
+
+DEFECTO MENOR:
+  🟡 Decorador @audit_action duplicado en línea ~108 (cosmético)
+
+================================================================================
+                    6. ISO 9241-171 - ACCESIBILIDAD
+================================================================================
+
+UBICACIÓN: parts/static/parts/css/design-system.css (~130 líneas)
+
+IMPLEMENTADO:
+  ✅ Variables CSS para focus ring (--focus-ring-color, --focus-ring)
+  ✅ Soporte prefers-reduced-motion
+  ✅ Clase .sr-only para screen readers
+  ✅ Focus visible en inputs, botones, selects
+  ✅ Skeleton loading con animación
+
+USO DE ARIA EN TEMPLATES:
+  ✅ part_list.html - aria-live="polite", role="status"
+  ✅ auto_list.html - aria-live="assertive", aria-busy
+  ✅ workshop_list.html - aria-live="polite"
+  ✅ logs_page.html - role="log"
+
+NO VERIFICABLE (requiere prueba manual):
+  ⚪ Contraste de colores WCAG 2.1 AA
+  ⚪ Navegación solo con teclado
+  ⚪ Compatibilidad con screen readers (NVDA, VoiceOver)
+
+================================================================================
+                    7. ISO 22301 - CONTINUIDAD DEL NEGOCIO
+================================================================================
+
+UBICACIÓN: scripts/backup_db.sh
+
+IMPLEMENTADO:
+  ✅ Backup versionado de db.sqlite3
+  ✅ Opción de compresión
+  ✅ Destino en /backups
+
+PURGA: scripts/purge_logs.sh
+  ✅ Ejecuta manage.py cleanup_logs
+  ✅ Respeta LOG_RETENTION_DAYS y VOICE_LOG_RETENTION_DAYS
+
+NO VERIFICABLE:
+  ⚪ Programación de backups (cron)
+  ⚪ Pruebas de restauración
+  ⚪ Offsite backup
+
+================================================================================
+                           ACCIONES REQUERIDAS
+================================================================================
+
+PRIORIDAD ALTA:
+  1. Documentar procedimientos en Documentacion/Procedimientos/
+  2. Configurar backup automático (cron)
+
+PRIORIDAD MEDIA:
+  3. Corregir @audit_action duplicado en auditoria.py
+  4. Agregar reporte de cobertura de tests
+  5. Documentar proceso de rollback
+
+PRIORIDAD BAJA:
+  6. Tests E2E en dispositivo móvil
+  7. Auditoría de contraste WCAG
+
+================================================================================
+                    PRÓXIMA AUDITORÍA: 2026-01-09
+================================================================================
+
+NOTA: Este archivo se debe leer SIEMPRE antes de implementar cambios.
+Ubicación: /home/ubuntu/car_inventory/Calidad/ISO_AUDIT.txt
+
+Última actualización: 2025-12-09

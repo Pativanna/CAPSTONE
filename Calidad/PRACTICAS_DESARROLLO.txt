@@ -1,0 +1,228 @@
+================================================================================
+              PRÁCTICAS DE DESARROLLO - LECTURA OBLIGATORIA
+              Sistema de Inventario - Transervis
+================================================================================
+Fecha: 2025-12-09
+Versión: 1.0
+
+================================================================================
+⚠️  INSTRUCCIÓN PARA IA/COPILOT: LEER SIEMPRE ANTES DE CADA IMPLEMENTACIÓN
+================================================================================
+
+Antes de implementar cualquier cambio, el asistente DEBE:
+1. Leer /home/ubuntu/car_inventory/Calidad/ISO_AUDIT.txt
+2. Leer este archivo (PRACTICAS_DESARROLLO.txt)
+3. Revisar el patrón existente en el código relacionado
+4. Proponer los cambios ANTES de implementar
+
+================================================================================
+                    1. ARQUITECTURA DEL PROYECTO
+================================================================================
+
+STACK TECNOLÓGICO:
+  - Backend: Django 4.x + Django Channels (WebSocket)
+  - Frontend: Turbo (Hotwired) + Vanilla JS
+  - Mobile: Capacitor 7.x (WebView híbrido)
+  - Base de datos: SQLite (desarrollo), PostgreSQL (producción recomendado)
+  - Cache: Redis
+  - Server: Daphne (ASGI) + Nginx
+
+FLUJO DE CARGA:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │ APK (Capacitor WebView)                                             │
+  │   └── Carga contenido desde: https://www.transervis.cl              │
+  │         └── Django sirve HTML/CSS/JS                                │
+  │               └── Turbo maneja navegación SPA                       │
+  │                     └── Plugins nativos via Capacitor bridge        │
+  └─────────────────────────────────────────────────────────────────────┘
+
+IMPORTANTE:
+  - El APK NO contiene el código de la app, solo el contenedor nativo
+  - Todo cambio de frontend requiere: ./aplicar_cambios.sh en servidor
+  - Los plugins nativos deben registrarse en MainActivity.java
+
+================================================================================
+                    2. PATRÓN DE CARGA TURBO
+================================================================================
+
+REGLA: Todo script de página debe seguir este patrón (ver part-list.js):
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ (function() {                                                               │
+│   'use strict';                                                             │
+│                                                                             │
+│   let initialized = false;  // EVITAR DOBLE INICIALIZACIÓN                  │
+│                                                                             │
+│   function onReady(callback) {                                              │
+│     const fire = () => {                                                    │
+│       if (!document.getElementById('miContainer')) return;  // VERIFICAR    │
+│       callback();                                                           │
+│     };                                                                      │
+│     if (document.readyState === 'loading') {                                │
+│       document.addEventListener('DOMContentLoaded', fire, { once: true });  │
+│     } else {                                                                │
+│       fire();                                                               │
+│     }                                                                       │
+│     document.addEventListener('page:ready', fire);                          │
+│     document.addEventListener('turbo:load', fire);                          │
+│     document.addEventListener('turbo:render', fire);                        │
+│     document.addEventListener('turbo:frame-load', fire);                    │
+│   }                                                                         │
+│                                                                             │
+│   function init() {                                                         │
+│     if (initialized) return;                                                │
+│     initialized = true;                                                     │
+│     // ... código de inicialización                                         │
+│   }                                                                         │
+│                                                                             │
+│   function cleanup() {                                                      │
+│     initialized = false;                                                    │
+│     // ... limpiar listeners, timers, etc.                                  │
+│   }                                                                         │
+│                                                                             │
+│   onReady(init);                                                            │
+│   document.addEventListener('turbo:before-render', cleanup);                │
+│   document.addEventListener('turbo:before-cache', cleanup);                 │
+│ })();                                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+UBICACIÓN DEL SCRIPT EN TEMPLATE:
+  - DENTRO del turbo-frame, NO en extra_scripts
+  - Con atributos: defer, data-page-script, data-turbo-track="reload"
+
+Ejemplo correcto:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ {% block content %}                                                         │
+│ <turbo-frame id="app-frame">                                                │
+│   <!-- contenido -->                                                        │
+│ <script src="{% static 'parts/js/mi-script.js' %}"                          │
+│         defer                                                               │
+│         nonce="{{ csp_nonce|default:'' }}"                                  │
+│         data-page-script="parts:mi-pagina"                                  │
+│         data-turbo-track="reload"></script>                                 │
+│ </turbo-frame>                                                              │
+│ {% endblock %}                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                    3. PLUGINS NATIVOS (CAPACITOR)
+================================================================================
+
+CREAR UN PLUGIN:
+
+1. Archivo Java: android/app/src/main/java/com/carinventory/app/MiPlugin.java
+   - Usar anotaciones @CapacitorPlugin, @PluginMethod, @PermissionCallback
+   - NO sobrescribir métodos de Plugin con visibilidad más restrictiva
+   - Usar nombres únicos para métodos privados (ej: checkCameraPermission, NO hasRequiredPermissions)
+
+2. Registrar en MainActivity.java:
+   registerPlugin(MiPlugin.class);  // ANTES de super.onCreate()
+
+3. Dependencias en android/app/build.gradle:
+   implementation 'com.example:libreria:version'
+
+4. Permisos en AndroidManifest.xml si aplica
+
+5. Bridge JS en parts/static/parts/js/capacitor-remote-bridge.js
+   O usar window.Capacitor.Plugins.MiPlugin directamente
+
+================================================================================
+                    4. AUDITORÍA (ISO 9001)
+================================================================================
+
+TODO CAMBIO SIGNIFICATIVO DEBE SER AUDITADO:
+
+Usar parts/auditoria.py:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ from parts.auditoria import AuditLogger                                     │
+│                                                                             │
+│ # Evento genérico                                                           │
+│ AuditLogger.log(request, 'mi_evento', 'descripción', details={...})         │
+│                                                                             │
+│ # Eventos específicos                                                       │
+│ AuditLogger.part_created(request, part)                                     │
+│ AuditLogger.part_updated(request, part, changes)                            │
+│ AuditLogger.part_deleted(request, part)                                     │
+│ AuditLogger.barcode_generated(request, part, barcode)                       │
+│                                                                             │
+│ # Decorador para vistas                                                     │
+│ @audit_action('mi_accion', 'descripción')                                   │
+│ def mi_vista(request):                                                      │
+│     ...                                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                    5. PROCESO DE DEPLOY
+================================================================================
+
+FLUJO OBLIGATORIO:
+
+1. Hacer cambios en el código
+2. git add -A && git commit -m "tipo: descripción"
+3. git push origin traspaso-app
+4. Esperar GitHub Actions (build APK) - ~5-10 min
+5. ./aplicar_cambios.sh en servidor (OBLIGATORIO para frontend)
+6. Descargar e instalar nueva APK si hubo cambios nativos
+
+TIPOS DE COMMIT (Conventional Commits):
+  - feat: Nueva funcionalidad
+  - fix: Corrección de bug
+  - docs: Documentación
+  - style: Formato (no afecta código)
+  - refactor: Refactorización
+  - test: Tests
+  - chore: Mantenimiento
+
+================================================================================
+                    6. TESTING
+================================================================================
+
+ANTES DE COMMIT:
+  python manage.py test parts  # Tests unitarios
+
+DESPUÉS DE DEPLOY:
+  BASE_URL=https://www.transervis.cl scripts/healthcheck.sh
+
+================================================================================
+                    7. ERRORES COMUNES Y SOLUCIONES
+================================================================================
+
+ERROR: "Unable to find plugin: XxxPlugin"
+CAUSA: APK actualizada pero servidor no
+SOLUCIÓN: ./aplicar_cambios.sh
+
+ERROR: "hasRequiredPermissions() cannot override..."
+CAUSA: Método privado con mismo nombre que método público de Plugin
+SOLUCIÓN: Renombrar método (ej: checkCameraPermission)
+
+ERROR: Script no se ejecuta al navegar con Turbo
+CAUSA: Script en extra_scripts en lugar de dentro del turbo-frame
+SOLUCIÓN: Mover script dentro del content block, usar patrón onReady()
+
+ERROR: Doble inicialización de scripts
+CAUSA: No hay guard de inicialización
+SOLUCIÓN: Usar variable `initialized` y verificar antes de init()
+
+================================================================================
+                    8. CHECKLIST PRE-IMPLEMENTACIÓN
+================================================================================
+
+□ ¿Leí ISO_AUDIT.txt?
+□ ¿Leí PRACTICAS_DESARROLLO.txt?
+□ ¿Revisé código similar existente?
+□ ¿El cambio sigue el patrón Turbo?
+□ ¿Agregué auditoría si es necesario?
+□ ¿El commit sigue Conventional Commits?
+□ ¿Ejecuté ./aplicar_cambios.sh después del push?
+
+================================================================================
+                    9. CONTACTO Y SOPORTE
+================================================================================
+
+Repositorio: github.com/Pativanna/CAPSTONE
+Branch principal: traspaso-app
+Producción: https://www.transervis.cl
+
+================================================================================
+Última actualización: 2025-12-09
+================================================================================

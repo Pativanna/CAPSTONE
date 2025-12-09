@@ -1,5 +1,13 @@
 # NOTAS DE DEPLOY - APK y Servidor
 
+## ⚠️ INSTRUCCIÓN PARA IA/COPILOT
+
+**ANTES de implementar cualquier cambio, DEBES leer:**
+1. `Calidad/ISO_AUDIT.txt` - Auditoría de cumplimiento ISO
+2. `Calidad/PRACTICAS_DESARROLLO.txt` - Patrones y buenas prácticas
+
+---
+
 ## Error Común: "Unable to find plugin: ZXingScanner"
 
 ### Causa
@@ -42,4 +50,14 @@ Todo el HTML/JS/CSS se sirve desde el servidor Django.
 
 ---
 **Fecha:** 2025-12-09
-**Última actualización:** Eliminación total de scanner (ZXing/MLKit)
+**Última actualización:** Implementación de Lector de Códigos de Barras con ML Kit
+
+---
+
+## Archivos de Calidad
+
+| Archivo | Propósito |
+|---------|-----------|
+| `ISO_AUDIT.txt` | Auditoría de cumplimiento de normas ISO |
+| `PRACTICAS_DESARROLLO.txt` | Patrones de código y buenas prácticas |
+| `NOTAS_DEPLOY.md` | Este archivo - Proceso de deploy |
