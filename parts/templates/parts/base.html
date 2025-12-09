@@ -56,11 +56,6 @@
         data-style-watch="primary"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}">
-  <link href="{% static 'parts/css/scan-verify.css' %}?v=20250310f"
-        rel="stylesheet"
-        data-style-watch="primary"
-        data-turbo-track="reload"
-        nonce="{{ csp_nonce|default:'' }}">
   <link href="{% static 'parts/css/hands-free.css' %}"
         rel="stylesheet"
         data-style-watch="primary"
@@ -151,13 +146,6 @@
                href="{% url 'parts:dashboard' %}"
                data-turbo-frame="app-frame">
               <i class="fas fa-chart-line"></i> Dashboard
-            </a>
-          </li>
-          <li class="nav-item mx-2">
-            <a class="nav-link"
-               href="{% url 'parts:scan_verify' %}"
-               data-turbo-frame="app-frame">
-              <i class="fas fa-barcode"></i> Verificador
             </a>
           </li>
           {% if user.profile.is_admin %}

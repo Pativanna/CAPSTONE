@@ -119,3 +119,5 @@ android/.gradle/
 android/local.properties
 ios/App/build/
 ios/App/Pods/
+*.apk
+apk-download/

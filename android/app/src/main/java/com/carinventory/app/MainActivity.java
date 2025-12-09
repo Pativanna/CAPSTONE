@@ -8,11 +8,6 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        // IMPORTANT: Register plugins BEFORE super.onCreate()
-        // The bridge is created in super.onCreate() -> load()
-        // After that, bridgeBuilder.addPlugin() has no effect
-        registerPlugin(MLKitScannerPlugin.class);
-        
         super.onCreate(savedInstanceState);
         
         // Development configuration: disable WebView cache

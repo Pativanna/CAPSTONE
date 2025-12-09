@@ -461,15 +461,6 @@ LOGGING = {
             'level': 'INFO',
             'filters': ['request_context'],
         },
-        'scanner_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(LOG_DIR / 'scanner.log'),
-            'maxBytes': 5 * 1024 * 1024,
-            'backupCount': 3,
-            'encoding': 'utf-8',
-            'formatter': 'simple',
-            'level': 'INFO',
-        },
     },
     'loggers': {
         'django': {
@@ -489,11 +480,6 @@ LOGGING = {
         },
         'parts.bluetooth': {
             'handlers': ['console', 'app_file', 'bluetooth_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'parts.views.scanner_logs': {
-            'handlers': ['scanner_file'],
             'level': 'INFO',
             'propagate': False,
         },
@@ -525,13 +511,6 @@ WINDOWS_PATHS = {
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", None)
 OPENAI_TIMEOUT_SECONDS = int(os.environ.get("OPENAI_TIMEOUT_SECONDS", "60"))
 OPENAI_MAX_RETRIES = int(os.environ.get("OPENAI_MAX_RETRIES", "2"))
-
-# Firebase ML Kit (barcode) proxy configuration
-FIREBASE_MLKIT_BARCODE_URL = os.environ.get('FIREBASE_MLKIT_BARCODE_URL', '').strip()
-FIREBASE_MLKIT_API_KEY = os.environ.get('FIREBASE_MLKIT_API_KEY', '').strip()
-FIREBASE_MLKIT_TIMEOUT = int(os.environ.get('FIREBASE_MLKIT_TIMEOUT', '12'))
-FIREBASE_MLKIT_MIN_CONFIDENCE = float(os.environ.get('FIREBASE_MLKIT_MIN_CONFIDENCE', '0.7'))
-FIREBASE_MLKIT_ENABLED = bool(FIREBASE_MLKIT_BARCODE_URL and FIREBASE_MLKIT_API_KEY)
 
 # Voice normalization strategy
 # Prefer delegating artifact correction to the LLM; also enable manual rules as a safety net

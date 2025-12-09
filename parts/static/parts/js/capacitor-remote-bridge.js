@@ -189,12 +189,6 @@
     return plugin;
   };
   
-  // Register our custom plugins - these must match the Java @CapacitorPlugin names
-  const customPlugins = ['MLKitScanner'];
-  customPlugins.forEach(function(name) {
-    cap.registerPlugin(name);
-  });
-  
   console.log('[CapacitorBridge] Initialized. Plugins:', Object.keys(cap.Plugins));
   console.log('[CapacitorBridge] PluginHeaders:', JSON.stringify(cap.PluginHeaders));
   

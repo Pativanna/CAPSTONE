@@ -2,7 +2,7 @@
   "name": "car_inventory",
   "version": "1.0.0",
   "description": "Sistema de inventario con reconocimiento de voz, WebRTC, impresión térmica Bluetooth y API REST. Desarrollado con Django Channels, Vosk, OpenAI Whisper y WebSocket.",
-  "main": "debug_scanner.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

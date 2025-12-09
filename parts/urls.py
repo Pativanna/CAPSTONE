@@ -4,7 +4,6 @@ from . import auth_views
 from . import vosk_views
 from . import barcode_views  # Nuevo: vistas de códigos de barras
 from . import views as parts_views
-from . import scanner_logs_views
 
 # Namespace de la aplicación
 app_name = 'parts'
@@ -63,14 +62,6 @@ urlpatterns = [
     path('parts/vosk-api/transcribe-hybrid', vosk_views.transcribe_hybrid, name='transcribe_hybrid'),
     path('parts/voice-search/transcribe/', vosk_views.voice_search_transcribe, name='voice_search_transcribe'),
     path('parts/voice-search/transcribe-openai/', vosk_views.voice_search_transcribe_openai, name='voice_search_transcribe_openai'),
-    path('parts/scan-verify/', views.scan_verify_view, name='scan_verify'),
-    path('parts/scan-verify/search/', views.scan_verify_search, name='scan_verify_search'),
-    path('parts/scan-verify/log/', views.scan_verify_log, name='scan_verify_log'),
-    path('parts/scan-verify/mlkit/', views.scan_verify_mlkit, name='scan_verify_mlkit'),
-    
-    # Scanner logs
-    path('api/scanner-logs/', scanner_logs_views.receive_scanner_logs, name='receive_scanner_logs'),
-    path('parts/scanner-logs/', scanner_logs_views.view_scanner_logs, name='view_scanner_logs'),
     
     path('parts/api/catalog-cache/', views.parts_catalog_cache, name='parts_catalog_cache'),
     # Endpoints adicionales se habilitarán cuando el módulo esté listo
