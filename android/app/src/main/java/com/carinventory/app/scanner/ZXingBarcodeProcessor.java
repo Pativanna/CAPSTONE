@@ -14,7 +14,7 @@ import com.google.zxing.NotFoundException;
 import com.google.zxing.Result;
 import com.google.zxing.ResultPoint;
 import com.google.zxing.common.HybridBinarizer;
-import com.google.zxing.common.PlanarYUVLuminanceSource;
+import com.google.zxing.PlanarYUVLuminanceSource;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
