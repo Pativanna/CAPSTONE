@@ -78,8 +78,8 @@ class ZXingNativeScanner {
     
     if (!this.plugin) {
       console.log('[ZXingScanner] ✅ Attaching native plugin for first time');
-      console.log('[ZXingScanner] Plugin object:', plugins.ZXingScanner);
-      console.log('[ZXingScanner] Plugin methods:', Object.keys(plugins.ZXingScanner));
+      // Note: Don't try to log Proxy objects or call Object.keys() on them - causes errors
+      console.log('[ZXingScanner] Plugin available: true');
     }
     
     this.plugin = plugins.ZXingScanner;

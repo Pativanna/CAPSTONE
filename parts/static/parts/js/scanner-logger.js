@@ -55,23 +55,43 @@
       
       const self = this;
       
+      // Safe stringify function for logging (handles Proxy objects)
+      const safeStringify = function(args) {
+        try {
+          return args.map(function(arg) {
+            if (arg === null) return 'null';
+            if (arg === undefined) return 'undefined';
+            if (typeof arg === 'string') return arg;
+            if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+            try {
+              return JSON.stringify(arg);
+            } catch (e) {
+              // Proxy or circular reference - use type info
+              return '[Object: ' + (typeof arg) + ']';
+            }
+          }).join(' ');
+        } catch (e) {
+          return '[Error stringifying args]';
+        }
+      };
+      
       console.log = function(...args) {
-        self.addLog('info', args.join(' '));
+        self.addLog('info', safeStringify(args));
         originalLog.apply(console, args);
       };
       
       console.error = function(...args) {
-        self.addLog('error', args.join(' '));
+        self.addLog('error', safeStringify(args));
         originalError.apply(console, args);
       };
       
       console.warn = function(...args) {
-        self.addLog('warning', args.join(' '));
+        self.addLog('warning', safeStringify(args));
         originalWarn.apply(console, args);
       };
       
       console.info = function(...args) {
-        self.addLog('info', args.join(' '));
+        self.addLog('info', safeStringify(args));
         originalInfo.apply(console, args);
       };
     }
@@ -79,6 +99,8 @@
     addLog(level, message) {
       // Filtrar solo logs relevantes del scanner
       if (!message.includes('[scanner]') && 
+          !message.includes('[ZXingScanner]') &&
+          !message.includes('[CapacitorBridge]') &&
           !message.includes('[MLKit]') && 
           !message.includes('Barcode') &&
           !message.includes('Camera')) {
