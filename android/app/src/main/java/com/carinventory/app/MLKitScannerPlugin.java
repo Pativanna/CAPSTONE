@@ -62,7 +62,7 @@ public class MLKitScannerPlugin extends Plugin {
     public void startScan(PluginCall call) {
         Log.i(TAG, "📷 startScan called");
         
-        if (!hasRequiredPermissions()) {
+        if (!checkCameraPermission()) {
             Log.i(TAG, "Requesting camera permission...");
             requestAllPermissions(call, "handleCameraPermission");
             return;
@@ -286,11 +286,11 @@ public class MLKitScannerPlugin extends Plugin {
     public void isAvailable(PluginCall call) {
         JSObject result = new JSObject();
         result.put("available", true);
-        result.put("hasPermission", hasRequiredPermissions());
+        result.put("hasPermission", checkCameraPermission());
         call.resolve(result);
     }
 
-    private boolean hasRequiredPermissions() {
+    private boolean checkCameraPermission() {
         return ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) 
             == PackageManager.PERMISSION_GRANTED;
     }
