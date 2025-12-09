@@ -2,7 +2,6 @@ package com.carinventory.app;
 
 import android.Manifest;
 import android.graphics.Color;
-import android.media.Image;
 import android.util.Log;
 import android.util.Size;
 import android.util.TypedValue;
@@ -33,26 +32,18 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
-import com.carinventory.app.scanner.ZXingBarcodeProcessor;
 import com.carinventory.app.scanner.BarcodeProcessor;
-import com.carinventory.app.scanner.FrameMetadata;
+import com.carinventory.app.scanner.MLKitBarcodeProcessor;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * ZXing Scanner Plugin for Capacitor
- * Barcode scanning using Google ZXing library
- * 
- * Replacement for MLKit scanner with smaller APK footprint
- * ZXing core: ~300-500 KB vs MLKit: ~8-10 MB
- * 
- * @see ANALISIS_MLKIT_ZXING.md
- * @see Documentacion/Procedimientos/PROC_20251205_1800_implementacion_zxing.md
+ * ML Kit Scanner Plugin for Capacitor
+ * Barcode scanning using ML Kit on-device (no Play Services dependency)
  */
 @CapacitorPlugin(
     name = "ZXingScanner",
@@ -87,16 +78,16 @@ public class ZXingScannerPlugin extends Plugin {
     @Override
     public void load() {
         try {
-            Log.i(TAG, "ZXingScanner plugin loading...");
+            Log.i(TAG, "MLKit scanner plugin loading...");
             cameraExecutor = Executors.newSingleThreadExecutor();
             
-            // Initialize barcode processor with ZXing
-            barcodeProcessor = new ZXingBarcodeProcessor(this::onBarcodeDetected);
+            // Initialize barcode processor with ML Kit
+            barcodeProcessor = new MLKitBarcodeProcessor(this::onBarcodeDetected);
             
-            Log.i(TAG, "✅ ZXingScanner plugin loaded successfully");
+            Log.i(TAG, "✅ MLKit scanner plugin loaded successfully");
         } catch (Exception e) {
-            Log.e(TAG, "❌ Failed to initialize ZXingScanner plugin", e);
-            throw new RuntimeException("Failed to initialize ZXingScanner plugin", e);
+            Log.e(TAG, "❌ Failed to initialize MLKit scanner plugin", e);
+            throw new RuntimeException("Failed to initialize MLKit scanner plugin", e);
         }
     }
     
@@ -148,7 +139,7 @@ public class ZXingScannerPlugin extends Plugin {
         
         getActivity().runOnUiThread(() -> {
             try {
-                Log.i(TAG, "🎬 Starting ZXing barcode scan...");
+                Log.i(TAG, "🎬 Starting MLKit barcode scan...");
                 
                 // Reset scan count
                 scanCount = 0;
@@ -227,7 +218,7 @@ public class ZXingScannerPlugin extends Plugin {
                 result.put("overlayVisible", true);
                 call.resolve(result);
                 
-                Log.i(TAG, "✅ ZXing scan UI created successfully");
+                Log.i(TAG, "✅ MLKit scan UI created successfully");
                 
             } catch (Exception e) {
                 Log.e(TAG, "❌ Error starting scan", e);
@@ -333,11 +324,15 @@ public class ZXingScannerPlugin extends Plugin {
     }
     
     private void stopScanInternal() {
-        Log.i(TAG, "⏹️ Stopping ZXing scan...");
+        Log.i(TAG, "⏹️ Stopping MLKit scan...");
         
         if (cameraProvider != null) {
             cameraProvider.unbindAll();
             cameraProvider = null;
+        }
+
+        if (barcodeProcessor != null) {
+            barcodeProcessor.stop();
         }
         
         if (scannerContainer != null) {
@@ -349,11 +344,11 @@ public class ZXingScannerPlugin extends Plugin {
         }
         
         isScanning = false;
-        Log.i(TAG, "✅ ZXing scan stopped");
+        Log.i(TAG, "✅ MLKit scan stopped");
     }
     
     private void startCamera() {
-        Log.i(TAG, "📸 startCamera() called");
+            Log.i(TAG, "📸 startCamera() called");
         
         try {
             ListenableFuture<ProcessCameraProvider> cameraProviderFuture = 
@@ -399,7 +394,7 @@ public class ZXingScannerPlugin extends Plugin {
             preview.setSurfaceProvider(previewView.getSurfaceProvider());
             
             Log.i(TAG, "📸 Building ImageAnalysis...");
-            // Image Analysis for ZXing
+            // Image Analysis for ML Kit
             imageAnalysis = new ImageAnalysis.Builder()
                 .setTargetResolution(new Size(1280, 720))
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -441,34 +436,14 @@ public class ZXingScannerPlugin extends Plugin {
             imageProxy.close();
             return;
         }
-        
+
         try {
-            // Convert ImageProxy to byte array for ZXing
-            Image image = imageProxy.getImage();
-            if (image == null) {
+            boolean closedByProcessor = barcodeProcessor.processImageProxy(imageProxy);
+            if (!closedByProcessor) {
                 imageProxy.close();
-                return;
             }
-            
-            // Get Y plane (luminance) for barcode detection
-            Image.Plane[] planes = image.getPlanes();
-            ByteBuffer buffer = planes[0].getBuffer();
-            
-            int rotation = imageProxy.getImageInfo().getRotationDegrees();
-            
-            // Create FrameMetadata
-            FrameMetadata frameMetadata = new FrameMetadata.Builder()
-                .setWidth(imageProxy.getWidth())
-                .setHeight(imageProxy.getHeight())
-                .setRotation(rotation)
-                .build();
-            
-            // Process with ZXing
-            barcodeProcessor.processByteBuffer(buffer, frameMetadata);
-            
         } catch (Exception e) {
             Log.e(TAG, "Error processing image", e);
-        } finally {
             imageProxy.close();
         }
     }
@@ -522,6 +497,9 @@ public class ZXingScannerPlugin extends Plugin {
         }
         if (cameraProvider != null) {
             cameraProvider.unbindAll();
+        }
+        if (barcodeProcessor != null) {
+            barcodeProcessor.stop();
         }
         super.handleOnDestroy();
     }
