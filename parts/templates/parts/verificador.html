@@ -393,12 +393,10 @@
   </div>
   
 </div>
+<script src="{% static 'parts/js/verificador.js' %}?v=20251209b"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:verificador"
+        data-turbo-track="reload"></script>
 </turbo-frame>
-{% endblock %}
-
-{% block extra_scripts %}
-<script src="{% static 'parts/js/verificador.js' %}?v=20251209a" 
-        data-page-script
-        data-turbo-track="reload"
-        nonce="{{ csp_nonce|default:'' }}"></script>
 {% endblock %}

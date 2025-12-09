@@ -3,9 +3,14 @@
  * 
  * Integra con el plugin nativo MLKitScanner para escanear códigos
  * y verificar piezas del inventario.
+ * 
+ * Sigue patrón de carga compatible con Turbo (ISO 25010 - Mantenibilidad)
  */
 (function() {
   'use strict';
+
+  // Evitar múltiples inicializaciones
+  let initialized = false;
   
   // Estado del verificador
   const state = {
@@ -18,9 +23,39 @@
   
   // Elementos del DOM
   let elements = {};
+
+  /**
+   * Patrón onReady compatible con Turbo
+   * Escucha múltiples eventos para asegurar inicialización correcta
+   */
+  function onReady(callback) {
+    const fire = () => {
+      // Solo inicializar si estamos en la página del verificador
+      if (!document.getElementById('verificadorContainer')) {
+        return;
+      }
+      callback();
+    };
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fire, { once: true });
+    } else {
+      fire();
+    }
+    document.addEventListener('page:ready', fire);
+    document.addEventListener('turbo:load', fire);
+    document.addEventListener('turbo:render', fire);
+    document.addEventListener('turbo:frame-load', fire);
+  }
   
   // Inicializar cuando el DOM esté listo
   function init() {
+    // Evitar doble inicialización
+    if (initialized && elements.container) {
+      console.log('[Verificador] Ya inicializado, omitiendo');
+      return;
+    }
+    
     console.log('[Verificador] Inicializando...');
     
     // Cachear elementos
@@ -42,6 +77,13 @@
       scannerTargetCode: document.getElementById('scannerTargetCode'),
       scannerLastRead: document.getElementById('scannerLastRead'),
     };
+    
+    if (!elements.container) {
+      console.log('[Verificador] Container no encontrado, no es página del verificador');
+      return;
+    }
+    
+    initialized = true;
     
     // Verificar si estamos en contexto nativo
     checkNativeContext();
@@ -465,21 +507,22 @@
     return div.innerHTML;
   }
   
-  // Inicializar cuando esté listo
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-  
-  // Re-inicializar en navegación Turbo
-  document.addEventListener('turbo:load', init);
-  
-  // Limpiar al salir de la página
-  document.addEventListener('turbo:before-render', function() {
+  /**
+   * Cleanup al salir de la página
+   */
+  function cleanup() {
     if (state.isScanning) {
       closeScanner();
     }
-  });
+    initialized = false;
+    elements = {};
+  }
+
+  // Usar patrón onReady compatible con Turbo
+  onReady(init);
+  
+  // Limpiar al salir de la página
+  document.addEventListener('turbo:before-render', cleanup);
+  document.addEventListener('turbo:before-cache', cleanup);
   
 })();
