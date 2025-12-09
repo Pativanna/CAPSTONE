@@ -46,9 +46,9 @@ jobs:
       with:
         python-version: '3.10'
         
-    - name: Install Python dependencies
+    - name: Install Python dependencies (minimal build set)
       run: |
-        pip install -r requirements.txt
+        pip install -r requirements-android-build.txt
         
     - name: Collect static files
       env:
