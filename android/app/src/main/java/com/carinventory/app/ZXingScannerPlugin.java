@@ -33,7 +33,7 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import com.carinventory.app.scanner.BarcodeProcessor;
-import com.carinventory.app.scanner.MLKitBarcodeProcessor;
+import com.carinventory.app.scanner.ZXingBarcodeProcessor;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -42,8 +42,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * ML Kit Scanner Plugin for Capacitor
- * Barcode scanning using ML Kit on-device (no Play Services dependency)
+ * Scanner ZXing nativo para Capacitor usando CameraX.
  */
 @CapacitorPlugin(
     name = "ZXingScanner",
@@ -78,16 +77,16 @@ public class ZXingScannerPlugin extends Plugin {
     @Override
     public void load() {
         try {
-            Log.i(TAG, "MLKit scanner plugin loading...");
+            Log.i(TAG, "ZXing scanner plugin loading...");
             cameraExecutor = Executors.newSingleThreadExecutor();
             
-            // Initialize barcode processor with ML Kit
-            barcodeProcessor = new MLKitBarcodeProcessor(this::onBarcodeDetected);
+            // Inicializa procesador ZXing (sin dependencias de ML Kit)
+            barcodeProcessor = new ZXingBarcodeProcessor(this::onBarcodeDetected);
             
-            Log.i(TAG, "✅ MLKit scanner plugin loaded successfully");
+            Log.i(TAG, "✅ ZXing scanner plugin loaded successfully");
         } catch (Exception e) {
-            Log.e(TAG, "❌ Failed to initialize MLKit scanner plugin", e);
-            throw new RuntimeException("Failed to initialize MLKit scanner plugin", e);
+            Log.e(TAG, "❌ Failed to initialize ZXing scanner plugin", e);
+            throw new RuntimeException("Failed to initialize ZXing scanner plugin", e);
         }
     }
     
@@ -139,7 +138,7 @@ public class ZXingScannerPlugin extends Plugin {
         
         getActivity().runOnUiThread(() -> {
             try {
-                Log.i(TAG, "🎬 Starting MLKit barcode scan...");
+                Log.i(TAG, "🎬 Starting ZXing barcode scan...");
                 
                 // Reset scan count
                 scanCount = 0;
@@ -218,7 +217,7 @@ public class ZXingScannerPlugin extends Plugin {
                 result.put("overlayVisible", true);
                 call.resolve(result);
                 
-                Log.i(TAG, "✅ MLKit scan UI created successfully");
+                Log.i(TAG, "✅ ZXing scan UI created successfully");
                 
             } catch (Exception e) {
                 Log.e(TAG, "❌ Error starting scan", e);
@@ -324,7 +323,7 @@ public class ZXingScannerPlugin extends Plugin {
     }
     
     private void stopScanInternal() {
-        Log.i(TAG, "⏹️ Stopping MLKit scan...");
+        Log.i(TAG, "⏹️ Stopping ZXing scan...");
         
         if (cameraProvider != null) {
             cameraProvider.unbindAll();
@@ -344,7 +343,7 @@ public class ZXingScannerPlugin extends Plugin {
         }
         
         isScanning = false;
-        Log.i(TAG, "✅ MLKit scan stopped");
+        Log.i(TAG, "✅ ZXing scan stopped");
     }
     
     private void startCamera() {
