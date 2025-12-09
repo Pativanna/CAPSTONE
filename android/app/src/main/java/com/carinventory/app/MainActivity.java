@@ -11,7 +11,7 @@ public class MainActivity extends BridgeActivity {
         // IMPORTANT: Register plugins BEFORE super.onCreate()
         // The bridge is created in super.onCreate() -> load()
         // After that, bridgeBuilder.addPlugin() has no effect
-        registerPlugin(ZXingScannerPlugin.class);
+        registerPlugin(MLKitScannerPlugin.class);
         
         super.onCreate(savedInstanceState);
         
