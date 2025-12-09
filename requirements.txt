@@ -7,8 +7,10 @@ whitenoise==6.6.0
 requests
 django-axes
 
-# Audio processing dependencies
-openai-whisper
+# Audio processing dependencies (CPU-only to avoid CUDA downloads)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
+openai-whisper==20231117
 openai
 ffmpeg-python
 websockets==12.0

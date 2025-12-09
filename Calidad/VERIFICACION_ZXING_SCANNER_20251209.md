@@ -178,6 +178,14 @@ grep -i "\[ZXingScanner\]\|\[scanner\]" /home/ubuntu/car_inventory/logs/app.json
 
 ---
 
+## ⚙️ Automatización de Builds Android (2025-12-09)
+
+- Se creó `requirements-android-build.txt` con las dependencias mínimas necesarias para ejecutar `collectstatic` durante el build del APK. Se excluyen paquetes pesados (torch, whisper, vosk, aiortc, etc.) que solo usa el backend.
+- El workflow `.github/workflows/build-android.yml` ahora instala ese archivo ligero antes de sincronizar Capacitor y ejecutar `./gradlew assembleDebug`. El artefacto `car-inventory-debug.apk` continúa publicándose automáticamente en cada push a `main/master/traspaso-app` o cuando se usa `workflow_dispatch`.
+- Esta separación evita descargas de ~1.5 GB por build y deja claro que las dependencias de IA/voz permanecen en `requirements.txt` únicamente para el servidor.
+
+---
+
 ## 📝 Historial de Cambios
 
 | Fecha | Cambio |

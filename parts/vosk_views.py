@@ -14,8 +14,16 @@ import wave
 from pathlib import Path
 from threading import Lock
 
-from openai import OpenAI
-from openai import APIConnectionError, APITimeoutError
+try:
+    from openai import OpenAI
+    from openai import APIConnectionError, APITimeoutError
+except ImportError:  # pragma: no cover - entorno sin SDK de OpenAI
+    OpenAI = None
+
+    class _OpenAIMissingError(Exception):
+        """Placeholder para capturar errores de OpenAI cuando el SDK no está disponible."""
+
+    APIConnectionError = APITimeoutError = _OpenAIMissingError
 import requests
 try:
     from vosk import Model, KaldiRecognizer
@@ -314,6 +322,9 @@ Salida: {"parte":"capó","valor":"120000","min_value":"","detalles":"buen estado
         use_cloud = body.get('use_cloud', True)
         openai_key = getattr(settings, 'OPENAI_API_KEY', None)
         should_use_openai = bool(openai_key) and bool(use_cloud)
+        if should_use_openai and OpenAI is None:
+            logger.warning("OpenAI SDK no disponible; usando extracción local")
+            should_use_openai = False
         data = None
 
         if should_use_openai:
@@ -956,6 +967,9 @@ def extraer_datos_vehiculo_nativo(texto):
     if not texto or len(texto.strip()) < 3:
         logger.warning("Texto vacío o muy corto para extraer datos")
         return {}
+    if OpenAI is None:
+        logger.warning("[EXTRACCION] SDK de OpenAI no instalado; usando fallback vacío")
+        return {}
     
     # Prompt para extracción estructurada
     system_prompt = """Eres un experto en autopartes. Extrae SOLO la información que está EXPLÍCITAMENTE mencionada en el texto.
@@ -1121,7 +1135,11 @@ def _extraer_campos(texto):
     if not texto:
         return {}
     api_key = getattr(settings, 'OPENAI_API_KEY', '')
-    if not api_key:
+    if not api_key or OpenAI is None:
+        if not api_key:
+            logger.warning('OPENAI_API_KEY no configurada, usando heurística')
+        elif OpenAI is None:
+            logger.warning('SDK de OpenAI no instalado, usando heurística')
         return _extraer_campos_heuristico(texto)
     prompt_sistema = (
         "Eres un asistente experto en repuestos automotrices. Extrae únicamente información explícita "
