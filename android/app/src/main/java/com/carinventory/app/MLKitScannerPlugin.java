@@ -1,43 +1,30 @@
 package com.carinventory.app;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.media.Image;
 import android.util.Log;
-import android.util.Size;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.FrameLayout;
 
-import androidx.annotation.NonNull;
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.ImageAnalysis;
-import androidx.camera.core.ImageProxy;
-import androidx.camera.core.Preview;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.camera.view.PreviewView;
-import androidx.core.app.ActivityCompat;
+import androidx.activity.result.ActivityResult;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.LifecycleOwner;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.mlkit.vision.barcode.BarcodeScanner;
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
-import com.google.mlkit.vision.barcode.BarcodeScanning;
-import com.google.mlkit.vision.barcode.common.Barcode;
-import com.google.mlkit.vision.common.InputImage;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
+/**
+ * Plugin de Capacitor para escaneo de códigos de barras usando ML Kit.
+ * Lanza BarcodeScanActivity para el escaneo real.
+ */
 @CapacitorPlugin(
     name = "MLKitScanner",
     permissions = {
@@ -51,12 +38,14 @@ public class MLKitScannerPlugin extends Plugin {
 
     private static final String TAG = "MLKitScanner";
     
-    private PreviewView previewView;
-    private ExecutorService cameraExecutor;
-    private BarcodeScanner scanner;
-    private ProcessCameraProvider cameraProvider;
-    private boolean isScanning = false;
-    private PluginCall scanCallbackHolder;
+    private PluginCall savedCall;
+    private BroadcastReceiver barcodeReceiver;
+
+    @Override
+    public void load() {
+        super.load();
+        Log.i(TAG, "MLKitScanner plugin loaded");
+    }
 
     @PluginMethod
     public void startScan(PluginCall call) {
@@ -64,222 +53,87 @@ public class MLKitScannerPlugin extends Plugin {
         
         if (!checkCameraPermission()) {
             Log.i(TAG, "Requesting camera permission...");
+            savedCall = call;
             requestAllPermissions(call, "handleCameraPermission");
             return;
         }
         
-        scanCallbackHolder = call;
+        launchScanner(call);
+    }
+    
+    private void launchScanner(PluginCall call) {
+        // Guardar call para callback
+        savedCall = call;
         call.setKeepAlive(true);
         
-        getActivity().runOnUiThread(() -> {
-            try {
-                setupPreviewView();
-                setupMLKitScanner();
-                startCamera();
-            } catch (Exception e) {
-                Log.e(TAG, "Error starting scan", e);
-                JSObject error = new JSObject();
-                error.put("error", e.getMessage());
-                call.reject("Failed to start scanner: " + e.getMessage());
-            }
-        });
+        // Obtener parámetros opcionales
+        String targetBarcode = call.getString("targetBarcode", null);
+        String targetName = call.getString("targetName", null);
+        boolean continuous = call.getBoolean("continuous", true);
+        
+        Log.i(TAG, "Target barcode: " + targetBarcode);
+        Log.i(TAG, "Target name: " + targetName);
+        Log.i(TAG, "Continuous mode: " + continuous);
+        
+        // Registrar receiver para modo continuo
+        if (continuous) {
+            registerBarcodeReceiver();
+        }
+        
+        // Lanzar Activity de escaneo
+        Intent intent = new Intent(getContext(), BarcodeScanActivity.class);
+        intent.putExtra(BarcodeScanActivity.EXTRA_TARGET_BARCODE, targetBarcode);
+        intent.putExtra(BarcodeScanActivity.EXTRA_TARGET_NAME, targetName);
+        intent.putExtra(BarcodeScanActivity.EXTRA_CONTINUOUS, continuous);
+        
+        startActivityForResult(call, intent, "handleScanResult");
+    }
+
+    @ActivityCallback
+    private void handleScanResult(PluginCall call, ActivityResult result) {
+        Log.i(TAG, "Scan activity result: " + result.getResultCode());
+        
+        // Desregistrar receiver
+        unregisterBarcodeReceiver();
+        
+        if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+            Intent data = result.getData();
+            String barcode = data.getStringExtra(BarcodeScanActivity.RESULT_BARCODE);
+            String format = data.getStringExtra(BarcodeScanActivity.RESULT_FORMAT);
+            boolean isMatch = data.getBooleanExtra(BarcodeScanActivity.RESULT_IS_MATCH, false);
+            
+            Log.i(TAG, "✅ Scan result: " + barcode + " (" + format + ") match=" + isMatch);
+            
+            JSObject ret = new JSObject();
+            ret.put("barcode", barcode);
+            ret.put("format", format);
+            ret.put("isMatch", isMatch);
+            ret.put("cancelled", false);
+            call.resolve(ret);
+        } else {
+            Log.i(TAG, "Scan cancelled");
+            JSObject ret = new JSObject();
+            ret.put("cancelled", true);
+            call.resolve(ret);
+        }
     }
 
     @PermissionCallback
     private void handleCameraPermission(PluginCall call) {
         if (getPermissionState("camera") == com.getcapacitor.PermissionState.GRANTED) {
             Log.i(TAG, "Camera permission granted");
-            startScan(call);
+            launchScanner(call);
         } else {
             Log.e(TAG, "Camera permission denied");
             call.reject("Camera permission denied");
         }
     }
 
-    private void setupPreviewView() {
-        Log.i(TAG, "Setting up preview view...");
-        
-        if (previewView != null) {
-            Log.i(TAG, "Preview view already exists");
-            return;
-        }
-        
-        previewView = new PreviewView(getContext());
-        previewView.setId(View.generateViewId());
-        
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        );
-        
-        // Get the bridge's web view parent
-        ViewGroup parent = (ViewGroup) bridge.getWebView().getParent();
-        parent.addView(previewView, 0, params);
-        
-        // Make webview transparent so preview shows through
-        bridge.getWebView().setBackgroundColor(android.graphics.Color.TRANSPARENT);
-        
-        Log.i(TAG, "Preview view added to layout");
-    }
-
-    private void setupMLKitScanner() {
-        Log.i(TAG, "Setting up ML Kit scanner...");
-        
-        BarcodeScannerOptions options = new BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(
-                Barcode.FORMAT_EAN_13,
-                Barcode.FORMAT_EAN_8,
-                Barcode.FORMAT_UPC_A,
-                Barcode.FORMAT_UPC_E,
-                Barcode.FORMAT_CODE_128,
-                Barcode.FORMAT_CODE_39,
-                Barcode.FORMAT_QR_CODE,
-                Barcode.FORMAT_DATA_MATRIX
-            )
-            .build();
-        
-        scanner = BarcodeScanning.getClient(options);
-        cameraExecutor = Executors.newSingleThreadExecutor();
-        
-        Log.i(TAG, "✅ ML Kit scanner initialized");
-    }
-
-    private void startCamera() {
-        Log.i(TAG, "Starting camera...");
-        
-        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = 
-            ProcessCameraProvider.getInstance(getContext());
-
-        cameraProviderFuture.addListener(() -> {
-            try {
-                cameraProvider = cameraProviderFuture.get();
-
-                Preview preview = new Preview.Builder().build();
-                preview.setSurfaceProvider(previewView.getSurfaceProvider());
-
-                ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
-                    .setTargetResolution(new Size(1280, 720))
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build();
-
-                imageAnalysis.setAnalyzer(cameraExecutor, this::analyzeImage);
-
-                CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
-
-                cameraProvider.unbindAll();
-                cameraProvider.bindToLifecycle(
-                    (LifecycleOwner) getActivity(), 
-                    cameraSelector, 
-                    preview, 
-                    imageAnalysis
-                );
-
-                isScanning = true;
-                Log.i(TAG, "✅ Camera started successfully");
-                
-                // Notify JS that camera is ready
-                JSObject result = new JSObject();
-                result.put("status", "started");
-                notifyListeners("scannerReady", result);
-
-            } catch (Exception e) {
-                Log.e(TAG, "❌ Camera start failed", e);
-                if (scanCallbackHolder != null) {
-                    scanCallbackHolder.reject("Camera start failed: " + e.getMessage());
-                    scanCallbackHolder = null;
-                }
-            }
-        }, ContextCompat.getMainExecutor(getContext()));
-    }
-
-    @androidx.camera.core.ExperimentalGetImage
-    private void analyzeImage(@NonNull ImageProxy imageProxy) {
-        if (!isScanning) {
-            imageProxy.close();
-            return;
-        }
-
-        Image mediaImage = imageProxy.getImage();
-        if (mediaImage == null) {
-            imageProxy.close();
-            return;
-        }
-
-        InputImage inputImage = InputImage.fromMediaImage(
-            mediaImage, 
-            imageProxy.getImageInfo().getRotationDegrees()
-        );
-
-        scanner.process(inputImage)
-            .addOnSuccessListener(barcodes -> {
-                if (!barcodes.isEmpty()) {
-                    Barcode barcode = barcodes.get(0);
-                    String value = barcode.getRawValue();
-                    if (value != null && !value.isEmpty()) {
-                        String format = formatToString(barcode.getFormat());
-                        Log.i(TAG, "✅ Barcode found: " + value + " (" + format + ")");
-                        
-                        // Send barcode to JS (don't stop scanning)
-                        JSObject result = new JSObject();
-                        result.put("barcode", value);
-                        result.put("format", format);
-                        notifyListeners("barcodeScanned", result);
-                    }
-                }
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "ML Kit scan error", e);
-            })
-            .addOnCompleteListener(task -> imageProxy.close());
-    }
-
     @PluginMethod
     public void stopScan(PluginCall call) {
         Log.i(TAG, "stopScan called");
-        
-        getActivity().runOnUiThread(() -> {
-            try {
-                isScanning = false;
-                
-                if (cameraProvider != null) {
-                    cameraProvider.unbindAll();
-                    cameraProvider = null;
-                }
-                
-                if (cameraExecutor != null) {
-                    cameraExecutor.shutdown();
-                    cameraExecutor = null;
-                }
-                
-                if (scanner != null) {
-                    scanner.close();
-                    scanner = null;
-                }
-                
-                if (previewView != null) {
-                    ViewGroup parent = (ViewGroup) previewView.getParent();
-                    if (parent != null) {
-                        parent.removeView(previewView);
-                    }
-                    previewView = null;
-                }
-                
-                // Restore webview background
-                bridge.getWebView().setBackgroundColor(android.graphics.Color.WHITE);
-                
-                if (scanCallbackHolder != null) {
-                    scanCallbackHolder.resolve();
-                    scanCallbackHolder = null;
-                }
-                
-                Log.i(TAG, "✅ Scanner stopped");
-                call.resolve();
-                
-            } catch (Exception e) {
-                Log.e(TAG, "Error stopping scanner", e);
-                call.reject("Failed to stop scanner: " + e.getMessage());
-            }
-        });
+        unregisterBarcodeReceiver();
+        call.resolve();
     }
 
     @PluginMethod
@@ -295,29 +149,51 @@ public class MLKitScannerPlugin extends Plugin {
             == PackageManager.PERMISSION_GRANTED;
     }
 
-    private String formatToString(int format) {
-        switch (format) {
-            case Barcode.FORMAT_EAN_13: return "EAN_13";
-            case Barcode.FORMAT_EAN_8: return "EAN_8";
-            case Barcode.FORMAT_UPC_A: return "UPC_A";
-            case Barcode.FORMAT_UPC_E: return "UPC_E";
-            case Barcode.FORMAT_CODE_128: return "CODE_128";
-            case Barcode.FORMAT_CODE_39: return "CODE_39";
-            case Barcode.FORMAT_QR_CODE: return "QR_CODE";
-            case Barcode.FORMAT_DATA_MATRIX: return "DATA_MATRIX";
-            default: return "UNKNOWN";
+    private void registerBarcodeReceiver() {
+        if (barcodeReceiver != null) return;
+        
+        barcodeReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String barcode = intent.getStringExtra(BarcodeScanActivity.RESULT_BARCODE);
+                String format = intent.getStringExtra(BarcodeScanActivity.RESULT_FORMAT);
+                boolean isMatch = intent.getBooleanExtra(BarcodeScanActivity.RESULT_IS_MATCH, false);
+                
+                Log.i(TAG, "📨 Broadcast received: " + barcode);
+                
+                // Notificar a JS
+                JSObject data = new JSObject();
+                data.put("barcode", barcode);
+                data.put("format", format);
+                data.put("isMatch", isMatch);
+                notifyListeners("barcodeScanned", data);
+            }
+        };
+        
+        IntentFilter filter = new IntentFilter("com.carinventory.BARCODE_SCANNED");
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            getContext().registerReceiver(barcodeReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            getContext().registerReceiver(barcodeReceiver, filter);
+        }
+        Log.i(TAG, "Barcode receiver registered");
+    }
+
+    private void unregisterBarcodeReceiver() {
+        if (barcodeReceiver != null) {
+            try {
+                getContext().unregisterReceiver(barcodeReceiver);
+            } catch (Exception e) {
+                Log.w(TAG, "Error unregistering receiver", e);
+            }
+            barcodeReceiver = null;
+            Log.i(TAG, "Barcode receiver unregistered");
         }
     }
 
     @Override
     protected void handleOnDestroy() {
         super.handleOnDestroy();
-        isScanning = false;
-        if (cameraExecutor != null) {
-            cameraExecutor.shutdown();
-        }
-        if (scanner != null) {
-            scanner.close();
-        }
+        unregisterBarcodeReceiver();
     }
 }

@@ -298,64 +298,82 @@
   async function openScanner() {
     console.log('[Verificador] Abriendo escáner...');
     
-    // Verificar que tenemos el plugin
-    if (!window.Capacitor || !window.Capacitor.Plugins || !window.Capacitor.Plugins.MLKitScanner) {
-      // Intentar registrar el plugin
-      if (window.Capacitor && window.Capacitor.registerPlugin) {
+    // Verificar que tenemos Capacitor
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform || !window.Capacitor.isNativePlatform()) {
+      alert('El escáner solo está disponible en la app móvil.');
+      return;
+    }
+    
+    // Registrar el plugin si no existe
+    if (!window.Capacitor.Plugins.MLKitScanner) {
+      if (window.Capacitor.registerPlugin) {
         window.Capacitor.registerPlugin('MLKitScanner');
-      }
-      
-      if (!window.Capacitor?.Plugins?.MLKitScanner) {
-        alert('El escáner no está disponible. Asegúrate de usar la app móvil.');
-        return;
       }
     }
     
     const MLKitScanner = window.Capacitor.Plugins.MLKitScanner;
     
+    if (!MLKitScanner) {
+      alert('El plugin de escáner no está disponible.');
+      return;
+    }
+    
     try {
-      // Verificar disponibilidad
-      const availability = await MLKitScanner.isAvailable();
-      console.log('[Verificador] Escáner disponible:', availability);
+      // Preparar parámetros
+      const options = {
+        continuous: true // Modo continuo para escanear múltiples códigos
+      };
       
-      // Activar modo escáner en UI
-      state.isScanning = true;
-      if (elements.container) {
-        elements.container.classList.add('scanner-active');
+      if (state.selectedPart) {
+        options.targetBarcode = state.selectedPart.barcode;
+        options.targetName = state.selectedPart.name;
       }
       
-      // Actualizar info del escáner
-      updateScannerInfo();
+      console.log('[Verificador] Opciones de escaneo:', options);
       
-      // Listener para códigos escaneados
-      state.barcodeListener = await window.Capacitor.Plugins.MLKitScanner.addListener(
+      // Listener para códigos escaneados (modo continuo)
+      state.barcodeListener = await MLKitScanner.addListener(
         'barcodeScanned',
         handleBarcodeScanned
       );
       
-      // Iniciar escaneo
-      await MLKitScanner.startScan();
-      console.log('[Verificador] Escáner iniciado');
+      // Iniciar escaneo (lanza Activity nativa)
+      state.isScanning = true;
+      const result = await MLKitScanner.startScan(options);
+      
+      console.log('[Verificador] Resultado del escáner:', result);
+      
+      // Remover listener cuando se cierra
+      if (state.barcodeListener) {
+        state.barcodeListener.remove();
+        state.barcodeListener = null;
+      }
+      
+      state.isScanning = false;
+      
+      // Si no fue cancelado, procesar el resultado final
+      if (result && !result.cancelled && result.barcode) {
+        await processScannedBarcode(result.barcode, result.format, result.isMatch);
+      }
       
     } catch (error) {
       console.error('[Verificador] Error abriendo escáner:', error);
+      state.isScanning = false;
+      if (state.barcodeListener) {
+        state.barcodeListener.remove();
+        state.barcodeListener = null;
+      }
       alert('Error al abrir el escáner: ' + (error.message || error));
-      closeScanner();
     }
   }
   
   /**
-   * Cierra el escáner
+   * Cierra el escáner (ya no necesitamos esto porque la Activity se cierra sola)
    */
   async function closeScanner() {
     console.log('[Verificador] Cerrando escáner...');
     
     state.isScanning = false;
-    
-    // Desactivar modo escáner en UI
-    if (elements.container) {
-      elements.container.classList.remove('scanner-active');
-    }
     
     // Remover listener
     if (state.barcodeListener) {
@@ -363,7 +381,7 @@
       state.barcodeListener = null;
     }
     
-    // Detener escaneo nativo
+    // Llamar stopScan por si acaso
     try {
       if (window.Capacitor?.Plugins?.MLKitScanner) {
         await window.Capacitor.Plugins.MLKitScanner.stopScan();
@@ -374,27 +392,26 @@
   }
   
   /**
-   * Actualiza la info mostrada en el escáner
+   * Actualiza la info mostrada en el escáner (ya no se usa con Activity separada)
    */
   function updateScannerInfo() {
-    if (elements.scannerTargetName) {
-      elements.scannerTargetName.textContent = state.selectedPart 
-        ? state.selectedPart.name 
-        : 'Cualquier código';
-    }
-    
-    if (elements.scannerTargetCode) {
-      elements.scannerTargetCode.textContent = state.selectedPart?.barcode || '-';
-    }
+    // Ya no necesario - la Activity maneja su propia UI
   }
   
   /**
-   * Maneja un código escaneado
+   * Maneja un código escaneado (evento desde broadcast en modo continuo)
    */
   async function handleBarcodeScanned(event) {
-    const { barcode, format } = event;
-    console.log('[Verificador] Código escaneado:', barcode, format);
+    const { barcode, format, isMatch } = event;
+    console.log('[Verificador] Código escaneado (broadcast):', barcode, format, isMatch);
     
+    await processScannedBarcode(barcode, format, isMatch);
+  }
+  
+  /**
+   * Procesa un código de barras escaneado
+   */
+  async function processScannedBarcode(barcode, format, matchFromNative) {
     // Evitar procesar el mismo código repetidamente
     if (barcode === state.lastScannedCode) return;
     state.lastScannedCode = barcode;
@@ -406,18 +423,10 @@
       }
     }, 2000);
     
-    // Actualizar UI
-    if (elements.scannerLastRead) {
-      elements.scannerLastRead.textContent = barcode;
-    }
+    // Verificar si hay match (usar resultado nativo o calcular)
+    const isMatch = matchFromNative || (state.selectedPart && state.selectedPart.barcode === barcode);
     
-    // Verificar si hay match
-    const isMatch = state.selectedPart && state.selectedPart.barcode === barcode;
-    
-    if (isMatch) {
-      // ¡MATCH! Parpadeo verde + vibración
-      triggerMatchFeedback();
-    }
+    console.log('[Verificador] Procesando código:', barcode, 'Match:', isMatch);
     
     // Registrar en el backend
     try {

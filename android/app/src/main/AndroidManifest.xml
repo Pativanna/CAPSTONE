@@ -25,6 +25,13 @@
 
         </activity>
 
+        <!-- Activity para escaneo de códigos de barras -->
+        <activity
+            android:name=".BarcodeScanActivity"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
