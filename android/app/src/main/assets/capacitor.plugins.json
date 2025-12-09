@@ -1,6 +1,6 @@
 [
   {
     "pkg": "com.carinventory.app",
-    "classpath": "com.carinventory.app.ZXingScannerPlugin"
+    "classpath": "com.carinventory.app.MLKitScannerPlugin"
   }
 ]

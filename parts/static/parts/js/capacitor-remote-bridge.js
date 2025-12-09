@@ -190,7 +190,7 @@
   };
   
   // Register our custom plugins - these must match the Java @CapacitorPlugin names
-  const customPlugins = ['ZXingScanner'];
+  const customPlugins = ['MLKitScanner'];
   customPlugins.forEach(function(name) {
     cap.registerPlugin(name);
   });

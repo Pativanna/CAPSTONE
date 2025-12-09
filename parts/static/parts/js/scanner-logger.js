@@ -99,7 +99,7 @@
     addLog(level, message) {
       // Filtrar solo logs relevantes del scanner
       if (!message.includes('[scanner]') && 
-          !message.includes('[ZXingScanner]') &&
+          !message.includes('[MLKitScanner]') &&
           !message.includes('[CapacitorBridge]') &&
           !message.includes('[MLKit]') && 
           !message.includes('Barcode') &&
