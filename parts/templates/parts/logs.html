@@ -18,39 +18,34 @@
      data-refresh-interval="10000"
      data-css-href="{% static 'parts/css/logs.css' %}"
      aria-hidden="true"></div>
-<section class="logs-hero mb-4">
-  <div class="container py-4">
-    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
-      <div>
-        <p class="text-uppercase small fw-semibold text-light mb-2">Auditoría en tiempo real</p>
-        <h1 class="text-white fw-semibold mb-2">Panel Unificado de Logs</h1>
-        <p class="text-light opacity-75 mb-0">Monitorea cada acción del motor de voz y de la aplicación con contexto completo y trazabilidad inmediata.</p>
-      </div>
-      <div class="text-lg-end w-100 w-lg-auto">
-        <button id="btn-refresh" class="btn btn-light btn-lg shadow-sm w-100 w-lg-auto">
-          <i class="bi bi-arrow-repeat me-2"></i>Actualizar ahora
-        </button>
-        <div class="live-pill mt-3 d-inline-flex align-items-center">
+<section class="logs-hero logs-hero--compact mb-3">
+  <div class="container py-3">
+    <div class="logs-hero-row">
+      <div class="logs-hero-title">
+        <h1>Logs</h1>
+        <div class="live-pill">
           <span class="live-dot"></span>
-          <span>Actualización automática cada 10s</span>
+          <span>Auto 10s</span>
         </div>
       </div>
+      <button id="btn-refresh" class="btn btn-light btn-sm">
+        <i class="bi bi-arrow-repeat"></i> <span class="d-none d-md-inline">Actualizar</span>
+      </button>
     </div>
   </div>
 </section>
 
 <div class="container pb-5">
-  <div class="card border-0 shadow-sm mb-4 logs-filter-card">
-    <div class="card-header bg-body-tertiary border-0 d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>
-        <h5 class="mb-0">Filtros avanzados</h5>
-        <small class="text-muted">Refina por sesión, nivel, módulo o usuario.</small>
-      </div>
-      <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="true">
-        Mostrar / Ocultar
+  <div class="card border-0 shadow-sm mb-3 logs-filter-card">
+    <div class="card-header bg-body-tertiary border-0 d-flex align-items-center justify-content-between py-2">
+      <span class="small fw-semibold"><i class="bi bi-funnel me-1"></i> Filtros</span>
+      <button class="btn btn-link btn-sm p-0 text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false">
+        <span class="d-md-none">Mostrar</span>
+        <span class="d-none d-md-inline">Expandir</span>
+        <i class="bi bi-chevron-down ms-1"></i>
       </button>
     </div>
-    <div class="collapse show" id="filterCollapse">
+    <div class="collapse" id="filterCollapse">
       <div class="card-body">
         <form method="get"
               action="{% url 'parts:logs_page' %}"
@@ -140,27 +135,18 @@
     </div>
   </div>
 
-  <div class="row g-3 mb-4" id="logs-summary">
-    <div class="col-md-4">
-      <div class="metric-card">
-        <div class="metric-label">Eventos filtrados</div>
-        <div class="metric-value" id="metric-total">--</div>
-        <div class="metric-note" id="metric-total-extra">Incluye voz, app e impresora</div>
-      </div>
+  <div class="logs-metrics-strip mb-3" id="logs-summary">
+    <div class="logs-metric-pill">
+      <span class="logs-metric-label">Eventos</span>
+      <span class="logs-metric-value" id="metric-total">--</span>
     </div>
-    <div class="col-md-4">
-      <div class="metric-card">
-        <div class="metric-label">Alertas / errores</div>
-        <div class="metric-value text-danger" id="metric-errors">--</div>
-        <div class="metric-note">Warnings + errores en el rango</div>
-      </div>
+    <div class="logs-metric-pill logs-metric-pill--danger">
+      <span class="logs-metric-label">Errores</span>
+      <span class="logs-metric-value" id="metric-errors">--</span>
     </div>
-    <div class="col-md-4">
-      <div class="metric-card">
-        <div class="metric-label">Último evento</div>
-        <div class="metric-value" id="metric-last">--</div>
-        <div class="metric-note" id="metric-last-source">-</div>
-      </div>
+    <div class="logs-metric-pill">
+      <span class="logs-metric-label">Último</span>
+      <span class="logs-metric-value" id="metric-last">--</span>
     </div>
   </div>
 

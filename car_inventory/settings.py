@@ -478,6 +478,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'parts.activity': {
+            'handlers': ['console', 'app_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'parts.bluetooth': {
             'handlers': ['console', 'app_file', 'bluetooth_file'],
             'level': 'INFO',
@@ -624,3 +629,28 @@ AXES_FAILURE_LIMIT = int(os.environ.get('AXES_FAILURE_LIMIT', '5'))
 AXES_COOLOFF_TIME = timedelta(minutes=int(os.environ.get('AXES_COOLOFF_MINUTES', '15')))
 AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
 AXES_RESET_COOL_OFF_ON_SUCCESS = True
+
+# Axes / IP handling behind Cloudflare + Nginx
+# - Cloudflare provides the real client IP in CF-Connecting-IP
+# - Nginx provides X-Forwarded-For (left-most is typically the client)
+# We prefer CF-Connecting-IP when present, then fall back to X-Forwarded-For, then REMOTE_ADDR.
+AXES_IPWARE_PROXY_ORDER = os.environ.get('AXES_IPWARE_PROXY_ORDER', os.environ.get('AXES_PROXY_ORDER', 'left-most'))
+AXES_IPWARE_META_PRECEDENCE_ORDER = (
+    'HTTP_CF_CONNECTING_IP',
+    'HTTP_X_FORWARDED_FOR',
+    'REMOTE_ADDR',
+)
+
+
+def _axes_client_ip(request):
+    cf_ip = (request.META.get('HTTP_CF_CONNECTING_IP') or '').strip()
+    if cf_ip:
+        return cf_ip
+    xff = (request.META.get('HTTP_X_FORWARDED_FOR') or '').strip()
+    if xff:
+        # X-Forwarded-For may contain a list: client, proxy1, proxy2...
+        return xff.split(',')[0].strip()
+    return (request.META.get('REMOTE_ADDR') or '').strip()
+
+
+AXES_CLIENT_IP_CALLABLE = 'car_inventory.settings._axes_client_ip'

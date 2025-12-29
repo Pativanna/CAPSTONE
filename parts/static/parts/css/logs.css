@@ -23,6 +23,105 @@
   display: block;
 }
 
+/* ===== HERO COMPACTO ===== */
+.logs-hero--compact {
+  background: var(--logs-hero-gradient);
+  color: var(--text-on-dark, #f4f6ff);
+  border-bottom-left-radius: 1rem;
+  border-bottom-right-radius: 1rem;
+}
+
+.logs-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.logs-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.logs-hero-title h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-on-dark);
+}
+
+.logs-hero--compact .live-pill {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.6rem;
+}
+
+.logs-hero--compact .btn-light {
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  font-weight: 600;
+}
+
+/* ===== MÉTRICAS COMPACTAS (STRIP) ===== */
+.logs-metrics-strip {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.logs-metric-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--surface-card);
+  border: 1px solid var(--logs-border);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.logs-metric-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--logs-muted);
+  font-weight: 600;
+}
+
+.logs-metric-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.logs-metric-pill--danger .logs-metric-value {
+  color: var(--logs-error-color);
+}
+
+/* Desktop: métricas más grandes */
+@media (min-width: 768px) {
+  .logs-hero-title h1 {
+    font-size: 1.5rem;
+  }
+  
+  .logs-metrics-strip {
+    gap: 0.75rem;
+  }
+  
+  .logs-metric-pill {
+    padding: 0.5rem 1rem;
+  }
+  
+  .logs-metric-value {
+    font-size: 1.1rem;
+  }
+}
+
+/* ===== HERO ORIGINAL (legacy) ===== */
 .logs-hero {
   background: var(--logs-hero-gradient);
   color: var(--text-on-dark, #f4f6ff);
@@ -31,7 +130,8 @@
   box-shadow: 0 25px 60px rgba(15, 60, 127, 0.25);
 }
 
-html[data-theme="light"] .logs-hero {
+html[data-theme="light"] .logs-hero,
+html[data-theme="light"] .logs-hero--compact {
   --logs-hero-gradient: linear-gradient(
     135deg,
     color-mix(in srgb, var(--brand-primary) 85%, #020711),
@@ -41,7 +141,9 @@ html[data-theme="light"] .logs-hero {
 }
 
 .logs-hero .text-light,
-.logs-hero .text-white {
+.logs-hero .text-white,
+.logs-hero--compact .text-light,
+.logs-hero--compact .text-white {
   color: var(--text-on-dark, #f4f6ff) !important;
   opacity: 0.95;
 }
@@ -78,6 +180,12 @@ html[data-theme="light"] .logs-hero {
   border-radius: 50%;
   background: var(--logs-error-color);
   box-shadow: 0 0 10px color-mix(in srgb, var(--logs-error-color) 70%, transparent);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .logs-filter-card .form-label {
@@ -87,6 +195,7 @@ html[data-theme="light"] .logs-hero {
   letter-spacing: .04em;
 }
 
+/* ===== MÉTRICAS LEGACY ===== */
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -376,5 +485,85 @@ html[data-theme="light"] .logs-hero {
 
   .timeline-axis {
     display: none;
+  }
+
+  /* Filtros compactos en móvil */
+  .logs-filter-card .card-body {
+    padding: 0.75rem !important;
+  }
+
+  .logs-filter-card .form-label {
+    font-size: 0.7rem !important;
+    margin-bottom: 0.15rem !important;
+  }
+
+  .logs-filter-card .form-control,
+  .logs-filter-card .form-select {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .logs-filter-card small {
+    display: none;
+  }
+
+  .logs-filter-card .row {
+    gap: 0.5rem !important;
+  }
+
+  /* Entradas de log compactas */
+  .log-entry-shell {
+    padding: 0.75rem 0.85rem;
+    border-radius: 0.75rem;
+  }
+
+  .log-entry-summary {
+    font-size: 0.9rem;
+  }
+
+  .log-entry-meta {
+    font-size: 0.75rem;
+    gap: 0.4rem 0.75rem;
+  }
+
+  .log-entry-detail-panel {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+
+  .log-json {
+    font-size: 0.75rem;
+    padding: 0.6rem;
+    max-height: 200px;
+  }
+
+  /* Cards de resumen compactas */
+  .viewer-log-panel {
+    max-height: 120px;
+    padding: 0.6rem !important;
+    font-size: 0.8rem;
+  }
+
+  .aggregation-panel {
+    padding: 0.75rem;
+  }
+
+  .aggregation-panel h6 {
+    font-size: 0.85rem;
+  }
+
+  /* Auditoría compacta */
+  #audit-card .card-body {
+    padding: 0.85rem;
+  }
+
+  #audit-filter-form .form-label {
+    font-size: 0.7rem !important;
+  }
+
+  #audit-filter-form .form-control,
+  #audit-filter-form .form-select {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
   }
 }

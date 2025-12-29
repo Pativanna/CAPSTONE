@@ -712,29 +712,40 @@ def part_list(request):
         per_page = 20
     per_page = max(20, min(per_page, 100))
 
-    modelos_disponibles = (
+    modelos_disponibles_qs = (
         Auto.objects.values_list('brand_model', flat=True)
         .distinct()
         .order_by('brand_model')
     )
+    modelos_disponibles = list(modelos_disponibles_qs)
 
     if filtro_modelo:
-        anios_disponibles = (
+        anios_disponibles_qs = (
             Auto.objects.filter(brand_model=filtro_modelo)
             .values_list('year', flat=True)
             .distinct()
             .order_by('-year')
         )
     else:
-        anios_disponibles = (
+        anios_disponibles_qs = (
             Auto.objects.values_list('year', flat=True)
             .distinct()
             .order_by('-year')
         )
+    anios_disponibles = list(anios_disponibles_qs)
+
+    orden_param = (request.GET.get('orden') or request.GET.get('order_by') or 'recientes').strip() or 'recientes'
+    orden_map = {
+        'recientes': '-date_added',
+        'ingreso': 'date_added',
+        'a_z': 'name',
+        'z_a': '-name',
+    }
+    orden_campo = orden_map.get(orden_param, '-date_added')
 
     piezas = (
         Part.objects.select_related('auto', 'workshop')
-        .order_by('-date_added')
+        .order_by(orden_campo)
     )
     if filtro_modelo:
         piezas = piezas.filter(auto__brand_model=filtro_modelo)
@@ -896,6 +907,13 @@ def part_list(request):
         'search_results_truncated': search_results_truncated,
         'search_total_matches': search_total_matches,
         'search_rank_limit': _MAX_RANKED_RESULTS,
+        'orden_activo': orden_param,
+        'orden_opciones': [
+            ('recientes', 'Por defecto'),
+            ('ingreso', 'Por ingreso'),
+            ('a_z', 'A → Z'),
+            ('z_a', 'Z → A'),
+        ],
     })
 
 
@@ -1151,9 +1169,21 @@ def update_part_field(request, pk):
         campo = payload.get('field')
         valor = payload.get('value')
 
-        campos_permitidos = ['name', 'catalog_name', 'position', 'details', 'max_value', 'min_value']
+        campos_permitidos = [
+            'name',
+            'catalog_name',
+            'position',
+            'details',
+            'max_value',
+            'min_value',
+            'date_added',
+            'auto_brand_model',
+            'auto_year',
+        ]
         if campo not in campos_permitidos:
             return JsonResponse({'success': False, 'error': 'Campo no editable'}, status=400)
+
+        campos_auditados = [campo]
 
         if campo in ['max_value', 'min_value']:
             if isinstance(valor, str):
@@ -1165,13 +1195,55 @@ def update_part_field(request, pk):
         elif campo == 'details':
             valor = Part.clean_details_value(valor)
 
-        setattr(pieza, campo, valor)
-        pieza.save()
+        elif campo == 'date_added':
+            parsed_date = None
+            if isinstance(valor, str):
+                valor = valor.strip()
+            if valor:
+                try:
+                    parsed_date = datetime.fromisoformat(valor)
+                except ValueError:
+                    for fmt in ('%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y'):
+                        try:
+                            parsed_date = datetime.strptime(valor, fmt)
+                            break
+                        except ValueError:
+                            continue
+            if not parsed_date:
+                return JsonResponse({'success': False, 'error': 'Fecha inválida'}, status=400)
+            if timezone.is_naive(parsed_date):
+                parsed_date = timezone.make_aware(parsed_date, timezone.get_current_timezone())
+            pieza.date_added = parsed_date
+            pieza.save(update_fields=['date_added'])
+            valor = pieza.date_added.isoformat()
+        elif campo in ['auto_brand_model', 'auto_year']:
+            auto_obj = pieza.auto or _get_placeholder_auto()
+            if campo == 'auto_brand_model':
+                auto_obj.brand_model = (valor or '').strip()
+                auto_obj.save(update_fields=['brand_model'])
+                valor = auto_obj.brand_model
+            else:
+                try:
+                    year_value = int(valor)
+                except (TypeError, ValueError):
+                    return JsonResponse({'success': False, 'error': 'Año inválido'}, status=400)
+                if year_value < 1950 or year_value > 2100:
+                    return JsonResponse({'success': False, 'error': 'Año fuera de rango'}, status=400)
+                auto_obj.year = year_value
+                auto_obj.save(update_fields=['year'])
+                valor = auto_obj.year
+            if pieza.auto_id != auto_obj.id:
+                pieza.auto = auto_obj
+                pieza.save(update_fields=['auto'])
+        else:
+            setattr(pieza, campo, valor)
+            pieza.save()
+
         Auditoria.pieza_modificada(
             pieza,
             usuario=request.user,
             request=request,
-            campos_modificados=[campo]
+            campos_modificados=campos_auditados
         )
         return JsonResponse({'success': True, 'field': campo, 'value': valor})
     except Exception as exc:
@@ -1619,13 +1691,19 @@ def parts_catalog_cache(request):
         updated_at = part.updated_at
         if updated_at and (latest_updated is None or updated_at > latest_updated):
             latest_updated = updated_at
+        auto_obj = getattr(part, 'auto', None)
         payload.append({
             'id': part.id,
             'name': part.name,
             'status': part.availability_status,
             'barcode': part.barcode or '',
-            'auto': getattr(part.auto, 'brand_model', '') or '',
+            'auto': getattr(auto_obj, 'brand_model', '') or '',
+            'auto_year': getattr(auto_obj, 'year', '') or '',
+            'auto_id': part.auto_id,
             'workshop': getattr(part.workshop, 'name', '') or '',
+            'min_value': part.min_value or 0,
+            'max_value': part.max_value or 0,
+            'date_added': part.date_added.isoformat() if part.date_added else '',
         })
 
     version = (latest_updated or timezone.now()).isoformat()
@@ -3957,4 +4035,3 @@ def verificador_log(request):
         'is_match': resultado == VerificacionLog.Resultado.MATCH,
         'pieza_encontrada': pieza_data,
     })
-

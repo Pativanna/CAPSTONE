@@ -21,6 +21,203 @@
   border-left: 4px solid var(--success-color);
 }
 
+/* ===== NUEVO DISEÑO COMPACTO ===== */
+.report-header {
+  margin-bottom: 1rem;
+}
+
+.report-header-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.report-header-main h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+}
+
+.report-timestamp {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+.report-card {
+  border-radius: 1rem;
+}
+
+.report-card-body {
+  padding: 1.25rem;
+}
+
+.report-period-section {
+  margin-bottom: 1rem;
+}
+
+.report-section-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+/* Chips de frecuencia compactos */
+.frequency-chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.frequency-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.frequency-chip i {
+  font-size: 0.85rem;
+}
+
+.frequency-chip:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: var(--primary-light);
+}
+
+.frequency-chip.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--primary-shadow-soft);
+}
+
+/* Grid de acciones compacto */
+.report-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.report-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--surface-card);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  font-size: 0.8rem;
+  min-height: 70px;
+}
+
+.report-action-btn i {
+  font-size: 1.25rem;
+}
+
+.report-action-btn span {
+  font-size: 0.75rem;
+}
+
+.report-action-btn--secondary {
+  color: var(--text-secondary);
+}
+
+.report-action-btn--secondary:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+
+.report-action-btn--primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+.report-action-btn--primary:hover {
+  background: var(--primary-hover);
+  box-shadow: 0 4px 12px var(--primary-shadow-soft);
+}
+
+.report-action-btn--success {
+  background: var(--success-color);
+  border-color: var(--success-color);
+  color: #fff;
+}
+
+.report-action-btn--success:hover {
+  background: color-mix(in srgb, var(--success-color) 85%, #000);
+  box-shadow: 0 4px 12px rgba(28, 180, 98, 0.3);
+}
+
+/* ===== ESTILOS LEGACY (desktop) ===== */
+@media (min-width: 769px) {
+  .report-header-main h1 {
+    font-size: 1.5rem;
+  }
+  
+  .report-card-body {
+    padding: 2rem;
+  }
+  
+  .frequency-chips {
+    gap: 0.75rem;
+  }
+  
+  .frequency-chip {
+    padding: 0.65rem 1.5rem;
+    font-size: 0.95rem;
+  }
+  
+  .report-actions-grid {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+  
+  .report-action-btn {
+    flex-direction: row;
+    padding: 0.75rem 1.5rem;
+    min-height: auto;
+    min-width: 160px;
+  }
+  
+  .report-action-btn i {
+    font-size: 1rem;
+  }
+  
+  .report-action-btn span {
+    font-size: 0.9rem;
+  }
+}
+
+/* ===== LEGACY: Hero grande (removido en móvil) ===== */
 .report-hero {
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-strong) 100%);
   color: white;
@@ -440,3 +637,96 @@
       font-size: 0.8rem;
     }
   }
+
+/* ===== OPTIMIZACIONES MÓVIL EXTRA ===== */
+@media (max-width: 768px) {
+  .report-page {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Card principal más compacta */
+  .report-card-body {
+    padding: 1rem !important;
+  }
+
+  .report-period-section {
+    margin-bottom: 0.75rem;
+  }
+
+  .report-section-label {
+    font-size: 0.7rem;
+    margin-bottom: 0.35rem;
+  }
+
+  /* Chips más pequeños */
+  .frequency-chips {
+    gap: 0.4rem;
+  }
+
+  .frequency-chip {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .frequency-chip i {
+    font-size: 0.75rem;
+  }
+
+  /* Grid de acciones más compacto */
+  .report-actions-grid {
+    gap: 0.5rem;
+  }
+
+  .report-action-btn {
+    padding: 0.65rem 0.4rem;
+    min-height: 60px;
+    gap: 0.25rem;
+  }
+
+  .report-action-btn i {
+    font-size: 1.1rem;
+  }
+
+  .report-action-btn span {
+    font-size: 0.7rem;
+  }
+
+  /* Preview más compacto */
+  .preview-container {
+    margin-top: 1rem;
+  }
+
+  .preview-header {
+    padding: 0.6rem 0.85rem;
+  }
+
+  .preview-title {
+    font-size: 0.9rem;
+  }
+
+  /* Historial más compacto */
+  .report-history h4 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .history-card .card-header {
+    padding: 0.6rem 0.85rem;
+    font-size: 0.85rem;
+  }
+
+  .history-card .table {
+    font-size: 0.8rem;
+  }
+
+  .history-card .table th,
+  .history-card .table td {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .history-card .btn-sm {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}

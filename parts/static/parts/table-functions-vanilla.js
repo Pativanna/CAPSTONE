@@ -9,6 +9,13 @@ function inicializarTablaFunciones(){
     if (parts.length === 2) return parts.pop().split(';').shift();
     return null;
   }
+  function getCsrfToken(){
+    const cookie = getCookie('csrftoken');
+    if (cookie && cookie.length > 20) return cookie;
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content && meta.content.length > 20) return meta.content;
+    return null;
+  }
   function formatCurrencyCL(value){
     const n = parseInt(value, 10);
     if (!n) return '-';
@@ -1203,9 +1210,14 @@ function inicializarTablaFunciones(){
     btn._toggleBound = true;
     btn.addEventListener('click', function(){
       const partId = btn.dataset.partId;
+      const csrfToken = getCsrfToken();
+      if (!csrfToken){
+        window.showToast?.({ title: 'Seguridad', body: 'No se encontró token CSRF. Recarga la página e inténtalo de nuevo.', variant: 'warning' });
+        return;
+      }
       fetch(`/parts/${partId}/toggle-sold/`, {
         method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken') }
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
       }).then(r => r.json()).then(data => {
         if (data.success){
           const nodes = getPartElements(partId);

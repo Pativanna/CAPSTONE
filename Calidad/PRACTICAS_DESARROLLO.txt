@@ -16,6 +16,16 @@ Antes de implementar cualquier cambio, el asistente DEBE:
 4. Proponer los cambios ANTES de implementar
 
 ================================================================================
+0. LECTURA OBLIGATORIA ANTES DE CADA RESPUESTA
+================================================================================
+
+ANTES DE ENVIAR CUALQUIER RESPUESTA O NUEVO MENSAJE:
+  - Volver a leer todos los archivos dentro de /home/ubuntu/car_inventory/Calidad/
+    (ISO_AUDIT.txt, PRACTICAS_DESARROLLO.txt, NOTAS_DEPLOY.md y cualquier otro que se agregue).
+  - Confirmar mentalmente que la información sigue vigente y considerar cualquier
+    instrucción nueva antes de escribir código o explicar cambios.
+
+================================================================================
                     1. ARQUITECTURA DEL PROYECTO
 ================================================================================
 

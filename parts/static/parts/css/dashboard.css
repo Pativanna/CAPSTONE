@@ -9,55 +9,277 @@
 }
 
 .metric-card--primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.metric-card--primary .opacity-75 {
-  opacity: 0.9 !important;
+  background: linear-gradient(135deg, #0b2f6d 0%, #154a9a 100%);
+  color: #fff;
 }
 
 .metric-card--success {
-  background: linear-gradient(135deg, #5cb85c 0%, #4cae4c 100%);
-  color: white;
-}
-
-.metric-card--success .opacity-75 {
-  opacity: 0.9 !important;
+  background: linear-gradient(135deg, #0b3b22 0%, #0f5c33 100%);
+  color: #fff;
 }
 
 .metric-card--warning {
-  background: linear-gradient(135deg, #f0ad4e 0%, #ec971f 100%);
-  color: white;
-}
-
-.metric-card--warning .opacity-75 {
-  opacity: 0.9 !important;
+  background: linear-gradient(135deg, #7a4b00 0%, #a36200 100%);
+  color: #fff;
 }
 
 .metric-card--danger {
-  background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
-  color: white;
-}
-
-.metric-card--danger .opacity-75 {
-  opacity: 0.9 !important;
+  background: linear-gradient(135deg, #6d040e 0%, #b90f24 100%);
+  color: #fff;
 }
 
 .metric-card--info {
-  background: linear-gradient(135deg, #5bc0de 0%, #46b8da 100%);
-  color: white;
-}
-
-.metric-card--info .opacity-75 {
-  opacity: 0.9 !important;
+  background: linear-gradient(135deg, #0b4058 0%, #11607d 100%);
+  color: #fff;
 }
 
 .metric-card--violet {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-  color: white;
+  background: linear-gradient(135deg, #3b1d60 0%, #5a2d91 100%);
+  color: #fff;
 }
 
-.metric-card--violet .opacity-75 {
-  opacity: 0.9 !important;
+/* ===== DASHBOARD LAYOUT ===== */
+.dashboard-summary-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dashboard-mode-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dashboard-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-pill i {
+  font-size: 0.85rem;
+}
+
+.dashboard-pill:hover {
+  border-color: var(--app-brand-primary);
+  color: var(--app-brand-primary);
+}
+
+.dashboard-pill--active,
+.dashboard-pill.active {
+  background: var(--app-brand-primary);
+  border-color: var(--app-brand-primary);
+  color: #fff;
+}
+
+.dashboard-mode-pills--ghost {
+  gap: 0.35rem;
+}
+
+.dashboard-pill--ghost {
+  background: transparent;
+  border-color: var(--border-color);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.7rem;
+}
+
+.dashboard-panel {
+  background: var(--surface-muted);
+  border-radius: var(--radius-md, 12px);
+  padding: 0.85rem 1rem;
+}
+
+.dashboard-panel__text {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.dashboard-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dashboard-chart-shell {
+  min-height: 220px;
+  position: relative;
+}
+
+/* Tablas apilables en móvil */
+.dashboard-table-stack {
+  width: 100%;
+}
+
+/* ===== OPTIMIZACIONES MÓVIL ===== */
+@media (max-width: 767px) {
+  /* Header del dashboard más compacto */
+  .container.mt-4 > .d-flex.flex-wrap {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .container.mt-4 h2 {
+    font-size: 1.15rem;
+  }
+
+  /* KPI cards más compactas */
+  .metric-card .card-body {
+    padding: 0.75rem !important;
+  }
+
+  .metric-card .display-6 {
+    font-size: 1.5rem !important;
+  }
+
+  .metric-card .small {
+    font-size: 0.65rem !important;
+  }
+
+  /* Cards de ingresos/ticket */
+  .row.g-3.mb-4 .card-body {
+    padding: 0.85rem !important;
+  }
+
+  .row.g-3.mb-4 .h3 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Panel de resumen interactivo */
+  .dashboard-summary-header {
+    gap: 0.5rem;
+  }
+
+  .dashboard-summary-header h5 {
+    font-size: 0.95rem;
+    margin-bottom: 0;
+  }
+
+  .dashboard-summary-header p {
+    font-size: 0.75rem;
+    display: none;
+  }
+
+  .dashboard-mode-pills {
+    gap: 0.3rem;
+  }
+
+  .dashboard-pill {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.7rem;
+  }
+
+  .dashboard-pill i {
+    font-size: 0.75rem;
+  }
+
+  .dashboard-pill span {
+    /* Ocultar texto en móvil, solo íconos */
+  }
+
+  .dashboard-mode-pills--ghost {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-pill--ghost {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .dashboard-panel {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .dashboard-panel .small {
+    font-size: 0.65rem !important;
+  }
+
+  .dashboard-panel__text {
+    font-size: 0.8rem;
+  }
+
+  .dashboard-chart-shell {
+    min-height: 180px;
+  }
+
+  #summaryChart {
+    max-height: 180px !important;
+  }
+
+  /* Tablas apilables */
+  .dashboard-table-stack thead {
+    display: none;
+  }
+
+  .dashboard-table-stack tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .dashboard-table-stack tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+    border: none;
+    font-size: 0.85rem;
+  }
+
+  .dashboard-table-stack tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .dashboard-table-stack tbody td.text-end {
+    text-align: right !important;
+  }
+
+  /* Listas compactas */
+  .list-group-item {
+    padding: 0.6rem 0.85rem !important;
+    font-size: 0.85rem;
+  }
+
+  .list-group-item .fw-semibold {
+    font-size: 0.9rem;
+  }
+
+  .list-group-item small {
+    font-size: 0.75rem;
+  }
+
+  .list-group-item .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Cards de sesiones de voz */
+  .row.g-4.mb-5 .card-body {
+    padding: 0.85rem !important;
+  }
+
+  .row.g-4.mb-5 h5 {
+    font-size: 0.95rem;
+  }
+
+  .row.g-4.mb-5 .h4 {
+    font-size: 1.25rem !important;
+  }
 }

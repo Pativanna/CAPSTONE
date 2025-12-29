@@ -141,6 +141,12 @@
 
             <!-- Botones de acción -->
             <div class="d-grid gap-2 mb-4">
+                <a class="btn btn-outline-dark btn-lg"
+                   href="{% url 'parts:verificador' %}?pieza={{ part.id }}"
+                   data-turbo-frame="app-frame">
+                    <i class="bi bi-upc-scan"></i>
+                    Ir a escáner y verificar
+                </a>
                 <button class="btn btn-success btn-lg" id="btn-imprimir">
                     <i class="bi bi-printer-fill"></i>
                     <span id="btn-text">Imprimir Etiqueta en GOOJPRT PT210</span>
@@ -154,6 +160,11 @@
                 <button class="btn btn-outline-info" id="btn-detectar">
                     <i class="bi bi-search"></i>
                     Detectar Impresora
+                </button>
+
+                <button class="btn btn-outline-success" id="btn-bluetooth-generate">
+                    <i class="bi bi-bluetooth"></i>
+                    Generar etiqueta en impresora Bluetooth
                 </button>
                 
                 <a href="{{ etiqueta_url }}" download="etiqueta_parte_{{ part.id }}.png" 

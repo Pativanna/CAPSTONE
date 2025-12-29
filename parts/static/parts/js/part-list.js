@@ -90,6 +90,19 @@
 
     const getCache = () => cache || loadFromStorage();
 
+    const updateEntry = (partId, updates) => {
+      const data = getCache();
+      if (!data?.parts?.length) return;
+      const entry = data.parts.find((item) => String(item.id) === String(partId));
+      if (!entry) return;
+      if (typeof updates === 'function') {
+        updates(entry);
+      } else if (updates && typeof updates === 'object') {
+        Object.assign(entry, updates);
+      }
+      saveToStorage(data);
+    };
+
     const fetchLatest = () => {
       if (!catalogUrl) return Promise.resolve(null);
       if (fetchPromise) return fetchPromise;
@@ -177,6 +190,12 @@
       getCount() {
         return getCache()?.parts?.length || 0;
       },
+      updateEntry,
+      getEntry(partId) {
+        const data = getCache();
+        if (!data?.parts) return null;
+        return data.parts.find((item) => String(item.id) === String(partId)) || null;
+      }
     };
   })();
 
@@ -372,6 +391,64 @@ function submitSearchInput(searchInput) {
       }
     });
   }
+
+  function escapeAttribute(value) {
+    return escapeHtml(value).replace(/"/g, '&quot;');
+  }
+
+  function parseJsonScript(id) {
+    const node = document.getElementById(id);
+    if (!node) return [];
+    try {
+      return JSON.parse(node.textContent) || [];
+    } catch (_err) {
+      return [];
+    }
+  }
+
+  const MODEL_OPTIONS = parseJsonScript('parts-model-options');
+  const YEAR_OPTIONS = parseJsonScript('parts-year-options');
+  const currencyFormatter = (typeof Intl !== 'undefined' && Intl.NumberFormat)
+    ? new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 })
+    : null;
+
+  function formatCurrencyCL(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return String(value);
+    return currencyFormatter ? currencyFormatter.format(numeric) : `$${Math.round(numeric)}`;
+  }
+
+  function formatShortDate(isoText) {
+    if (!isoText) return '-';
+    try {
+      const date = new Date(isoText);
+      if (Number.isNaN(date.getTime())) return '-';
+      return date.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (_err) {
+      return isoText;
+    }
+  }
+
+  const QUICK_EDIT_FIELDS = {
+    name: { type: 'text', label: 'Nombre de la pieza' },
+    auto_brand_model: {
+      type: 'text',
+      label: 'Vehículo',
+      datalist: 'available-model-options',
+      placeholder: 'Modelo / versión'
+    },
+    auto_year: {
+      type: 'number',
+      label: 'Año del vehículo',
+      datalist: 'available-year-options',
+      min: 1950,
+      max: 2100
+    },
+    date_added: { type: 'date', label: 'Fecha de ingreso' },
+    max_value: { type: 'number', label: 'Valor inicial', step: 1000 },
+    min_value: { type: 'number', label: 'Valor final', step: 1000 }
+  };
       return;
     }
     const params = new URLSearchParams(window.location.search);
@@ -437,30 +514,296 @@ function submitSearchInput(searchInput) {
       quickContainer.innerHTML = '';
     };
 
+    const quickEditState = {
+      modal: document.getElementById('quickEditModal'),
+      question: document.getElementById('quick-edit-question'),
+      wrapper: document.getElementById('quick-edit-input-wrapper'),
+      confirmBtn: document.getElementById('quick-edit-confirm-btn'),
+      bsModal: null,
+      cell: null,
+      partId: null,
+      field: null,
+      originalValue: '',
+      inputEl: null
+    };
+
+    if (quickEditState.modal && window.bootstrap) {
+      quickEditState.bsModal = new window.bootstrap.Modal(quickEditState.modal);
+    }
+
+    const formatQuickDisplay = (field, value) => {
+      if (field === 'date_added') return formatShortDate(value);
+      if (field === 'max_value' || field === 'min_value') return formatCurrencyCL(value);
+      if (field === 'auto_year') return value || '-';
+      if (field === 'auto_brand_model') return value || 'Sin vehículo';
+      return value || '-';
+    };
+
+    const setConfirmLoading = (state) => {
+      if (!quickEditState.confirmBtn) return;
+      quickEditState.confirmBtn.disabled = state;
+      quickEditState.confirmBtn.classList.toggle('disabled', state);
+    };
+
+    const closeQuickEdit = () => {
+      setConfirmLoading(false);
+      quickEditState.bsModal?.hide();
+      quickEditState.inputEl = null;
+      quickEditState.cell = null;
+    };
+
+    const updateLocalQuickRow = (partId, field, rawValue) => {
+      CatalogCache.updateEntry(partId, (entry) => {
+        if (field === 'auto_brand_model') {
+          entry.auto = rawValue;
+        } else if (field === 'auto_year') {
+          entry.auto_year = rawValue;
+        } else if (field === 'max_value' || field === 'min_value') {
+          entry[field] = Number(rawValue);
+        } else if (field === 'date_added') {
+          entry.date_added = rawValue;
+        } else {
+          entry[field] = rawValue;
+        }
+      });
+    };
+
+    const submitQuickEdit = () => {
+      if (!quickEditState.cell || !quickEditState.partId || !quickEditState.inputEl) return;
+      const newValue = quickEditState.inputEl.value;
+      if (newValue === quickEditState.originalValue) {
+        closeQuickEdit();
+        return;
+      }
+      setConfirmLoading(true);
+      fetch(`/parts/${quickEditState.partId}/update-field/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': (window.getCsrfToken && window.getCsrfToken()) || document.querySelector('input[name=csrfmiddlewaretoken]')?.value || ''
+        },
+        body: JSON.stringify({ field: quickEditState.field, value: newValue })
+      })
+        .then((resp) => resp.json())
+        .then((data) => {
+          if (!data?.success) throw new Error(data?.error || 'No se pudo guardar');
+          const updatedValue = data.value ?? newValue;
+          const display = formatQuickDisplay(quickEditState.field, updatedValue);
+          quickEditState.cell.textContent = display;
+          quickEditState.cell.dataset.value = updatedValue;
+          updateLocalQuickRow(quickEditState.partId, quickEditState.field, updatedValue);
+          const row = quickEditState.cell.closest('.catalog-quick-results__row');
+          if (row && quickEditState.field === 'name') {
+            const preferredRaw = row.dataset.preferred || '';
+            if (!preferredRaw || preferredRaw === quickEditState.originalValue) {
+              row.dataset.preferred = updatedValue;
+            }
+          }
+          window.showToast?.({
+            title: 'Inventario',
+            body: 'Cambios aplicados correctamente.',
+            variant: 'success'
+          });
+          closeQuickEdit();
+        })
+        .catch((err) => {
+          setConfirmLoading(false);
+          window.showToast?.({
+            title: 'Inventario',
+            body: err?.message || 'No se pudo actualizar el campo.',
+            variant: 'danger'
+          });
+        });
+    };
+
+    if (quickEditState.confirmBtn && !quickEditState.confirmBtn.dataset.bound) {
+      quickEditState.confirmBtn.dataset.bound = 'true';
+      quickEditState.confirmBtn.addEventListener('click', submitQuickEdit);
+    }
+
+    const openQuickEdit = (cell) => {
+      const field = cell?.dataset?.field;
+      if (!field || !QUICK_EDIT_FIELDS[field]) {
+        window.showToast?.({
+          title: 'Inventario',
+          body: 'Este campo no admite edición rápida.',
+          variant: 'warning'
+        });
+        return;
+      }
+      const row = cell.closest('.catalog-quick-results__row');
+      if (!row) return;
+      quickEditState.cell = cell;
+      quickEditState.partId = row.dataset.partId;
+      quickEditState.field = field;
+      quickEditState.originalValue = cell.dataset.value || cell.textContent.trim();
+      const config = QUICK_EDIT_FIELDS[field];
+      if (quickEditState.question) {
+        const previous = quickEditState.originalValue || 'sin dato';
+        quickEditState.question.innerHTML = `Cambiar <strong>${escapeHtml(config.label || cell.dataset.label || field)}</strong> de <em>${escapeHtml(previous)}</em> a:`;
+      }
+      if (quickEditState.wrapper) {
+        quickEditState.wrapper.innerHTML = '';
+        let input;
+        if (config.type === 'textarea') {
+          input = document.createElement('textarea');
+          input.rows = 4;
+        } else {
+          input = document.createElement('input');
+          input.type = config.type || 'text';
+          if (config.type === 'number' && config.step) input.step = config.step;
+          if (config.min) input.min = config.min;
+          if (config.max) input.max = config.max;
+        }
+        input.className = 'form-control quick-edit-modal-input';
+        if (config.placeholder) input.placeholder = config.placeholder;
+        if (config.datalist) input.setAttribute('list', config.datalist);
+        input.value = quickEditState.originalValue || '';
+        quickEditState.wrapper.appendChild(input);
+        quickEditState.inputEl = input;
+        input.focus();
+        input.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' && config.type !== 'textarea') {
+            event.preventDefault();
+            submitQuickEdit();
+          }
+        }, { once: true });
+      }
+      quickEditState.bsModal?.show();
+    };
+
+    const attachQuickEditableHandlers = () => {
+      const cells = quickContainer.querySelectorAll('.quick-editable');
+      cells.forEach((cell) => {
+        if (cell.dataset.quickEditBound === 'true') return;
+        cell.dataset.quickEditBound = 'true';
+        cell.addEventListener('dblclick', (event) => {
+          event.stopPropagation();
+          openQuickEdit(cell);
+        });
+        cell.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const now = Date.now();
+          const lastTap = Number(cell.dataset.lastTap || '0');
+          if (now - lastTap < 350) {
+            openQuickEdit(cell);
+          }
+          cell.dataset.lastTap = String(now);
+        });
+      });
+    };
+
     const renderResults = (items) => {
       if (!items || !items.length) {
         quickContainer.innerHTML = '<div class="catalog-quick-results__empty">Sin coincidencias en el índice local.</div>';
         quickContainer.classList.remove('d-none');
         return;
       }
-      quickContainer.innerHTML = items.map((item) => `
-        <button type="button"
-                class="catalog-quick-results__item"
-                data-catalog-id="${item.id}"
-                data-catalog-name="${escapeHtml(item.name)}"
-                data-catalog-barcode="${escapeHtml(item.barcode || '')}">
-          <div class="catalog-result-meta">
-            <span class="catalog-result-name">${escapeHtml(item.name)}</span>
-            <div class="catalog-result-tags">
-              ${item.barcode ? `<span class="badge bg-light text-dark"><i class="bi bi-upc me-1"></i>${escapeHtml(item.barcode)}</span>` : ''}
-              ${item.auto ? `<span class="badge bg-primary-subtle text-primary-emphasis"><i class="bi bi-car-front me-1"></i>${escapeHtml(item.auto)}</span>` : ''}
-              ${item.workshop ? `<span class="badge bg-body-secondary text-body"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(item.workshop)}</span>` : ''}
-            </div>
-          </div>
-          <i class="bi bi-arrow-return-left text-muted"></i>
-        </button>
-      `).join('');
+      const rows = items.map((item) => {
+        const preferred = escapeAttribute(item.barcode || item.name || '');
+        const name = escapeHtml(item.name || 'Sin nombre');
+        const vehicle = escapeHtml(item.auto || 'Sin vehículo');
+        const year = escapeHtml(item.auto_year || '');
+        return `
+          <tr class="catalog-quick-results__row"
+              data-part-id="${item.id}"
+              data-preferred="${preferred}"
+              tabindex="0"
+              role="button">
+            <td>
+              <span class="quick-result-name quick-editable"
+                    data-field="name"
+                    data-label="Nombre de la pieza"
+                    data-value="${escapeAttribute(item.name || '')}">
+                ${name}
+              </span>
+              <div class="text-muted small">${escapeHtml(item.workshop || '')}</div>
+            </td>
+            <td>
+              <div class="quick-result-vehicle">
+                <span class="quick-editable"
+                      data-field="auto_brand_model"
+                      data-label="Vehículo"
+                      data-value="${escapeAttribute(item.auto || '')}">
+                  ${vehicle || 'Sin vehículo'}
+                </span>
+                <span class="quick-editable quick-result-year"
+                      data-field="auto_year"
+                      data-label="Año del vehículo"
+                      data-value="${escapeAttribute(item.auto_year || '')}">
+                  ${year || '-'}
+                </span>
+              </div>
+            </td>
+            <td>
+              <span class="quick-editable"
+                    data-field="date_added"
+                    data-label="Fecha de ingreso"
+                    data-value="${escapeAttribute(item.date_added || '')}">
+                ${formatShortDate(item.date_added)}
+              </span>
+            </td>
+            <td>
+              <div class="quick-result-prices">
+                <small>Inicial</small>
+                <span class="quick-editable"
+                      data-field="max_value"
+                      data-label="Valor inicial"
+                      data-value="${escapeAttribute(item.max_value ?? '')}">
+                  ${formatCurrencyCL(item.max_value)}
+                </span>
+              </div>
+            </td>
+            <td>
+              <div class="quick-result-prices">
+                <small>Final</small>
+                <span class="quick-editable"
+                      data-field="min_value"
+                      data-label="Valor final"
+                      data-value="${escapeAttribute(item.min_value ?? '')}">
+                  ${formatCurrencyCL(item.min_value)}
+                </span>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      quickContainer.innerHTML = `
+        <table class="catalog-quick-results-table">
+          <thead>
+            <tr>
+              <th>Pieza</th>
+              <th>Vehículo</th>
+              <th>Ingreso</th>
+              <th>Precio inicial</th>
+              <th>Precio oferta</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
       quickContainer.classList.remove('d-none');
+      attachQuickEditableHandlers();
+    };
+
+    const clearHideTimer = () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+    };
+
+    const handleQuickRowSelection = (row) => {
+      if (!row) return;
+      clearHideTimer();
+      const preferred = row.dataset.preferred || row.querySelector('.quick-result-name')?.textContent || '';
+      if (preferred) {
+        searchInput.value = preferred;
+        submitSearchInput(searchInput);
+      }
+      hideResults();
     };
 
     const runLocalSearch = () => {
@@ -472,13 +815,6 @@ function submitSearchInput(searchInput) {
       if (!CatalogCache.isReady()) return;
       const matches = CatalogCache.search(term);
       renderResults(matches);
-    };
-
-    const clearHideTimer = () => {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
     };
 
     searchInput.addEventListener('input', () => {
@@ -512,21 +848,20 @@ function submitSearchInput(searchInput) {
       }
     });
 
-    quickContainer.addEventListener('mousedown', (event) => {
-      // Evita que el blur cierre los resultados antes de hacer clic
+    quickContainer.addEventListener('click', (event) => {
+      if (event.target.closest('.quick-editable')) return;
+      const row = event.target.closest('.catalog-quick-results__row');
+      if (!row) return;
       event.preventDefault();
+      handleQuickRowSelection(row);
     });
 
-    quickContainer.addEventListener('click', (event) => {
-      const item = event.target.closest('.catalog-quick-results__item');
-      if (!item) return;
-      clearHideTimer();
-      const preferred = item.dataset.catalogBarcode || item.dataset.catalogName || '';
-      if (preferred) {
-        searchInput.value = preferred;
-        submitSearchInput(searchInput);
-      }
-      hideResults();
+    quickContainer.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      const row = event.target.closest('.catalog-quick-results__row');
+      if (!row) return;
+      event.preventDefault();
+      handleQuickRowSelection(row);
     });
     document.querySelectorAll('a[href$="/logout/"]').forEach((link) => {
       link.addEventListener('click', () => {
@@ -983,6 +1318,8 @@ function submitSearchInput(searchInput) {
     const tableWrapper = document.getElementById('parts-table-wrapper');
     const FILTERS_KEY = 'columnFilters';
     const maxFilterPages = parseInt(loadBtn.dataset.filterPages || String(LOAD_MORE_MAX_FILTER_PAGES), 10);
+    const sentinel = document.getElementById('parts-load-sentinel');
+    let sentinelObserver = null;
 
     const toggleSkeleton = (show) => {
       if (!skeleton) return;
@@ -1030,6 +1367,10 @@ function submitSearchInput(searchInput) {
 
     const showNoMoreMessage = () => {
       if (loadBtn.classList.contains('d-none')) return;
+      if (sentinelObserver) {
+        sentinelObserver.disconnect();
+        sentinelObserver = null;
+      }
       setLoading(false);
       const container = loadBtn.parentElement;
       loadBtn.classList.add('d-none');
@@ -1188,6 +1529,17 @@ function submitSearchInput(searchInput) {
 
       processPage(initialUrl);
     });
+
+    if (sentinel && 'IntersectionObserver' in window) {
+      sentinelObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          if (!loadBtn.dataset.nextUrl || loadBtn.disabled || loadBtn.classList.contains('d-none')) return;
+          loadBtn.click();
+        });
+      }, { rootMargin: '200px', threshold: 0.25 });
+      sentinelObserver.observe(sentinel);
+    }
   }
 
   function initLiveSync() {

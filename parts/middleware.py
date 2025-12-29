@@ -56,7 +56,26 @@ class SecurityHeadersMiddleware:
         style_src = ["'self'", nonce_token, *inline_style_hashes, *self.STYLE_CDN_SOURCES]
         style_src_elem = ["'self'", nonce_token, *inline_style_hashes, *self.STYLE_CDN_SOURCES]
         style_src_attr = ["'unsafe-inline'"]
-        connect_src = ["'self'", "wss:", "ws:"]
+        # IMPORTANT: avoid allowing ws:/wss: to arbitrary hosts in production.
+        # Allow WebSocket connections only to the current allowed host.
+        connect_src = ["'self'"]
+        host = ''
+        try:
+            host = (request.get_host() or '').strip()
+        except Exception:
+            host = ''
+        if host:
+            connect_src.append(f"wss://{host}")
+            if getattr(settings, 'DEBUG', False):
+                connect_src.append(f"ws://{host}")
+        # Dev convenience for local testing
+        if getattr(settings, 'DEBUG', False):
+            connect_src.extend([
+                'ws://localhost:8000',
+                'ws://127.0.0.1:8000',
+                'wss://localhost:8000',
+                'wss://127.0.0.1:8000',
+            ])
         connect_src.extend(self.CONNECT_EXTRA)
         img_src = ["'self'", "data:", "blob:", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"]
         font_src = ["'self'", "data:", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"]

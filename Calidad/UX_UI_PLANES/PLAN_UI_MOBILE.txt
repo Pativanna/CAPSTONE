@@ -1,0 +1,89 @@
+================================================================================
+            PLAN DE MEJORA UI/UX - INVENTARIO CAR INVENTORY (MÓVIL)
+================================================================================
+Fecha: 2025-12-09
+Responsable: Codex (IA)
+
+NORMAS DE REFERENCIA:
+  - ISO/IEC 9241-171 (accesibilidad y usabilidad en interfaces)
+  - ISO/IEC 25010 (calidad del producto software)
+  - ISO/IEC 27001/27034 (seguridad en el ciclo de vida, aplica a cambios)
+  - ISO 9001 (trazabilidad de decisiones en carpeta Calidad)
+
+OBJETIVOS:
+  1. Priorizar los tres flujos móviles principales: consulta rápida de piezas,
+     escaneo de códigos y consulta de precios generales.
+  2. Mantener consistencia visual con la paleta actual (modo claro/oscuro) sin
+     añadir FABs; usar sólo navbar + botones contextuales.
+  3. Garantizar que todos los listados funcionen con paginación incremental de
+     20 elementos visibles y respeten filtros activos.
+  4. Asegurar que los flujos críticos (voz y escaneo) tengan botones grandes,
+     confirmaciones audibles y accesibles según requisitos.
+
+SECCIONES Y REQUERIMIENTOS CLAVE:
+
+1. part_list (pantalla inicial)
+   - Búsqueda texto/voz como primer elemento visible.
+   - Resultados inmediatos en tabla compacta sin fotos:
+     “Nombre + Modelo + Año | Fecha de ingreso”.
+   - Doble tap en campos clave para edición inline con confirmación
+     “¿Cambiar X de Y a Z? Atrás/Aceptar” y registro en auditoría.
+   - Tarjeta principal plegable/con fotos al seleccionar una pieza.
+   - Botón “Filtros” debajo de la búsqueda; selector “Ordenar por:” junto a filtros
+     con opciones default, ingreso, A-Z, Z-A, etc.
+   - Sin scroll infinito en dashboard, pero en listados cargar 20 items por batch
+     respetando filtros (no confundir totales vs. visibles tras filtro).
+
+2. Escaneo y barcode
+   - `verificador.html`: modo auto-scan o seleccionar pieza -> “Escanear”.
+     Modal fullscreen con 8% de zona muerta inferior para evitar solaparse con
+     los botones del SO. Mostrar en la parte baja el último código leído, nombre,
+     vehículo, año y fecha de ingreso. Permitir escaneo continuo.
+   - `barcode_preview.html`: añadir acciones rápidas
+       • “Ir a escanear código de barras”
+       • “Generar código para impresora Bluetooth conectada”
+     integradas a los flujos existentes (`scanner` y `printer_hub`).
+
+3. Flujo de voz (selección taller/vehículo, manos libres, fotos)
+   - Botones grandes con feedback sonoro para cada acción:
+       • Confirmación al elegir taller/vehículo.
+       • Sonido distinto al iniciar manos libres y otro al finalizar.
+       • Beeps cortos para cada comando reconocido.
+   - Opción de silenciar sonidos desde el menú “Más” del navbar (toggle global).
+
+4. Dashboard
+   - Ordenar tarjetas: ingresos y ventas primero, luego inventario crítico.
+   - En móvil, mostrar KPIs sin scroll infinito; gráficos deben ser legibles y
+     adaptados (stacked vertical, carrusel horizontal si es necesario).
+
+5. Reportes (`report_page.html`)
+   - Cards por período: Diario, Semanal, Mensual, Anual.
+   - Cada card con botones “Previsualizar” y “Descargar”.
+   - Debe funcionar en mobile (layout de una columna) y desktop (grid).
+
+6. Logs (`logs.html`)
+   - Vista comprimida con tres campos visibles: Usuario · Evento · Descripción corta.
+   - Tap para expandir y mostrar detalles completos.
+   - Filtros/chips para facilitar revisión rápida en móviles.
+
+7. Listados: autos y talleres
+   - Añadir chips de filtro (estado, ubicación) y ordenar por más recientes.
+
+8. Printer hub
+   - Se mantiene igual, sólo asegurar coherencia con nuevos botones desde
+     barcode_preview.
+
+IMPLEMENTACIÓN Y TEST:
+  - Actualizar plantillas, JS y estilos respetando patrón Turbo (ver prácticas).
+  - Añadir pruebas manuales guiadas para:
+      • Edición inline + confirmación.
+      • Paginación incremental con filtros aplicados.
+      • Sonidos y toggle de mute.
+      • Report cards en mobile y desktop.
+      • Modal fullscreen del verificador con zona muerta y datos del escaneo.
+  - Documentar cualquier excepción en esta carpeta.
+
+PROXIMOS PASOS:
+  1. Modificar plantillas/JS según este plan.
+  2. Registrar cambios en auditoría si aplica.
+  3. Validar manualmente en APK y navegador responsive.

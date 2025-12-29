@@ -319,61 +319,91 @@
       return mq ? mq.matches : window.innerWidth < 992;
     }
 
+    function isPanelOpen() {
+      return document.body.classList.contains('mobile-more-active');
+    }
+
     function closePanel() {
       document.body.classList.remove('mobile-more-active');
-      panel.classList.remove('mobile-more-panel--open');
       trigger.setAttribute('aria-expanded', 'false');
       panel.scrollTop = 0;
     }
 
+    function openPanel() {
+      document.body.classList.add('mobile-more-active');
+      trigger.setAttribute('aria-expanded', 'true');
+      panel.scrollTop = 0;
+    }
+
+    function togglePanel() {
+      if (isPanelOpen()) {
+        closePanel();
+      } else {
+        openPanel();
+      }
+    }
+
+    // Remover data-bs-toggle para evitar que Bootstrap interfiera en móvil
+    function disableBootstrapDropdown() {
+      if (isMobile()) {
+        trigger.removeAttribute('data-bs-toggle');
+      } else {
+        trigger.setAttribute('data-bs-toggle', 'dropdown');
+      }
+    }
+
+    // Ejecutar al inicio
+    disableBootstrapDropdown();
+
+    // En móvil, manejar click manualmente
     trigger.addEventListener('click', function (e) {
       if (!isMobile()) return;
       e.preventDefault();
       e.stopPropagation();
-      var willOpen = !document.body.classList.contains('mobile-more-active');
-      if (panel.classList.contains('show')) {
-        panel.classList.remove('show');
-      }
-      document.body.classList.toggle('mobile-more-active', willOpen);
-      panel.classList.toggle('mobile-more-panel--open', willOpen);
-      if (willOpen) {
-        panel.scrollTop = 0;
-      }
-      trigger.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-    }, true);
+      togglePanel();
+    });
 
+    // Click fuera cierra el panel
     document.addEventListener('click', function (ev) {
-      if (!document.body.classList.contains('mobile-more-active')) return;
+      if (!isPanelOpen()) return;
       if (!isMobile()) return;
       if (trigger.contains(ev.target) || panel.contains(ev.target)) return;
       closePanel();
     });
 
+    // Backdrop cierra el panel
     if (backdrop) {
       backdrop.addEventListener('click', closePanel);
     }
 
+    // Escape cierra el panel
     document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && document.body.classList.contains('mobile-more-active') && isMobile()) {
+      if (event.key === 'Escape' && isPanelOpen() && isMobile()) {
         closePanel();
       }
     });
 
+    // Resize: cambiar modo y cerrar si es necesario
     window.addEventListener('resize', function () {
-      if (!isMobile() && document.body.classList.contains('mobile-more-active')) {
+      disableBootstrapDropdown();
+      if (!isMobile() && isPanelOpen()) {
         closePanel();
       }
     });
 
+    // Al colapsar navbar, cerrar panel
     var navbarMain = document.getElementById('navbarMain');
-    if (navbarMain && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+    if (navbarMain) {
       navbarMain.addEventListener('hidden.bs.collapse', closePanel);
-    } else if (navbarMain) {
-      navbarMain.addEventListener('collapse:hide', closePanel);
     }
 
+    // Turbo navigation cierra el panel
     document.addEventListener('turbo:before-visit', closePanel);
     document.addEventListener('turbo:load', closePanel);
+
+    // Exponer funciones globalmente para el back button
+    window.__closeMobileMorePanel = closePanel;
+    window.__isMobileMorePanelOpen = isPanelOpen;
   }
 
   function persistCollapse(panel, key, mobileDefault) {

@@ -1,0 +1,48 @@
+================================================================================
+          INSTRUCCIONES DE IMPLEMENTACIÓN SEGURA Y PROFESIONAL (ISO)
+================================================================================
+Fecha: 2025-12-09
+Versión: 1.0
+
+OBJETIVO:
+  - Asegurar que TODO cambio de código cumpla con las normas ISO aplicables
+    al proyecto de inventario de Transervis.
+
+NORMAS APLICADAS:
+  1. ISO/IEC 27001 y 27002 (Anexo A.14 / Sección 8): Controles de seguridad en
+     el ciclo de vida del software.
+  2. ISO/IEC 27034-1: Directrices de seguridad en aplicaciones.
+  3. ISO/IEC 25010: Modelo de calidad de software (seguridad, fiabilidad,
+     mantenibilidad, compatibilidad y usabilidad).
+  4. ISO 9001: Gestión de calidad y trazabilidad de cambios.
+
+REGLAS OBLIGATORIAS PARA CADA IMPLEMENTACIÓN:
+  - Validar exhaustivamente la entrada de usuarios, datos de archivos y respuestas
+    remotas (prevención de inyección y XSS).
+  - Mantener cabeceras y políticas de seguridad (CSP, COOP, Permissions Policy,
+    Referrer Policy) y no reducirlas sin justificación documentada.
+  - Anonimizar o minimizar datos personales en logs (conforme ISO/IEC 27701).
+  - Registrar acciones críticas mediante `parts/auditoria.py` y decoradores
+    `@audit_action` según ISO 9001.
+  - Diseñar cambios con pruebas asociadas (unitarias o de integración) siguiendo
+    la matriz de calidad ISO/IEC 25010.
+  - No introducir dependencias que rompan el proceso de build o el pipeline
+    documentado; actualizar `requirements*.txt` o `package*.json` con hashes
+    y versiones fijas.
+  - Revisar que nuevos scripts cumplan el patrón Turbo (ver PRACTICAS) para
+    evitar condiciones de carrera y asegurar mantenibilidad.
+  - Documentar cualquier excepción de seguridad o deuda técnica en la carpeta
+    `Calidad/` para auditoría futura.
+
+CHECKLIST RÁPIDO:
+  □ ¿Validé y saniticé entradas/salidas?
+  □ ¿Mantengo o refuerzo controles de seguridad ya declarados?
+  □ ¿Registré eventos relevantes en el sistema de auditoría?
+  □ ¿Agregué/actualicé pruebas para cubrir el cambio?
+  □ ¿Documenté decisiones en los archivos de Calidad cuando aplica?
+
+NOTA:
+  - Este archivo DEBE leerse junto con ISO_AUDIT.txt y PRACTICAS_DESARROLLO.txt
+    antes de cualquier implementación o respuesta.
+  - Si surge una nueva norma ISO aplicable, actualizar este documento y el
+    resto de la carpeta de calidad.

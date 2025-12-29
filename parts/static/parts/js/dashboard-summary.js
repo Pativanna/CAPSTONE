@@ -265,6 +265,9 @@
       }
 
     descriptionEl.textContent = chartDesc || '';
+    if (canvasEl) {
+      canvasEl.setAttribute('aria-label', chartDesc || 'Resumen del inventario sin descripción disponible.');
+    }
     updateModeButtons();
     toggleSpecialToolbar();
     updateSpecialButtons();
@@ -296,7 +299,11 @@
         .catch((err) => {
           console.error('dashboard_stats_error', err);
           if (descriptionEl) {
-            descriptionEl.textContent = 'No se pudo cargar el resumen. Intenta nuevamente más tarde.';
+            const fallbackMessage = 'No se pudo cargar el resumen. Intenta nuevamente más tarde.';
+            descriptionEl.textContent = fallbackMessage;
+            if (canvasEl) {
+              canvasEl.setAttribute('aria-label', fallbackMessage);
+            }
           }
         });
     }

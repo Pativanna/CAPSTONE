@@ -4,6 +4,35 @@
 
 {% block content %}
 <section class="inventory-shell">
+  <!-- Header móvil compacto (visible solo en <992px) -->
+  <div class="inventory-mobile-header">
+    <h1><i class="bi bi-box-seam me-2"></i>Inventario</h1>
+    <a href="{% url 'parts:part_create' %}" class="btn btn-light btn-sm" data-turbo-frame="app-frame">
+      <i class="fas fa-plus"></i> Nueva
+    </a>
+  </div>
+
+  <!-- Métricas móviles como strip horizontal -->
+  <div class="inventory-metrics-strip d-lg-none">
+    <div class="inventory-metric-chip">
+      <strong>{{ total_piezas|intcomma }}</strong>
+      <span>total</span>
+    </div>
+    <div class="inventory-metric-chip">
+      <strong>{{ inventory_stats.available|default:0|intcomma }}</strong>
+      <span>disponibles</span>
+    </div>
+    <div class="inventory-metric-chip">
+      <strong>{{ inventory_stats.sold|default:0|intcomma }}</strong>
+      <span>vendidas</span>
+    </div>
+    <div class="inventory-metric-chip">
+      <strong>{{ inventory_stats.incomplete|default:0|intcomma }}</strong>
+      <span>incompletas</span>
+    </div>
+  </div>
+
+  <!-- Hero desktop (oculto en móvil por CSS) -->
   <header class="inventory-hero card border-0 shadow-sm mb-3">
     <div class="card-body inventory-hero-body">
       <div class="inventory-hero-copy">
@@ -95,39 +124,57 @@
         <div id="catalog-cache-status" class="catalog-cache-status text-muted small mt-1" role="status">
           Índice local: sincronizando…
         </div>
-        <div id="catalog-quick-results" class="catalog-quick-results d-none" aria-live="polite"></div>
+        <div id="catalog-quick-results"
+             class="catalog-quick-results d-none"
+             aria-live="polite"
+             aria-label="Resultados rápidos de piezas"></div>
       </div>
 
       <div class="inventory-filter-header">
         <div class="inventory-filter-summary small">
           <span class="badge rounded-pill bg-body-secondary text-body fw-semibold">
             <i class="fas fa-boxes-stacked me-1"></i> {{ total_piezas }} piezas
-        </span>
-        {% if modelo_filtrado %}
-          <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">
-            <i class="fas fa-car-side me-1"></i> Modelo: {{ modelo_filtrado }}
           </span>
-        {% endif %}
-        {% if anio_filtrado %}
-          <span class="badge rounded-pill bg-info-subtle text-info-emphasis">
-            <i class="fas fa-calendar me-1"></i> Año: {{ anio_filtrado }}
-          </span>
-        {% endif %}
-        <span class="badge rounded-pill bg-dark-subtle text-dark-emphasis"
-              data-filter-count
-              role="status"
-              aria-live="polite"
-              aria-atomic="true">Filtros rápidos: 0</span>
+          {% if modelo_filtrado %}
+            <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis">
+              <i class="fas fa-car-side me-1"></i> Modelo: {{ modelo_filtrado }}
+            </span>
+          {% endif %}
+          {% if anio_filtrado %}
+            <span class="badge rounded-pill bg-info-subtle text-info-emphasis">
+              <i class="fas fa-calendar me-1"></i> Año: {{ anio_filtrado }}
+            </span>
+          {% endif %}
+          <span class="badge rounded-pill bg-dark-subtle text-dark-emphasis"
+                data-filter-count
+                role="status"
+                aria-live="polite"
+                aria-atomic="true">Filtros rápidos: 0</span>
+        </div>
       </div>
-      <div class="d-flex flex-column flex-lg-row gap-2 w-100 w-lg-auto">
-        <button class="btn btn-outline-primary w-100 w-lg-auto {% if not filtros_partes_abiertos %}collapsed{% endif %}"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#parts-filter-panel"
-                aria-controls="parts-filter-panel"
-                aria-expanded="{{ filtros_partes_abiertos|yesno:'true,false' }}">
-          <i class="fas fa-sliders-h me-1"></i> Filtros avanzados
-        </button>
+
+      <div class="filter-primary-actions d-flex flex-column flex-lg-row gap-2 mt-3">
+        <div class="d-flex flex-column flex-lg-row gap-2 w-100">
+          <button class="btn btn-outline-primary flex-fill {% if not filtros_partes_abiertos %}collapsed{% endif %}"
+                  type="button"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#parts-filter-panel"
+                  aria-controls="parts-filter-panel"
+                  aria-expanded="{{ filtros_partes_abiertos|yesno:'true,false' }}">
+            <i class="fas fa-sliders-h me-1"></i> Filtros
+          </button>
+          <div class="order-select-shell flex-fill">
+            <label for="parts-order-select" class="form-label text-muted small mb-1">Ordenar por:</label>
+            <select id="parts-order-select"
+                    name="orden"
+                    class="form-select"
+                    onchange="this.form.requestSubmit()">
+              {% for value,label in orden_opciones %}
+                <option value="{{ value }}" {% if value == orden_activo %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
         <button id="clear-filters-btn" type="button" class="btn btn-outline-secondary w-100 w-lg-auto">
           <i class="fas fa-arrows-rotate"></i> Reiniciar todo
         </button>
@@ -320,6 +367,7 @@
     {% endif %}
   </div>
 </div>
+<div id="parts-load-sentinel" class="parts-load-sentinel" aria-hidden="true"></div>
 
 <input type="file"
        id="photo-upload-input"
@@ -327,7 +375,42 @@
        accept="image/*"
        multiple>
 
+<datalist id="available-model-options">
+  {% for modelo in modelos_disponibles %}
+    <option value="{{ modelo }}">
+  {% endfor %}
+</datalist>
+<datalist id="available-year-options">
+  {% for anio in anios_disponibles %}
+    <option value="{{ anio }}">
+  {% endfor %}
+</datalist>
+
+<div class="modal fade" id="quickEditModal" tabindex="-1" aria-labelledby="quickEditLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="quickEditLabel"><i class="bi bi-pencil-square me-2"></i> Confirmar cambio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p id="quick-edit-question" class="text-muted mb-3"></p>
+        <div id="quick-edit-input-wrapper"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Atrás</button>
+        <button type="button" class="btn btn-primary" id="quick-edit-confirm-btn">
+          <i class="bi bi-check2-circle me-1"></i> Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </section>
+
+{{ modelos_disponibles|json_script:"parts-model-options" }}
+{{ anios_disponibles|json_script:"parts-year-options" }}
 
 <!-- Modal eliminar pieza -->
 <div class="modal fade" id="deletePartModal" tabindex="-1" aria-labelledby="deletePartLabel" aria-hidden="true">

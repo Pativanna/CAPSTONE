@@ -3,13 +3,12 @@
 
 {% block content %}
 <section class="report-page container-fluid container-xl py-4">
-  <div class="report-hero">
-    <h1 class="h2 mb-2">
-      <i class="fas fa-chart-line"></i> Generador de Reportes
-    </h1>
-    <p class="mb-0">Sistema de gestión de inventario Transervis</p>
-    <small class="d-block mt-2 opacity-75">{{ 'now'|date:'d/m/Y H:i' }}</small>
-  </div>
+  <header class="report-header">
+    <div class="report-header-main">
+      <h1><i class="fas fa-chart-line"></i> Reportes</h1>
+      <span class="report-timestamp">{{ 'now'|date:'d/m/Y H:i' }}</span>
+    </div>
+  </header>
 
   {% if message %}
     <div class="alert alert-success alert-dismissible fade show report-alert" role="alert">
@@ -20,61 +19,54 @@
   {% endif %}
 
   <section class="report-card card shadow-sm mb-5">
-    <div class="card-header text-center py-4">
-      <h3 class="mb-0 fw-bold">
-        <i class="fas fa-calendar-alt"></i> Selecciona el período del reporte
-      </h3>
-    </div>
-    <div class="card-body">
-      <div class="frequency-selector" role="radiogroup" aria-label="Frecuencia del reporte">
-        <button type="button"
-                class="frequency-btn"
-                data-frequency="daily"
-                aria-pressed="false">
-          <div class="frequency-icon-wrapper">
-            <i class="fas fa-calendar-day frequency-icon"></i>
-          </div>
-          <span class="frequency-title">Diario</span>
-          <span class="frequency-subtitle">Reporte del día actual</span>
-        </button>
-
-        <button type="button"
-                class="frequency-btn active"
-                data-frequency="weekly"
-                aria-pressed="true">
-          <span class="frequency-badge">Seleccionado</span>
-          <div class="frequency-icon-wrapper">
-            <i class="fas fa-calendar-week frequency-icon"></i>
-          </div>
-          <span class="frequency-title">Semanal</span>
-          <span class="frequency-subtitle">Últimos 7 días</span>
-        </button>
-
-        <button type="button"
-                class="frequency-btn"
-                data-frequency="monthly"
-                aria-pressed="false">
-          <div class="frequency-icon-wrapper">
-            <i class="fas fa-calendar-alt frequency-icon"></i>
-          </div>
-          <span class="frequency-title">Mensual</span>
-          <span class="frequency-subtitle">Últimos 30 días</span>
-        </button>
+    <div class="card-body report-card-body">
+      <!-- Selector de período compacto -->
+      <div class="report-period-section">
+        <label class="report-section-label">
+          <i class="fas fa-calendar-alt"></i> Período
+        </label>
+        <div class="frequency-chips" role="radiogroup" aria-label="Frecuencia del reporte">
+          <button type="button"
+                  class="frequency-chip"
+                  data-frequency="daily"
+                  aria-pressed="false">
+            <i class="fas fa-calendar-day"></i>
+            <span>Hoy</span>
+          </button>
+          <button type="button"
+                  class="frequency-chip active"
+                  data-frequency="weekly"
+                  aria-pressed="true">
+            <i class="fas fa-calendar-week"></i>
+            <span>7 días</span>
+          </button>
+          <button type="button"
+                  class="frequency-chip"
+                  data-frequency="monthly"
+                  aria-pressed="false">
+            <i class="fas fa-calendar-alt"></i>
+            <span>30 días</span>
+          </button>
+        </div>
       </div>
 
-      <div class="action-buttons mt-3">
-        <button type="button" id="previewBtn" class="btn-action btn-outline-secondary">
-          <i class="fas fa-eye me-2"></i> Vista previa
+      <!-- Acciones compactas -->
+      <div class="report-actions-grid">
+        <button type="button" id="previewBtn" class="report-action-btn report-action-btn--secondary">
+          <i class="fas fa-eye"></i>
+          <span>Vista previa</span>
         </button>
-        <button type="button" id="downloadBtn" class="btn-action btn-primary-custom">
-          <i class="fas fa-download me-2"></i> Descargar PDF
+        <button type="button" id="downloadBtn" class="report-action-btn report-action-btn--primary">
+          <i class="fas fa-download"></i>
+          <span>Descargar</span>
         </button>
         <button type="button"
                 id="sendBtn"
-                class="btn-action btn-success-custom"
+                class="report-action-btn report-action-btn--success"
                 data-bs-toggle="modal"
                 data-bs-target="#sendModal">
-          <i class="fas fa-paper-plane me-2"></i> Enviar por email
+          <i class="fas fa-paper-plane"></i>
+          <span>Enviar</span>
         </button>
       </div>
     </div>

@@ -35,15 +35,19 @@
     if (!button) return;
     button.classList.remove('active');
     button.setAttribute('aria-pressed', 'false');
-    const badge = button.querySelector('.frequency-badge');
-    if (badge) badge.remove();
+    // Solo agregar/remover badge en frequency-btn (legacy), no en frequency-chip
+    if (button.classList.contains('frequency-btn')) {
+      const badge = button.querySelector('.frequency-badge');
+      if (badge) badge.remove();
+    }
   }
 
   function activateButtonStyles(button) {
     if (!button) return;
     button.classList.add('active');
     button.setAttribute('aria-pressed', 'true');
-    if (!button.querySelector('.frequency-badge')) {
+    // Solo agregar badge en frequency-btn (legacy), no en frequency-chip
+    if (button.classList.contains('frequency-btn') && !button.querySelector('.frequency-badge')) {
       const badge = document.createElement('span');
       badge.className = 'frequency-badge';
       badge.textContent = 'Seleccionado';
@@ -57,7 +61,8 @@
   }
 
   function initFrequencyButtons() {
-    const buttons = Array.from(document.querySelectorAll('.frequency-btn'));
+    // Soportar tanto .frequency-btn (legacy) como .frequency-chip (nuevo diseño compacto)
+    const buttons = Array.from(document.querySelectorAll('.frequency-btn, .frequency-chip'));
     if (!buttons.length) return;
 
     const freqInputValue = document.getElementById('reportFrequency')?.value;

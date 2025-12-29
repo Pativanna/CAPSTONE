@@ -18,7 +18,7 @@
     <div class="col-6 col-md-3">
       <div class="card metric-card metric-card--primary shadow-sm border-0">
         <div class="card-body text-center py-3">
-          <div class="small text-uppercase opacity-75">Piezas totales</div>
+          <div class="small text-uppercase">Piezas totales</div>
           <div class="display-6 fw-bold">{{ total_parts|intcomma }}</div>
         </div>
       </div>
@@ -26,7 +26,7 @@
     <div class="col-6 col-md-3">
       <div class="card metric-card metric-card--success shadow-sm border-0">
         <div class="card-body text-center py-3">
-          <div class="small text-uppercase opacity-75">Disponibles</div>
+          <div class="small text-uppercase">Disponibles</div>
           <div class="display-6 fw-bold">{{ available_parts|intcomma }}</div>
         </div>
       </div>
@@ -34,7 +34,7 @@
     <div class="col-6 col-md-3">
       <div class="card metric-card metric-card--danger shadow-sm border-0">
         <div class="card-body text-center py-3">
-          <div class="small text-uppercase opacity-75">Vendidas</div>
+          <div class="small text-uppercase">Vendidas</div>
           <div class="display-6 fw-bold">{{ sold_parts|intcomma }}</div>
         </div>
       </div>
@@ -42,7 +42,7 @@
     <div class="col-6 col-md-3">
       <div class="card metric-card metric-card--violet shadow-sm border-0">
         <div class="card-body text-center py-3">
-          <div class="small text-uppercase opacity-75">Autos registrados</div>
+          <div class="small text-uppercase">Autos registrados</div>
           <div class="display-6 fw-bold">{{ total_autos|intcomma }}</div>
         </div>
       </div>
@@ -131,10 +131,15 @@
           <div id="summarySelectorRow" class="dashboard-chip-row mb-3"></div>
           <div class="dashboard-panel dashboard-panel--summary mb-3">
             <div class="text-muted small text-uppercase fw-semibold">Descripción</div>
-            <span id="chartDescription" class="dashboard-panel__text"></span>
+            <span id="chartDescription" class="dashboard-panel__text" role="status" aria-live="polite"></span>
           </div>
           <div class="dashboard-chart-shell">
-            <canvas id="summaryChart" class="w-100" height="220"></canvas>
+            <canvas id="summaryChart"
+                    class="w-100"
+                    height="220"
+                    role="img"
+                    aria-describedby="chartDescription"
+                    aria-label="Resumen visual del inventario"></canvas>
           </div>
         </div>
       </div>
@@ -147,7 +152,7 @@
         <div class="card-body">
           <h5 class="card-title">Top talleres por valor disponible</h5>
           <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
+            <table class="table table-sm align-middle mb-0 dashboard-table-stack">
               <thead>
                 <tr>
                   <th>Taller</th>
@@ -158,9 +163,9 @@
               <tbody>
                 {% for workshop in top_workshops %}
                   <tr>
-                    <td>{{ workshop.name }}</td>
-                    <td class="text-end">{{ workshop.count|intcomma }}</td>
-                    <td class="text-end">${{ workshop.total|floatformat:0|intcomma }}</td>
+                    <td data-label="Taller">{{ workshop.name }}</td>
+                    <td class="text-end" data-label="Piezas">{{ workshop.count|intcomma }}</td>
+                    <td class="text-end" data-label="Valor estimado">${{ workshop.total|floatformat:0|intcomma }}</td>
                   </tr>
                 {% empty %}
                   <tr><td colspan="3" class="text-center text-muted py-3">Sin datos</td></tr>
@@ -176,7 +181,7 @@
         <div class="card-body">
           <h5 class="card-title">Modelos que concentran mayor valor</h5>
           <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
+            <table class="table table-sm align-middle mb-0 dashboard-table-stack">
               <thead>
                 <tr>
                   <th>Modelo</th>
@@ -187,9 +192,9 @@
               <tbody>
                 {% for model in top_models %}
                   <tr>
-                    <td>{{ model.name }}</td>
-                    <td class="text-end">{{ model.count|intcomma }}</td>
-                    <td class="text-end">${{ model.total|floatformat:0|intcomma }}</td>
+                    <td data-label="Modelo">{{ model.name }}</td>
+                    <td class="text-end" data-label="Piezas">{{ model.count|intcomma }}</td>
+                    <td class="text-end" data-label="Valor estimado">${{ model.total|floatformat:0|intcomma }}</td>
                   </tr>
                 {% empty %}
                   <tr><td colspan="3" class="text-center text-muted py-3">Sin datos</td></tr>
@@ -253,7 +258,7 @@
         <div class="card-body">
           <h5 class="card-title">Sesiones de voz recientes</h5>
           <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
+            <table class="table table-sm align-middle mb-0 dashboard-table-stack">
               <thead>
                 <tr>
                   <th>Sesión</th>
@@ -265,13 +270,13 @@
               <tbody>
                 {% for sess in recent_voice_sessions %}
                   <tr>
-                    <td>
+                    <td data-label="Sesión">
                       <div class="fw-semibold">{{ sess.session_id }}</div>
                       <small class="text-muted">{{ sess.started_at|date:"d/m H:i" }} · {{ sess.status }}</small>
                     </td>
-                    <td class="text-end">{{ sess.partial_count|default:0 }}</td>
-                    <td class="text-end">{{ sess.final_count|default:0 }}</td>
-                    <td class="text-end">{{ sess.command_count|default:0 }}</td>
+                    <td class="text-end" data-label="Parciales">{{ sess.partial_count|default:0 }}</td>
+                    <td class="text-end" data-label="Finales">{{ sess.final_count|default:0 }}</td>
+                    <td class="text-end" data-label="Comandos">{{ sess.command_count|default:0 }}</td>
                   </tr>
                 {% empty %}
                   <tr><td colspan="4" class="text-center text-muted py-3">Sin sesiones recientes</td></tr>

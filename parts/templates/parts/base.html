@@ -4,13 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}Transervis - Sistema de Inventario{% endblock %}</title>
   {% if csrf_token and csrf_token != 'NOTPROVIDED' %}
   <meta name="csrf-token" content="{{ csrf_token }}">
   {% endif %}
   <link rel="icon" href="{% static 'parts/favicon.svg' %}" type="image/svg+xml">
   <meta name="csp-nonce" content="{{ csp_nonce|default:'' }}">
+  <!-- Theme color para Android status bar -->
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
   <!-- Capacitor Remote Bridge - Custom bridge for remote content loading -->
   <!-- This enables native plugins when loading from server.url -->
@@ -76,6 +79,16 @@
         data-style-watch="primary"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/verificador.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
+  <link href="{% static 'parts/css/mobile-nav.css' %}"
+        rel="stylesheet"
+        data-style-watch="primary"
+        data-turbo-track="reload"
+        nonce="{{ csp_nonce|default:'' }}">
   <script nonce="{{ csp_nonce|default:'' }}">
     document.documentElement.classList.add('app-loading');
     window.__setAppLoadingProgress = function (value) {
@@ -102,20 +115,30 @@
     <div class="app-loading-progress__bar"></div>
   </div>
 </div>
+<div class="mobile-dead-zone mobile-dead-zone--top" aria-hidden="true"></div>
 
 <!-- Navbar fija superior -->
 {% block navbar %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow-sm">
   <div class="container-fluid">
-  <a class="navbar-brand"
-     href="{% url 'parts:part_list' %}"
-     data-turbo-frame="app-frame">
+    <!-- Botón hamburguesa para Mega Menu (solo móvil) -->
+    <button class="navbar-toggler" 
+            type="button" 
+            id="mega-menu-trigger"
+            aria-label="Abrir menú"
+            aria-expanded="false"
+            aria-controls="mega-menu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    
+    <a class="navbar-brand"
+       href="{% url 'parts:part_list' %}"
+       data-turbo-frame="app-frame">
       <span class="brand-logo">T</span>
       <span class="brand-text">TRANSERVIS</span>
     </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+    
+    <!-- Collapse para desktop -->
     <div class="collapse navbar-collapse" id="navbarMain">
       <ul class="navbar-nav mx-auto flex-lg-grow-0 primary-nav-list">
         {% if user.is_authenticated %}
@@ -167,7 +190,7 @@
         {% endif %}
       </ul>
       
-      <!-- Controles de usuario a la derecha -->
+      <!-- Controles de usuario a la derecha (desktop) -->
       <ul class="navbar-nav ms-auto">
         {% if user.is_authenticated %}
           <li class="nav-item align-items-center theme-toggle-item">
@@ -179,113 +202,7 @@
             <span id="beep-switch" class="d-none" aria-hidden="true"></span>
           </li>
           
-          <!-- Dropdown Más (configuraciones y herramientas) -->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle"
-               href="#"
-               id="moreDropdown"
-               role="button"
-               data-bs-toggle="dropdown"
-               aria-controls="mobile-more-panel"
-               aria-expanded="false">
-              <i class="fas fa-ellipsis-h"></i> <span class="d-none d-lg-inline">Más</span>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end nav-pref-menu" aria-labelledby="moreDropdown" id="mobile-more-panel">
-              <li class="nav-pref-heading">Preferencias rápidas</li>
-              <li>
-                <div class="nav-pref-row nav-pref-row--compact" aria-live="polite">
-                  <span class="nav-pref-label">Modo de transcripción:</span>
-                  <button type="button"
-                          class="nav-pref-pill nav-pref-pill--toggle"
-                          id="transcription-mode-toggle"
-                          aria-pressed="false"
-                          title="Modo de transcripción">
-                    <i class="fas fa-cloud nav-pref-pill-icon" id="transcription-mode-icon"></i>
-                    <span id="transcription-mode-text">Nube</span>
-                  </button>
-                </div>
-              </li>
-              <li>
-                <button type="button" class="nav-pref-item" id="beep-toggle">
-                  <span class="nav-pref-icon">
-                    <i class="bi bi-broadcast-pin"></i>
-                  </span>
-                  <span class="nav-pref-text">
-                    <span class="nav-pref-title">Sonidos de dictado</span>
-                    <span class="nav-pref-meta">Alertas breves</span>
-                  </span>
-                  <span class="nav-pref-pill nav-pref-pill--ghost" id="beep-toggle-inline" aria-pressed="false">OFF</span>
-                </button>
-              </li>
-              <li>
-                <div class="nav-pref-row nav-pref-row--stacked" id="printer-pref-block">
-                  <div class="nav-pref-label printer-status-header">
-                    <span id="printer-status-label">Conectar impresora por:</span>
-                    <span id="printer-active-method" class="printer-active-method d-none"></span>
-                  </div>
-                  <div class="printer-connection-options" role="group" aria-label="Método de conexión">
-                    <button type="button"
-                            class="printer-connect-chip"
-                            id="printer-connect-btn"
-                            title="Conectar por Bluetooth directo">
-                      <i class="bi bi-bluetooth"></i>
-                      <span>Bluetooth</span>
-                    </button>
-                    <button type="button"
-                            class="printer-connect-chip printer-connect-chip--ghost"
-                            id="printer-open-hub"
-                            title="Abrir hub avanzado">
-                      <i class="bi bi-hdd-network"></i>
-                      <span>Hub</span>
-                    </button>
-                  </div>
-                  <div id="bluetooth-status-container"
-                       class="printer-status-inline bluetooth-status-badge bluetooth-status-badge--inline"
-                       data-inline-indicator="true">
-                    <div class="status-icon"><i class="fas fa-bluetooth-b"></i></div>
-                    <div class="status-text">
-                      <span class="status-title">Impresora</span>
-                      <span class="status-message">Desconectada</span>
-                    </div>
-                  </div>
-                  <button type="button"
-                          class="nav-pref-pill nav-pref-pill--danger d-none"
-                          id="printer-disconnect-btn">
-                    <i class="bi bi-plug"></i>
-                    <span>Desconectar</span>
-                  </button>
-                </div>
-              </li>
-              <li><hr class="dropdown-divider"></li>
-              <li class="nav-pref-heading">Atajos</li>
-              <li>
-                <div class="nav-quick-grid" role="group" aria-label="Accesos rápidos">
-                  <a class="nav-quick-icon" href="{% url 'parts:report_page' %}" data-turbo-frame="app-frame">
-                    <i class="fas fa-file-pdf"></i>
-                    <span>Reportes</span>
-                  </a>
-                  {% if user.profile.can_manage_users %}
-                  <a class="nav-quick-icon" href="{% url 'parts:user_list' %}" data-turbo-frame="app-frame">
-                    <i class="fas fa-users"></i>
-                    <span>Usuarios</span>
-                  </a>
-                  {% endif %}
-                  {% if user.profile.is_admin %}
-                  <a class="nav-quick-icon" href="{% url 'parts:logs_page' %}" data-turbo-frame="app-frame">
-                    <i class="bi bi-activity"></i>
-                    <span>Logs</span>
-                  </a>
-                  <a class="nav-quick-icon" href="{% url 'parts:synonym_manager' %}" data-turbo-frame="app-frame">
-                    <i class="bi bi-translate"></i>
-                    <span>Sinónimos</span>
-                  </a>
-                  {% endif %}
-                </div>
-              </li>
-            </ul>
-          </li>
-          
-          <!-- Dropdown de usuario -->
+          <!-- Dropdown de usuario (desktop) -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="fas fa-user-circle me-1"></i>
@@ -301,6 +218,19 @@
               </li>
               <li><hr class="dropdown-divider"></li>
               <li>
+                <a class="dropdown-item" href="{% url 'parts:report_page' %}" data-turbo-frame="app-frame">
+                  <i class="fas fa-file-pdf"></i> Reportes
+                </a>
+              </li>
+              {% if user.profile.is_admin %}
+              <li>
+                <a class="dropdown-item" href="{% url 'parts:logs_page' %}" data-turbo-frame="app-frame">
+                  <i class="bi bi-activity"></i> Logs
+                </a>
+              </li>
+              {% endif %}
+              <li><hr class="dropdown-divider"></li>
+              <li>
                 <a class="dropdown-item text-danger" href="{% url 'parts:logout' %}">
                   <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </a>
@@ -314,6 +244,248 @@
 </nav>
 {% endblock navbar %}
 
+<!-- Overlay para Mega Menu -->
+<div id="mega-menu-overlay" class="mega-menu-overlay" aria-hidden="true"></div>
+
+<!-- Mega Menu (solo móvil) -->
+{% if user.is_authenticated %}
+<aside id="mega-menu" class="mega-menu" aria-label="Menú principal" aria-hidden="true">
+  <header class="mega-menu__header">
+    <h2 class="mega-menu__title">
+      <i class="fas fa-bars"></i> Menú
+    </h2>
+    <button type="button" class="mega-menu__close" id="mega-menu-close" aria-label="Cerrar menú">
+      <i class="fas fa-times"></i>
+    </button>
+  </header>
+  
+  <div class="mega-menu__panels">
+    <!-- Panel principal de categorías -->
+    <div class="mega-menu__panel mega-menu__panel--main" id="mega-panel-main">
+      
+      <!-- Categoría: Inventario -->
+      <button type="button" class="mega-menu__category" data-target="mega-panel-inventario">
+        <span class="mega-menu__category-content">
+          <span class="mega-menu__category-icon"><i class="fas fa-boxes"></i></span>
+          <span class="mega-menu__category-text">
+            <span class="mega-menu__category-title">Inventario</span>
+            <span class="mega-menu__category-subtitle">Repuestos, Autos, Talleres</span>
+          </span>
+        </span>
+        <i class="fas fa-chevron-right mega-menu__category-arrow"></i>
+      </button>
+      
+      <!-- Categoría: Reportes y Datos -->
+      <button type="button" class="mega-menu__category" data-target="mega-panel-reportes">
+        <span class="mega-menu__category-content">
+          <span class="mega-menu__category-icon"><i class="fas fa-chart-pie"></i></span>
+          <span class="mega-menu__category-text">
+            <span class="mega-menu__category-title">Reportes y Datos</span>
+            <span class="mega-menu__category-subtitle">Dashboard, Reportes, Logs</span>
+          </span>
+        </span>
+        <i class="fas fa-chevron-right mega-menu__category-arrow"></i>
+      </button>
+      
+      <!-- Categoría: Herramientas -->
+      <button type="button" class="mega-menu__category" data-target="mega-panel-herramientas">
+        <span class="mega-menu__category-content">
+          <span class="mega-menu__category-icon"><i class="fas fa-tools"></i></span>
+          <span class="mega-menu__category-text">
+            <span class="mega-menu__category-title">Herramientas</span>
+            <span class="mega-menu__category-subtitle">Lector, Impresora, Voz</span>
+          </span>
+        </span>
+        <i class="fas fa-chevron-right mega-menu__category-arrow"></i>
+      </button>
+      
+      <!-- Categoría: Configuración -->
+      <button type="button" class="mega-menu__category" data-target="mega-panel-config">
+        <span class="mega-menu__category-content">
+          <span class="mega-menu__category-icon"><i class="fas fa-cog"></i></span>
+          <span class="mega-menu__category-text">
+            <span class="mega-menu__category-title">Configuración</span>
+            <span class="mega-menu__category-subtitle">Preferencias, Usuarios</span>
+          </span>
+        </span>
+        <i class="fas fa-chevron-right mega-menu__category-arrow"></i>
+      </button>
+      
+    </div>
+    
+    <!-- Sub-panel: Inventario -->
+    <div class="mega-menu__panel mega-menu__panel--sub" id="mega-panel-inventario">
+      <button type="button" class="mega-menu__back" data-back="mega-panel-main">
+        <i class="fas fa-arrow-left"></i> Inventario
+      </button>
+      <a href="{% url 'parts:part_list' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-cogs"></i> Ver Repuestos
+      </a>
+      <a href="{% url 'parts:part_create' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-plus-circle"></i> Agregar Repuesto
+      </a>
+      <div class="mega-menu__divider"></div>
+      <a href="{% url 'parts:auto_list' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-car"></i> Ver Autos
+      </a>
+      <a href="{% url 'parts:auto_create' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-car-side"></i> Agregar Auto
+      </a>
+      <div class="mega-menu__divider"></div>
+      <a href="{% url 'parts:workshop_list' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-wrench"></i> Ver Talleres
+      </a>
+      <a href="{% url 'parts:workshop_create' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-store-alt"></i> Agregar Taller
+      </a>
+    </div>
+    
+    <!-- Sub-panel: Reportes y Datos -->
+    <div class="mega-menu__panel mega-menu__panel--sub" id="mega-panel-reportes">
+      <button type="button" class="mega-menu__back" data-back="mega-panel-main">
+        <i class="fas fa-arrow-left"></i> Reportes y Datos
+      </button>
+      <a href="{% url 'parts:dashboard' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-chart-line"></i> Dashboard
+      </a>
+      <a href="{% url 'parts:report_page' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-file-pdf"></i> Reportes PDF
+      </a>
+      {% if user.profile.is_admin %}
+      <div class="mega-menu__divider"></div>
+      <a href="{% url 'parts:logs_page' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="bi bi-activity"></i> Logs de Actividad
+      </a>
+      {% endif %}
+    </div>
+    
+    <!-- Sub-panel: Herramientas -->
+    <div class="mega-menu__panel mega-menu__panel--sub" id="mega-panel-herramientas">
+      <button type="button" class="mega-menu__back" data-back="mega-panel-main">
+        <i class="fas fa-arrow-left"></i> Herramientas
+      </button>
+      <a href="{% url 'parts:verificador' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="bi bi-upc-scan"></i> Lector de Códigos
+      </a>
+      <a href="{% url 'parts:printer_hub' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-print"></i> Hub de Impresora
+      </a>
+      {% if user.profile.is_admin %}
+      <div class="mega-menu__divider"></div>
+      <a href="{% url 'parts:part_publish_root' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="bi bi-megaphone"></i> Publicar Piezas
+      </a>
+      <a href="{% url 'parts:synonym_manager' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="bi bi-translate"></i> Sinónimos
+      </a>
+      {% endif %}
+    </div>
+    
+    <!-- Sub-panel: Configuración -->
+    <div class="mega-menu__panel mega-menu__panel--sub" id="mega-panel-config">
+      <button type="button" class="mega-menu__back" data-back="mega-panel-main">
+        <i class="fas fa-arrow-left"></i> Configuración
+      </button>
+      
+      <!-- Preferencias inline -->
+      <div class="mega-menu__prefs">
+        <div class="mega-menu__pref-row">
+          <span class="mega-menu__pref-label">Modo oscuro</span>
+          <button type="button" 
+                  class="mega-menu__pref-toggle" 
+                  id="mega-theme-toggle"
+                  aria-pressed="false"
+                  aria-label="Cambiar modo oscuro"></button>
+        </div>
+        <div class="mega-menu__pref-row">
+          <span class="mega-menu__pref-label">Sonidos de dictado</span>
+          <button type="button" 
+                  class="mega-menu__pref-toggle" 
+                  id="mega-beep-toggle"
+                  aria-pressed="false"
+                  aria-label="Cambiar sonidos"></button>
+        </div>
+        <div class="mega-menu__pref-row">
+          <span class="mega-menu__pref-label">Transcripción en nube</span>
+          <button type="button" 
+                  class="mega-menu__pref-toggle" 
+                  id="mega-transcription-toggle"
+                  aria-pressed="false"
+                  aria-label="Cambiar modo transcripción"></button>
+        </div>
+      </div>
+      
+      <div class="mega-menu__divider"></div>
+      
+      {% if user.profile.can_manage_users %}
+      <a href="{% url 'parts:user_list' %}" class="mega-menu__item" data-turbo-frame="app-frame">
+        <i class="fas fa-users"></i> Gestión de Usuarios
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Sección de usuario en la parte inferior -->
+  <footer class="mega-menu__user">
+    <div class="mega-menu__user-info">
+      <div class="mega-menu__user-avatar">
+        <i class="fas fa-user"></i>
+      </div>
+      <div class="mega-menu__user-details">
+        <div class="mega-menu__user-name">{{ user.get_full_name|default:user.username }}</div>
+        <div class="mega-menu__user-role">{{ user.profile.get_role_display }}</div>
+      </div>
+    </div>
+    <a href="{% url 'parts:logout' %}" class="mega-menu__logout">
+      <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+    </a>
+  </footer>
+</aside>
+
+<!-- Bottom Navigation (solo móvil) -->
+<nav class="bottom-nav" aria-label="Navegación principal móvil">
+  <a href="{% url 'parts:dashboard' %}" 
+     class="bottom-nav__item" 
+     data-turbo-frame="app-frame"
+     data-nav-id="inicio">
+    <span class="bottom-nav__icon"><i class="fas fa-home"></i></span>
+    <span class="bottom-nav__label">Inicio</span>
+  </a>
+  
+  <a href="{% url 'parts:part_list' %}" 
+     class="bottom-nav__item" 
+     data-turbo-frame="app-frame"
+     data-nav-id="repuestos">
+    <span class="bottom-nav__icon"><i class="fas fa-cogs"></i></span>
+    <span class="bottom-nav__label">Repuestos</span>
+  </a>
+  
+  <a href="{% url 'parts:part_create' %}" 
+     class="bottom-nav__item bottom-nav__item--primary" 
+     data-turbo-frame="app-frame"
+     data-nav-id="agregar">
+    <span class="bottom-nav__icon"><i class="fas fa-plus"></i></span>
+    <span class="bottom-nav__label">Agregar</span>
+  </a>
+  
+  <a href="{% url 'parts:verificador' %}" 
+     class="bottom-nav__item" 
+     data-turbo-frame="app-frame"
+     data-nav-id="lector">
+    <span class="bottom-nav__icon"><i class="bi bi-upc-scan"></i></span>
+    <span class="bottom-nav__label">Lector</span>
+  </a>
+  
+  <a href="{% url 'parts:part_list' %}?voice=1" 
+     class="bottom-nav__item bottom-nav__item--voice" 
+     data-turbo-frame="app-frame"
+     data-nav-id="voz">
+    <span class="bottom-nav__icon"><i class="fas fa-microphone"></i></span>
+    <span class="bottom-nav__label">Voz</span>
+  </a>
+</nav>
+{% endif %}
+
 <div id="mobile-more-backdrop" class="mobile-more-backdrop" aria-hidden="true"></div>
 
 <!-- Contenido con padding-top para navbar fija -->
@@ -324,7 +496,7 @@
 </turbo-frame>
 
 <!-- Toasts container -->
-<div class="position-fixed top-0 end-0 p-3 toast-region">
+<div class="position-fixed end-0 p-3 toast-region">
   <div id="toast-container" class="toast-container"></div>
   <!-- los toasts se inyectan aquí dinámicamente -->
   
@@ -341,6 +513,7 @@
 <script src="{% static 'parts/bluetooth-status-indicator.js' %}" nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
 <script src="{% static 'parts/vendor/chart.umd.min.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
 <script src="{% static 'parts/js/app-shell.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/mobile-nav.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
 <script src="{% static 'parts/js/theme-preferences.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
 <script src="{% static 'parts/js/filter-panels.js' %}" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
 <script src="{% static 'parts/js/dashboard-summary.js' %}?v=20250305a" defer nonce="{{ csp_nonce|default:'' }}" data-turbo-track="reload"></script>
@@ -368,7 +541,7 @@
         
         <div class="mb-3">
           <label class="form-label fw-bold">Método de Conexión:</label>
-          <div class="btn-group w-100" role="group">
+          <div class="btn-group w-100 printer-method-group" role="group" aria-label="Método de conexión de la impresora">
             <input type="radio" class="btn-check" name="printerMethod" id="printerUSB" value="usb" checked>
             <label class="btn btn-outline-primary" for="printerUSB">
               <i class="fas fa-usb"></i> USB
@@ -405,9 +578,15 @@
         
         <div id="networkOptions" class="d-none">
           <div class="mb-3">
-            <label class="form-label">Dirección IP:</label>
-            <input type="text" class="form-control" id="printerIP" placeholder="192.168.1.100">
-            <small class="text-muted">Dirección IP del servidor con la impresora compartida</small>
+            <label class="form-label" for="printerIP">Dirección IP:</label>
+            <input type="text"
+                   class="form-control"
+                   id="printerIP"
+                   placeholder="192.168.1.100"
+                   inputmode="decimal"
+                   pattern="^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
+                   aria-describedby="printerIPHelp">
+            <small class="text-muted" id="printerIPHelp">Dirección IP del servidor con la impresora compartida</small>
           </div>
         </div>
         
@@ -437,6 +616,8 @@
     </div>
   </div>
 </div>
+
+<div class="mobile-dead-zone mobile-dead-zone--bottom" aria-hidden="true"></div>
 
 <!-- Modal de Test de Impresora -->
 <div class="modal fade printer-modal" id="printerTestModal" tabindex="-1" aria-labelledby="printerTestModalLabel" aria-hidden="true" data-test-url="{% url 'parts:impresora_test' %}">

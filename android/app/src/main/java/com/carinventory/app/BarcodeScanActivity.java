@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Vibrator;
 import android.util.Log;
 import android.util.Size;
+import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -31,8 +32,13 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import android.graphics.drawable.GradientDrawable;
 
 /**
  * Activity separada para escaneo de códigos de barras con ML Kit.
@@ -56,6 +62,7 @@ public class BarcodeScanActivity extends AppCompatActivity {
     private TextView txtStatus;
     private TextView txtResult;
     private TextView txtTarget;
+    private TextView txtHistory;
     private View flashOverlay;
     private LinearLayout infoPanel;
     
@@ -66,6 +73,7 @@ public class BarcodeScanActivity extends AppCompatActivity {
     private boolean isProcessing = false;
     private String lastScannedCode = "";
     private long lastScanTime = 0;
+    private final Deque<String> recentDetections = new ArrayDeque<>();
     
     // Configuración
     private String targetBarcode = null;
@@ -122,59 +130,130 @@ public class BarcodeScanActivity extends AppCompatActivity {
         flashOverlay.setBackgroundColor(0x8800FF00); // Verde semi-transparente
         flashOverlay.setVisibility(View.GONE);
         container.addView(flashOverlay);
+
+        // Sombras superior/inferior
+        View topShade = new View(this);
+        FrameLayout.LayoutParams topParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            dp(220)
+        );
+        topParams.gravity = Gravity.TOP;
+        topShade.setLayoutParams(topParams);
+        topShade.setBackground(new GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{0xCC000000, 0x00000000}
+        ));
+        container.addView(topShade);
+
+        View bottomShade = new View(this);
+        FrameLayout.LayoutParams bottomParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            dp(260)
+        );
+        bottomParams.gravity = Gravity.BOTTOM;
+        bottomShade.setLayoutParams(bottomParams);
+        bottomShade.setBackground(new GradientDrawable(
+            GradientDrawable.Orientation.BOTTOM_TOP,
+            new int[]{0xCC000000, 0x00000000}
+        ));
+        container.addView(bottomShade);
+
+        // HUD superior
+        LinearLayout topHud = new LinearLayout(this);
+        topHud.setOrientation(LinearLayout.VERTICAL);
+        topHud.setPadding(dp(24), dp(48), dp(24), dp(16));
+        FrameLayout.LayoutParams hudParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        );
+        hudParams.gravity = Gravity.TOP;
+        topHud.setLayoutParams(hudParams);
+
+        txtStatus = new TextView(this);
+        txtStatus.setText("📷 Inicializando cámara…");
+        txtStatus.setTextColor(0xFFFFFFFF);
+        txtStatus.setTextSize(18);
+        txtStatus.setPadding(dp(20), dp(12), dp(20), dp(12));
+        txtStatus.setBackground(roundedBackground(0x55000000, dp(24)));
+        topHud.addView(txtStatus);
+
+        if (targetName != null && !targetName.isEmpty()) {
+            txtTarget = new TextView(this);
+            txtTarget.setText("Buscando: " + targetName);
+            txtTarget.setTextColor(0xFFDDDDDD);
+            txtTarget.setTextSize(14);
+            txtTarget.setPadding(0, dp(12), 0, 0);
+            topHud.addView(txtTarget);
+
+            if (targetBarcode != null && !targetBarcode.isEmpty()) {
+                TextView txtExpected = new TextView(this);
+                txtExpected.setText("Código esperado: " + targetBarcode);
+                txtExpected.setTextColor(0xFF7FDBFF);
+                txtExpected.setTextSize(13);
+                txtExpected.setPadding(0, dp(4), 0, 0);
+                topHud.addView(txtExpected);
+            }
+        }
+        container.addView(topHud);
         
         // Panel inferior
         infoPanel = new LinearLayout(this);
         infoPanel.setOrientation(LinearLayout.VERTICAL);
-        infoPanel.setBackgroundColor(0xDD000000);
-        infoPanel.setPadding(32, 24, 32, 24);
+        infoPanel.setBackground(roundedBackground(0xE6000000, dp(32)));
+        infoPanel.setPadding(dp(24), dp(24), dp(24), dp(28));
         
         FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
         );
         panelParams.gravity = android.view.Gravity.BOTTOM;
+        panelParams.setMargins(dp(16), 0, dp(16), dp(16));
         infoPanel.setLayoutParams(panelParams);
+        infoPanel.setElevation(dp(6));
         
-        // Texto de objetivo
-        if (targetName != null && !targetName.isEmpty()) {
-            txtTarget = new TextView(this);
-            txtTarget.setText("Buscando: " + targetName);
-            txtTarget.setTextColor(0xFFAAAAAA);
-            txtTarget.setTextSize(14);
-            infoPanel.addView(txtTarget);
-            
-            if (targetBarcode != null && !targetBarcode.isEmpty()) {
-                TextView txtExpected = new TextView(this);
-                txtExpected.setText("Código esperado: " + targetBarcode);
-                txtExpected.setTextColor(0xFF00AAFF);
-                txtExpected.setTextSize(12);
-                txtExpected.setPadding(0, 8, 0, 0);
-                infoPanel.addView(txtExpected);
-            }
-        }
-        
-        // Texto de estado
-        txtStatus = new TextView(this);
-        txtStatus.setText("📷 Apunta a un código de barras...");
-        txtStatus.setTextColor(0xFFFFFFFF);
-        txtStatus.setTextSize(16);
-        txtStatus.setPadding(0, 16, 0, 0);
-        infoPanel.addView(txtStatus);
-        
-        // Texto de resultado
+        TextView lastLabel = new TextView(this);
+        lastLabel.setText("Último código");
+        lastLabel.setTextColor(0xFFB0BEC5);
+        lastLabel.setTextSize(13);
+        infoPanel.addView(lastLabel);
+
         txtResult = new TextView(this);
         txtResult.setTextColor(0xFF4CAF50);
-        txtResult.setTextSize(20);
-        txtResult.setPadding(0, 8, 0, 0);
+        txtResult.setText("Aún no hay lecturas");
+        txtResult.setTextSize(24);
+        txtResult.setPadding(0, dp(4), 0, 0);
         infoPanel.addView(txtResult);
+
+        View divider = new View(this);
+        LinearLayout.LayoutParams dividerParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            1
+        );
+        dividerParams.setMargins(0, dp(20), 0, dp(20));
+        divider.setLayoutParams(dividerParams);
+        divider.setBackgroundColor(0x33FFFFFF);
+        infoPanel.addView(divider);
+
+        TextView historyLabel = new TextView(this);
+        historyLabel.setText("IDs detectados");
+        historyLabel.setTextColor(0xFFB0BEC5);
+        historyLabel.setTextSize(13);
+        infoPanel.addView(historyLabel);
+
+        txtHistory = new TextView(this);
+        txtHistory.setTextColor(0xFFFFFFFF);
+        txtHistory.setTextSize(16);
+        txtHistory.setText("— Sin lecturas —");
+        txtHistory.setPadding(0, dp(6), 0, 0);
+        infoPanel.addView(txtHistory);
         
         // Botón cerrar
         Button btnClose = new Button(this);
-        btnClose.setText("✕ Cerrar Escáner");
+        btnClose.setText("Cerrar escáner");
         btnClose.setTextColor(0xFFFFFFFF);
-        btnClose.setBackgroundColor(0xFF333333);
-        btnClose.setPadding(32, 16, 32, 16);
+        btnClose.setAllCaps(false);
+        btnClose.setBackground(roundedBackground(0x33000000, dp(24)));
+        btnClose.setPadding(dp(32), dp(16), dp(32), dp(16));
         
         LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -189,10 +268,42 @@ public class BarcodeScanActivity extends AppCompatActivity {
             finish();
         });
         infoPanel.addView(btnClose);
-        
+
         container.addView(infoPanel);
         
         setContentView(container);
+    }
+
+    private GradientDrawable roundedBackground(int color, float radiusPx) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(radiusPx);
+        return drawable;
+    }
+
+    private int dp(int value) {
+        float density = getResources().getDisplayMetrics().density;
+        return Math.round(value * density);
+    }
+
+    private void updateHistory(String newEntry) {
+        if (txtHistory == null || newEntry == null || newEntry.isEmpty()) {
+            return;
+        }
+        recentDetections.remove(newEntry);
+        recentDetections.addFirst(newEntry);
+        while (recentDetections.size() > 3) {
+            recentDetections.removeLast();
+        }
+        StringBuilder builder = new StringBuilder();
+        Iterator<String> iterator = recentDetections.iterator();
+        while (iterator.hasNext()) {
+            builder.append("• ").append(iterator.next());
+            if (iterator.hasNext()) {
+                builder.append("\n");
+            }
+        }
+        txtHistory.setText(builder.toString());
     }
 
     private void setupMLKitScanner() {
@@ -302,7 +413,10 @@ public class BarcodeScanActivity extends AppCompatActivity {
         boolean isMatch = targetBarcode != null && targetBarcode.equals(barcode);
         
         runOnUiThread(() -> {
-            txtResult.setText(barcode);
+            String displayValue = format != null && !format.isEmpty()
+                ? barcode + " · " + format
+                : barcode;
+            txtResult.setText(displayValue);
             
             if (isMatch) {
                 // ¡MATCH! - Flash verde + vibración
@@ -319,6 +433,8 @@ public class BarcodeScanActivity extends AppCompatActivity {
                 txtStatus.setText("✅ Código escaneado");
                 txtResult.setTextColor(0xFF4CAF50);
             }
+
+            updateHistory(displayValue);
         });
         
         // Enviar resultado a la Activity que nos llamó

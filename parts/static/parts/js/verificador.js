@@ -19,6 +19,14 @@
     lastScannedCode: null,
     searchDebounceTimer: null,
     barcodeListener: null,
+    results: [],
+    sort: { column: 'name', direction: 'asc' },
+    filters: {
+      name: '',
+      barcode: '',
+      sold: '',
+    },
+    expanded: new Set(),
   };
   
   // Elementos del DOM
@@ -65,17 +73,19 @@
       btnCloseScanner: document.getElementById('btnCloseScanner'),
       btnClearSelection: document.getElementById('btnClearSelection'),
       searchInput: document.getElementById('searchInput'),
-      searchResults: document.getElementById('searchResults'),
+      clearSearchBtn: document.getElementById('clearSearchBtn'),
+      tableBody: document.getElementById('verificadorTableBody'),
+      mobileList: document.getElementById('verificadorMobileList'),
+      noResults: document.getElementById('verificadorNoResults'),
       selectedPartCard: document.getElementById('selectedPartCard'),
       selectedPartInfo: document.getElementById('selectedPartInfo'),
       webOnlyMessage: document.getElementById('webOnlyMessage'),
-      noBarcodeAlert: document.getElementById('noBarcodeAlert'),
+      sortHeaders: Array.from(document.querySelectorAll('#verificador-table [data-sort]')),
       scannerPanel: document.getElementById('scannerPanel'),
-      scannerVideo: document.getElementById('scannerVideo'),
       scannerFlash: document.getElementById('scannerFlash'),
+      scannerLastRead: document.getElementById('scannerLastRead'),
       scannerTargetName: document.getElementById('scannerTargetName'),
       scannerTargetCode: document.getElementById('scannerTargetCode'),
-      scannerLastRead: document.getElementById('scannerLastRead'),
     };
     
     if (!elements.container) {
@@ -90,6 +100,7 @@
     
     // Event listeners
     setupEventListeners();
+    updateSortIndicators();
     
     // Cargar resultados iniciales
     searchParts('');
@@ -125,8 +136,7 @@
     if (elements.btnOpenScanner) {
       elements.btnOpenScanner.addEventListener('click', openScanner);
     }
-    
-    // Botón cerrar escáner
+
     if (elements.btnCloseScanner) {
       elements.btnCloseScanner.addEventListener('click', closeScanner);
     }
@@ -145,20 +155,155 @@
         }, 300);
       });
     }
-    
-    // Delegación de clicks en resultados
-    if (elements.searchResults) {
-      elements.searchResults.addEventListener('click', function(e) {
-        const item = e.target.closest('.search-result-item');
-        if (item && !item.classList.contains('no-barcode')) {
-          const partId = item.dataset.partId;
-          const partData = JSON.parse(item.dataset.part || '{}');
-          selectPart(partData);
+
+    if (elements.clearSearchBtn) {
+      elements.clearSearchBtn.addEventListener('click', function() {
+        if (elements.searchInput) {
+          elements.searchInput.value = '';
+        }
+        searchParts('');
+      });
+    }
+
+    // Ordenamiento de columnas
+    elements.sortHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        const column = header.dataset.sort;
+        if (!column) return;
+        if (state.sort.column === column) {
+          state.sort.direction = state.sort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+          state.sort = { column, direction: 'asc' };
+        }
+        updateSortIndicators();
+        renderSearchResults();
+      });
+    });
+
+    const handleRowToggle = (row) => {
+      const partId = row?.dataset?.partId;
+      if (!partId) return;
+      if (state.expanded.has(partId)) {
+        state.expanded.delete(partId);
+      } else {
+        state.expanded.add(partId);
+      }
+      renderSearchResults();
+    };
+
+    const handleScanButton = (btn) => {
+      const raw = btn.dataset.part;
+      if (!raw) return;
+      const partData = JSON.parse(raw || '{}');
+      startScanForPart(partData);
+    };
+
+    const handleSelectButton = (btn) => {
+      const raw = btn.dataset.part;
+      if (!raw) return;
+      const partData = JSON.parse(raw || '{}');
+      selectPart(partData);
+    };
+
+    const handleApplySearchButton = (btn) => {
+      let term = btn.dataset.searchTerm || '';
+      term = term.trim();
+      if (!term) return;
+      if (elements.searchInput) {
+        elements.searchInput.value = term;
+        elements.searchInput.focus();
+      }
+      searchParts(term);
+    };
+
+    // Delegación de clicks en filas (desktop)
+    if (elements.tableBody) {
+      elements.tableBody.addEventListener('click', function(e) {
+        const scanBtn = e.target.closest('[data-action="scan-part"]');
+        if (scanBtn) {
+          handleScanButton(scanBtn);
+          e.stopPropagation();
+          return;
+        }
+        const applySearchBtn = e.target.closest('[data-action="apply-search"]');
+        if (applySearchBtn) {
+          handleApplySearchButton(applySearchBtn);
+          e.stopPropagation();
+          return;
+        }
+        const selectBtn = e.target.closest('[data-action="select-part"]');
+        if (selectBtn) {
+          handleSelectButton(selectBtn);
+          return;
+        }
+        const row = e.target.closest('tr[data-row-kind="main"]');
+        if (row) {
+          handleRowToggle(row);
+        }
+      });
+    }
+
+    // Delegación en filas móviles
+    if (elements.mobileList) {
+      elements.mobileList.addEventListener('click', function(e) {
+        const scanBtn = e.target.closest('[data-action="scan-part"]');
+        if (scanBtn) {
+          handleScanButton(scanBtn);
+          e.stopPropagation();
+          return;
+        }
+        const applySearchBtn = e.target.closest('[data-action="apply-search"]');
+        if (applySearchBtn) {
+          handleApplySearchButton(applySearchBtn);
+          e.stopPropagation();
+          return;
+        }
+        const selectBtn = e.target.closest('[data-action="select-part"]');
+        if (selectBtn) {
+          handleSelectButton(selectBtn);
+          return;
+        }
+        const row = e.target.closest('tr[data-row-kind="main"]');
+        if (row) {
+          handleRowToggle(row);
         }
       });
     }
   }
-  
+
+  /**
+   * Controla el HUD inmersivo y el blur del shell
+   */
+  function setScannerOverlay(active) {
+    const isActive = Boolean(active);
+    if (elements.container) {
+      elements.container.classList.toggle('scanner-active', isActive);
+    }
+    if (document.body) {
+      document.body.classList.toggle('scanner-mode', isActive);
+    }
+    if (elements.scannerPanel) {
+      elements.scannerPanel.classList.toggle('is-visible', isActive);
+      elements.scannerPanel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    }
+    if (!isActive && elements.scannerFlash) {
+      elements.scannerFlash.classList.remove('active');
+    }
+    if (isActive && elements.scannerLastRead) {
+      elements.scannerLastRead.textContent = 'Calibrando cámara...';
+    }
+    if (!isActive && elements.scannerLastRead) {
+      elements.scannerLastRead.textContent = 'Apunta a un código de barras...';
+    }
+    if (isActive && state.selectedPart && elements.scannerTargetName && elements.scannerTargetCode) {
+      elements.scannerTargetName.textContent = state.selectedPart.name || 'Objetivo';
+      elements.scannerTargetCode.textContent = state.selectedPart.barcode || '-';
+    } else {
+      if (elements.scannerTargetName) elements.scannerTargetName.textContent = 'Cualquier código';
+      if (elements.scannerTargetCode) elements.scannerTargetCode.textContent = '-';
+    }
+  }
+
   /**
    * Busca piezas en el backend
    */
@@ -182,12 +327,13 @@
       
     } catch (error) {
       console.error('[Verificador] Error buscando piezas:', error);
-      if (elements.searchResults) {
-        elements.searchResults.innerHTML = `
-          <div class="alert alert-danger">
-            <i class="bi bi-exclamation-triangle"></i> Error al buscar piezas
-          </div>
-        `;
+      state.results = [];
+      renderSearchResults([]);
+      if (elements.noResults) {
+        elements.noResults.classList.remove('d-none');
+        elements.noResults.classList.remove('alert-info');
+        elements.noResults.classList.add('alert-danger');
+        elements.noResults.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error al buscar piezas';
       }
     }
   }
@@ -196,56 +342,213 @@
    * Renderiza los resultados de búsqueda
    */
   function renderSearchResults(results) {
-    if (!elements.searchResults) return;
-    
-    if (results.length === 0) {
-      elements.searchResults.innerHTML = `
-        <div class="text-center text-muted py-4">
-          <i class="bi bi-search fs-1"></i>
-          <p class="mt-2">No se encontraron piezas con código de barras</p>
-        </div>
-      `;
+    if (Array.isArray(results)) {
+      state.results = results.map((part, index) => ({
+        ...part,
+        added_index: index,
+      }));
+    }
+    const ordered = getSortedResults();
+    renderDesktopRows(ordered);
+    renderMobileCards(ordered);
+    updateEmptyStates(ordered);
+  }
+
+  function getSortedResults() {
+    const list = (state.results || []).slice();
+    const { column, direction } = state.sort;
+    const dir = direction === 'desc' ? -1 : 1;
+
+    if (column === 'name') {
+      return list.sort((a, b) => {
+        const va = typeof a.added_index === 'number' ? a.added_index : Number.MAX_SAFE_INTEGER;
+        const vb = typeof b.added_index === 'number' ? b.added_index : Number.MAX_SAFE_INTEGER;
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return 0;
+      });
+    }
+
+    return list;
+  }
+
+  function renderDesktopRows(list) {
+    if (!elements.tableBody) return;
+    if (!list.length) {
+      elements.tableBody.innerHTML = '';
       return;
     }
-    
-    let hasNoBarcodeItems = false;
-    
-    const html = results.map(part => {
-      const hasBarcode = part.barcode && part.barcode.trim() !== '';
-      if (!hasBarcode) hasNoBarcodeItems = true;
-      
+    const rows = list.flatMap(part => {
       const isSelected = state.selectedPart && state.selectedPart.id === part.id;
+      const isExpanded = state.expanded.has(String(part.id));
+      const rowClasses = ['verificador-main-row'];
+      if (isSelected) rowClasses.push('table-primary');
+      if (isExpanded) rowClasses.push('is-expanded');
       const photoUrl = part.foto_url || '/static/parts/img/no-photo.svg';
-      
-      return `
-        <div class="search-result-item ${!hasBarcode ? 'no-barcode' : ''} ${isSelected ? 'selected' : ''}"
-             data-part-id="${part.id}"
-             data-part='${JSON.stringify(part).replace(/'/g, "&#39;")}'>
-          <img src="${photoUrl}" 
-               alt="${part.name}" 
-               class="result-photo"
-               onerror="this.src='/static/parts/img/no-photo.svg'">
-          <div class="result-info">
-            <div class="result-name">${escapeHtml(part.name)}</div>
-            <div class="result-meta">
-              ${escapeHtml(part.auto)} • ${escapeHtml(part.workshop)}
+      const partData = JSON.stringify(part).replace(/'/g, '&#39;');
+      const year = part.year || part.anio || '';
+      const barcodeLabel = part.barcode ? escapeHtml(part.barcode) : 'Sin código';
+      const barcodeBadge = part.barcode
+        ? `<span class="badge bg-primary-subtle text-primary">${barcodeLabel}</span>`
+        : '<span class="badge bg-secondary">Sin código</span>';
+      const statusBadge = part.sold
+        ? '<span class="badge bg-secondary">Vendida</span>'
+        : '<span class="badge bg-success-subtle text-success">Disponible</span>';
+      const searchTerm = escapeHtml(part.barcode || part.codigo || part.name || '');
+      const searchLabel = part.barcode ? barcodeLabel : escapeHtml(part.name || 'pieza');
+      const mainRow = `
+        <tr class="${rowClasses.join(' ')}" data-row-kind="main" data-part='${partData}' data-part-id="${part.id}" data-has-barcode="${!!part.barcode}" aria-expanded="${isExpanded ? 'true' : 'false'}">
+          <td class="text-center align-middle verificador-photo-cell">
+            <img src="${photoUrl}" alt="${escapeHtml(part.name)}" class="verificador-table-thumb" onerror="this.src='/static/parts/img/no-photo.svg'">
+          </td>
+          <td class="align-middle verificador-piece-cell">
+            <div class="verificador-main-cell">
+              <div class="verificador-piece-text">
+                <div class="fw-semibold mb-0">${escapeHtml(part.name || 'Sin nombre')}</div>
+                <div class="text-muted small text-truncate">${escapeHtml(part.auto || '-')}${year ? ` • ${escapeHtml(year)}` : ''}</div>
+              </div>
+              <span class="verificador-toggle-icon" aria-hidden="true">
+                <i class="bi bi-chevron-down"></i>
+              </span>
             </div>
-            ${hasBarcode 
-              ? `<span class="result-barcode">${escapeHtml(part.barcode)}</span>` 
-              : '<span class="text-muted small"><i class="bi bi-exclamation-circle"></i> Sin código</span>'
-            }
-          </div>
-          ${part.sold ? '<span class="badge bg-secondary">Vendida</span>' : ''}
-        </div>
-      `;
+          </td>
+        </tr>`;
+      const detailRow = `
+        <tr class="verificador-detail-row ${isExpanded ? 'show' : ''}" data-row-kind="detail" data-detail-for="${part.id}">
+          <td colspan="2">
+            <div class="verificador-detail-card">
+              <div class="detail-meta">
+                <div><span class="label">Auto</span><strong>${escapeHtml(part.auto || '-')}</strong></div>
+                <div><span class="label">Año</span><strong>${escapeHtml(year || '—')}</strong></div>
+                <div><span class="label">Código</span>${barcodeBadge}</div>
+                <div><span class="label">Estado</span>${statusBadge}</div>
+              </div>
+              <div class="detail-actions mt-2">
+                <button type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        data-action="apply-search"
+                        data-search-term="${searchTerm}"
+                        ${searchTerm ? '' : 'disabled'}>
+                  <i class="bi bi-search"></i> Buscar ${searchLabel}
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" data-action="scan-part" data-part='${partData}' ${part.barcode ? '' : 'disabled'}>
+                  <i class="bi bi-camera-video"></i> Escanear código
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-action="select-part" data-part='${partData}'>
+                  <i class="bi bi-pin-angle"></i> Fijar objetivo
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+      return [mainRow, detailRow];
     }).join('');
-    
-    elements.searchResults.innerHTML = html;
-    
-    // Mostrar alerta si hay items sin código
-    if (elements.noBarcodeAlert) {
-      elements.noBarcodeAlert.classList.toggle('d-none', !hasNoBarcodeItems);
+    elements.tableBody.innerHTML = rows;
+  }
+
+  function renderMobileCards(list) {
+    if (!elements.mobileList) return;
+    if (!list.length) {
+      elements.mobileList.innerHTML = '';
+      return;
     }
+    const cards = list.flatMap(part => {
+      const isExpanded = state.expanded.has(String(part.id));
+      const isSelected = state.selectedPart && state.selectedPart.id === part.id;
+      const rowClasses = ['verificador-main-row'];
+      if (isSelected) rowClasses.push('table-primary');
+      if (isExpanded) rowClasses.push('is-expanded');
+      const photoUrl = part.foto_url || '/static/parts/img/no-photo.svg';
+      const partData = JSON.stringify(part).replace(/'/g, '&#39;');
+      const year = part.year || part.anio || '';
+      const barcodeLabel = part.barcode ? escapeHtml(part.barcode) : 'Sin código';
+      const barcodeBadge = part.barcode
+        ? `<span class="badge bg-primary-subtle text-primary">${barcodeLabel}</span>`
+        : '<span class="badge bg-secondary">Sin código</span>';
+      const statusBadge = part.sold
+        ? '<span class="badge bg-secondary">Vendida</span>'
+        : '<span class="badge bg-success-subtle text-success">Disponible</span>';
+      const searchTerm = escapeHtml(part.barcode || part.codigo || part.name || '');
+      const searchLabel = part.barcode ? barcodeLabel : escapeHtml(part.name || 'pieza');
+      const mainRow = `
+        <tr class="${rowClasses.join(' ')}"
+            data-row-kind="main"
+            data-part='${partData}'
+            data-part-id="${part.id}"
+            data-has-barcode="${!!part.barcode}"
+            aria-expanded="${isExpanded ? 'true' : 'false'}">
+          <td class="text-center align-middle" style="width:48px;">
+            <img src="${photoUrl}" alt="${escapeHtml(part.name)}" class="verificador-table-thumb" onerror="this.src='/static/parts/img/no-photo.svg'">
+          </td>
+          <td class="align-middle">
+            <div class="verificador-main-cell">
+              <div class="verificador-piece-text">
+                <div class="fw-semibold">${escapeHtml(part.name || 'Sin nombre')}</div>
+                <div class="text-muted small">${escapeHtml(part.auto || '-')}${year ? ` • ${escapeHtml(year)}` : ''}</div>
+              </div>
+              <span class="verificador-toggle-icon" aria-hidden="true">
+                <i class="bi bi-chevron-down"></i>
+              </span>
+            </div>
+          </td>
+        </tr>`;
+      const detailRow = `
+        <tr class="verificador-detail-row ${isExpanded ? 'show' : ''}" data-row-kind="detail" data-detail-for="${part.id}">
+          <td colspan="2">
+            <div class="verificador-detail-card">
+              <div class="detail-meta">
+                <div><span class="label">Auto</span><strong>${escapeHtml(part.auto || '-')}</strong></div>
+                <div><span class="label">Año</span><strong>${escapeHtml(year || '—')}</strong></div>
+                <div><span class="label">Código</span>${barcodeBadge}</div>
+                <div><span class="label">Estado</span>${statusBadge}</div>
+              </div>
+              <div class="detail-actions mt-2">
+                <button type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        data-action="apply-search"
+                        data-search-term="${searchTerm}"
+                        ${searchTerm ? '' : 'disabled'}>
+                  <i class="bi bi-search"></i> Buscar ${searchLabel}
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" data-action="scan-part" data-part='${partData}' ${part.barcode ? '' : 'disabled'}>
+                  <i class="bi bi-camera-video"></i> Escanear
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-action="select-part" data-part='${partData}'>
+                  <i class="bi bi-pin-angle"></i> Fijar
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+      return [mainRow, detailRow];
+    }).join('');
+    elements.mobileList.innerHTML = cards;
+  }
+
+  function updateEmptyStates(list) {
+    if (elements.noResults) {
+      elements.noResults.classList.toggle('d-none', list.length > 0);
+    }
+    if (elements.tableBody) {
+      elements.tableBody.closest('.table-responsive')?.classList.toggle('d-none', !list.length && window.innerWidth >= 992);
+    }
+  }
+
+  function updateSortIndicators() {
+    elements.sortHeaders.forEach(header => {
+      const col = header.dataset.sort;
+      const isActive = col === state.sort.column;
+      header.classList.toggle('active', isActive);
+      const icon = header.querySelector('.sort-indicator');
+      if (icon) {
+        icon.classList.remove('fa-sort', 'fa-sort-up', 'fa-sort-down');
+        if (isActive) {
+          icon.classList.add(state.sort.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+        } else {
+          icon.classList.add('fa-sort');
+        }
+      }
+    });
   }
   
   /**
@@ -253,29 +556,41 @@
    */
   function selectPart(part) {
     state.selectedPart = part;
-    console.log('[Verificador] Pieza seleccionada:', part);
-    
-    // Mostrar card de pieza seleccionada
-    if (elements.selectedPartCard) {
-      elements.selectedPartCard.classList.remove('d-none');
+    updateSelectedPartCard();
+    renderSearchResults();
+  }
+
+  function updateSelectedPartCard() {
+    if (state.selectedPart) {
+      if (elements.selectedPartCard) {
+        elements.selectedPartCard.classList.remove('d-none');
+      }
+      if (elements.selectedPartInfo) {
+        const p = state.selectedPart;
+        const year = p.year || p.anio || '';
+        elements.selectedPartInfo.innerHTML = `
+          <div class="d-flex align-items-center justify-content-between flex-wrap">
+            <div>
+              <strong>${escapeHtml(p.name)}</strong>
+              <div class="small text-muted">${escapeHtml(p.auto || '-')}${year ? ` • ${escapeHtml(year)}` : ''}</div>
+            </div>
+            <div class="mt-1 text-end">
+              <span class="badge bg-primary">
+                <i class="bi bi-upc"></i> ${escapeHtml(p.barcode || '—')}
+              </span>
+            </div>
+          </div>
+        `;
+      }
+    } else {
+      if (elements.selectedPartCard) elements.selectedPartCard.classList.add('d-none');
+      if (elements.selectedPartInfo) elements.selectedPartInfo.innerHTML = '';
     }
-    
-    if (elements.selectedPartInfo) {
-      elements.selectedPartInfo.innerHTML = `
-        <div class="d-flex align-items-center">
-          <strong>${escapeHtml(part.name)}</strong>
-        </div>
-        <div class="small text-muted">${escapeHtml(part.auto)}</div>
-        <div class="mt-1">
-          <span class="badge bg-primary">
-            <i class="bi bi-upc"></i> ${escapeHtml(part.barcode)}
-          </span>
-        </div>
-      `;
-    }
-    
-    // Re-renderizar resultados para mostrar selección
-    searchParts(elements.searchInput?.value || '');
+  }
+
+  function startScanForPart(part) {
+    selectPart(part);
+    openScanner();
   }
   
   /**
@@ -289,7 +604,7 @@
     }
     
     // Re-renderizar resultados
-    searchParts(elements.searchInput?.value || '');
+    renderSearchResults();
   }
   
   /**
@@ -318,19 +633,22 @@
       return;
     }
     
+    // Preparar parámetros
+    const options = {
+      continuous: true // Modo continuo para escanear múltiples códigos
+    };
+    
+    if (state.selectedPart) {
+      options.targetBarcode = state.selectedPart.barcode;
+      options.targetName = state.selectedPart.name;
+    }
+    
+    console.log('[Verificador] Opciones de escaneo:', options);
+    
+    let result = null;
+    
     try {
-      // Preparar parámetros
-      const options = {
-        continuous: true // Modo continuo para escanear múltiples códigos
-      };
-      
-      if (state.selectedPart) {
-        options.targetBarcode = state.selectedPart.barcode;
-        options.targetName = state.selectedPart.name;
-      }
-      
-      console.log('[Verificador] Opciones de escaneo:', options);
-      
+      setScannerOverlay(true);
       // Listener para códigos escaneados (modo continuo)
       state.barcodeListener = await MLKitScanner.addListener(
         'barcodeScanned',
@@ -339,31 +657,25 @@
       
       // Iniciar escaneo (lanza Activity nativa)
       state.isScanning = true;
-      const result = await MLKitScanner.startScan(options);
+      result = await MLKitScanner.startScan(options);
       
       console.log('[Verificador] Resultado del escáner:', result);
       
-      // Remover listener cuando se cierra
-      if (state.barcodeListener) {
-        state.barcodeListener.remove();
-        state.barcodeListener = null;
-      }
-      
-      state.isScanning = false;
-      
-      // Si no fue cancelado, procesar el resultado final
-      if (result && !result.cancelled && result.barcode) {
-        await processScannedBarcode(result.barcode, result.format, result.isMatch);
-      }
-      
     } catch (error) {
       console.error('[Verificador] Error abriendo escáner:', error);
+      alert('Error al abrir el escáner: ' + (error.message || error));
+    } finally {
       state.isScanning = false;
       if (state.barcodeListener) {
         state.barcodeListener.remove();
         state.barcodeListener = null;
       }
-      alert('Error al abrir el escáner: ' + (error.message || error));
+      setScannerOverlay(false);
+    }
+    
+    // Si no fue cancelado, procesar el resultado final
+    if (result && !result.cancelled && result.barcode) {
+      await processScannedBarcode(result.barcode, result.format, result.isMatch);
     }
   }
   
@@ -374,6 +686,7 @@
     console.log('[Verificador] Cerrando escáner...');
     
     state.isScanning = false;
+    setScannerOverlay(false);
     
     // Remover listener
     if (state.barcodeListener) {
@@ -437,37 +750,6 @@
   }
   
   /**
-   * Activa el feedback visual/háptico de match
-   */
-  function triggerMatchFeedback() {
-    console.log('[Verificador] ¡MATCH!');
-    
-    // Flash verde
-    if (elements.scannerFlash) {
-      elements.scannerFlash.classList.add('active');
-      setTimeout(() => {
-        elements.scannerFlash.classList.remove('active');
-      }, 500);
-    }
-    
-    // Vibración (si está disponible)
-    if (navigator.vibrate) {
-      navigator.vibrate([100, 50, 100, 50, 100]);
-    }
-    
-    // Sonido (opcional - comentado por ahora)
-    // playMatchSound();
-    
-    // Actualizar texto
-    if (elements.scannerLastRead) {
-      elements.scannerLastRead.innerHTML = `
-        <i class="bi bi-check-circle-fill text-success"></i>
-        ¡COINCIDE! ${state.selectedPart.barcode}
-      `;
-    }
-  }
-  
-  /**
    * Registra la verificación en el backend
    */
   async function logVerification(barcode, format, isMatch) {
@@ -523,6 +805,8 @@
     if (state.isScanning) {
       closeScanner();
     }
+    setScannerOverlay(false);
+    state.expanded.clear();
     initialized = false;
     elements = {};
   }

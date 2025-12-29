@@ -71,6 +71,7 @@
     const btnPrint = document.getElementById('btn-imprimir');
     const btnTest = document.getElementById('btn-test');
     const btnDetect = document.getElementById('btn-detectar');
+    const btnBluetoothGenerate = document.getElementById('btn-bluetooth-generate');
     const methodInfo = document.getElementById('method-info');
     const btnText = document.getElementById('btn-text');
     const form = document.getElementById('print-form');
@@ -212,6 +213,14 @@
       } else {
         runServerPrint();
       }
+    });
+    btnBluetoothGenerate?.addEventListener('click', () => {
+      const bluetoothOption = document.getElementById('method-bluetooth');
+      if (bluetoothOption) {
+        bluetoothOption.checked = true;
+        updateMethodInfo('bluetooth');
+      }
+      printBluetooth();
     });
     btnTest?.addEventListener('click', runPrinterTest);
     btnDetect?.addEventListener('click', detectPrinter);

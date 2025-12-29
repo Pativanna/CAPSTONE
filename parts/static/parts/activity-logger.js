@@ -8,14 +8,18 @@
 
   function getCsrfToken(){
     const name = 'csrftoken';
-    if (!document.cookie) return '';
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i += 1){
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === `${name}=`){
-        return decodeURIComponent(cookie.substring(name.length + 1));
+    if (document.cookie){
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i += 1){
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === `${name}=`){
+          const val = decodeURIComponent(cookie.substring(name.length + 1));
+          if (val && val.length > 20) return val;
+        }
       }
     }
+    const meta = document.querySelector('meta[name=\"csrf-token\"]');
+    if (meta && meta.content && meta.content.length > 20) return meta.content;
     return '';
   }
 

@@ -28,6 +28,10 @@
   --table-sticky-bg: #eeeeee;
   --app-shell-nav-offset: 4.75rem;
   --mobile-navbar-height: 64px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --dead-zone-top: 0px;
+  --dead-zone-bottom: 0px;
   color-scheme: light;
 }
 
@@ -79,6 +83,7 @@ body {
   color: var(--text-primary);
   min-height: 100vh;
   padding-top: var(--app-shell-nav-offset);
+  padding-bottom: 2rem;
   transition: background 0.3s ease, color 0.3s ease;
 }
 
@@ -361,17 +366,22 @@ body.theme-switching *::after {
   letter-spacing: 1px;
 }
 
+.navbar.fixed-top {
+  top: 0;
+}
+
 .switch-tile {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   border-radius: 999px;
-  padding: 0.35rem 0.9rem;
+  padding: 0.5rem 1rem;
   border: 1px solid rgba(255, 255, 255, 0.35);
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
   cursor: pointer;
   transition: background 0.2s, border 0.2s;
+  min-height: 2.75rem;
 }
 
 .switch-tile .tile-icon {
@@ -628,6 +638,50 @@ body.theme-switching *::after {
 
 .dashboard-chart-shell canvas {
   width: 100%;
+}
+
+.dashboard-table-stack {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dashboard-table-stack tbody tr {
+  transition: background 0.2s ease;
+}
+
+.dashboard-table-stack tbody tr td[data-label] {
+  position: relative;
+}
+
+@media (max-width: 575.98px) {
+  .dashboard-table-stack thead {
+    display: none;
+  }
+
+  .dashboard-table-stack tbody tr {
+    display: block;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 1rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.85rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .dashboard-table-stack tbody tr td {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    text-align: left !important;
+    border: none;
+    padding: 0.4rem 0;
+  }
+
+  .dashboard-table-stack tbody tr td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
 }
 
 .inventory-table-wrapper .table {
@@ -1293,45 +1347,41 @@ body.mobile-more-active .mobile-more-backdrop {
   pointer-events: auto;
 }
 
-body.mobile-more-active #mobile-more-panel {
-  display: block !important;
-}
-
-#mobile-more-panel {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-#mobile-more-panel.mobile-more-panel--open {
-  display: block;
-}
-
 @media (max-width: 991.98px) {
+  /* Panel "Más" en móvil - estilos completos */
   #mobile-more-panel {
-    display: none;
+    display: none !important;
+    visibility: hidden;
     border: 1px solid var(--border-color);
-    position: fixed;
-    top: var(--mobile-navbar-height, 64px);
-    left: 0;
-    right: 0;
-    margin: 0;
+    position: fixed !important;
+    top: var(--mobile-navbar-height, 64px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: auto !important;
+    margin: 0 !important;
     border-radius: 1.25rem 1.25rem 0 0;
     max-height: calc(100vh - var(--mobile-navbar-height, 64px));
     overflow-y: auto;
-    background: var(--surface-card);
-    padding: 0.5rem 0.75rem 1rem;
-    z-index: 1045;
+    background: var(--surface-card) !important;
+    padding: 0.5rem 0.75rem 1rem !important;
+    z-index: 1045 !important;
     box-shadow: var(--shadow-lg);
     opacity: 0;
     transform: translateY(1rem);
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0s 0.25s;
+    /* Anular estilos de Bootstrap dropdown */
+    inset: unset !important;
+    width: 100% !important;
+    min-width: 100% !important;
   }
 
-  #mobile-more-panel.mobile-more-panel--open {
-    display: block;
-  }
-
+  /* Cuando el panel está abierto */
   body.mobile-more-active #mobile-more-panel {
+    display: block !important;
+    visibility: visible;
     opacity: 1;
     transform: translateY(0);
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0s 0s;
   }
 
   .nav-pref-menu {
@@ -1776,6 +1826,16 @@ body.mobile-more-active #mobile-more-panel {
 
 .toast-region {
   z-index: 1080;
+  top: calc(var(--dead-zone-top) + 0.5rem);
+}
+
+@media (max-width: 575.98px) {
+  .toast-region {
+    top: auto;
+    bottom: calc(var(--dead-zone-bottom) + 0.5rem);
+    left: 0;
+    right: 0;
+  }
 }
 
 .printer-log,
@@ -1858,11 +1918,82 @@ body.mobile-more-active #mobile-more-panel {
 @media (max-width: 991.98px) {
   :root {
     --app-shell-nav-offset: 4.25rem;
+    --dead-zone-top: calc(var(--safe-area-top) + (16px * 0.85));
+    --dead-zone-bottom: calc(var(--safe-area-bottom) + (20px * 0.7));
+  }
+
+  body {
+    padding-top: calc(var(--app-shell-nav-offset) + var(--dead-zone-top));
+    padding-bottom: calc(2rem + var(--dead-zone-bottom));
+  }
+
+  .app-shell-main {
+    padding-bottom: calc(4rem + var(--dead-zone-bottom));
+  }
+
+  .navbar.fixed-top {
+    top: var(--dead-zone-top);
   }
 
   .navbar .nav-link {
     margin-bottom: 0.35rem;
   }
+}
+
+.printer-method-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+.printer-method-group .btn {
+  flex: 1 1 0;
+}
+
+@media (max-width: 575.98px) {
+  .printer-method-group {
+    flex-wrap: wrap;
+  }
+
+  .printer-method-group .btn {
+    flex-basis: 100%;
+  }
+}
+
+.mobile-dead-zone {
+  position: fixed;
+  left: 0;
+  right: 0;
+  background: var(--surface-base);
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 1400;
+  display: none;
+}
+
+.mobile-dead-zone--top {
+  top: 0;
+  height: var(--dead-zone-top);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: linear-gradient(120deg, var(--app-brand-primary), var(--app-brand-primary-soft));
+}
+
+.mobile-dead-zone--bottom {
+  bottom: 0;
+  height: var(--dead-zone-bottom);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -10px 26px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 991.98px) {
+  .mobile-dead-zone {
+    display: block;
+  }
+}
+
+[data-theme="dark"] .mobile-dead-zone--top {
+  background: linear-gradient(120deg, #091629, #14274a);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 /* App loading overlay (moved from base.html inline style) */

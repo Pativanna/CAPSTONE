@@ -1,0 +1,666 @@
+/**
+ * Mobile Navigation System
+ * Bottom Nav (estilo Instagram) + Mega Menu (estilo tiendas grandes)
+ * 
+ * ISO 9241-171: Accesibilidad y usabilidad
+ * ISO 25010: Calidad de software
+ */
+
+/* =============================================================================
+   CSS VARIABLES - Mobile Navigation
+   ============================================================================= */
+:root {
+  --bottom-nav-height: 56px;
+  --bottom-nav-bg: var(--surface-card);
+  --bottom-nav-border: var(--border-color);
+  --bottom-nav-icon-size: 1.35rem;
+  --bottom-nav-label-size: 0.6rem;
+  --bottom-nav-active-color: var(--app-brand-primary);
+  --bottom-nav-inactive-color: var(--text-muted);
+  --mega-menu-width: 100%;
+  --mega-menu-bg: var(--surface-elevated);
+  --mega-menu-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Safe area con fallbacks robustos */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  
+  /* Fallback manual si env() no funciona - será sobrescrito por JS */
+  --android-nav-height: 0px;
+  --android-status-height: 0px;
+}
+
+/* =============================================================================
+   BOTTOM NAVIGATION BAR (Solo móvil < 992px)
+   ============================================================================= */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bottom-nav-bg);
+  border-top: 1px solid var(--bottom-nav-border);
+  z-index: 1050;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  
+  /* Altura base + safe area inferior (usa max para tomar el mayor valor) */
+  --effective-safe-bottom: max(var(--safe-area-bottom), var(--android-nav-height));
+  height: calc(var(--bottom-nav-height) + var(--effective-safe-bottom));
+  padding-bottom: var(--effective-safe-bottom);
+  padding-left: var(--safe-area-left);
+  padding-right: var(--safe-area-right);
+}
+
+@media (max-width: 991.98px) {
+  .bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding-top: 4px;
+  }
+  
+  /* Ajustar padding del contenido principal para el bottom nav */
+  .app-shell-main {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--effective-safe-bottom, 0px) + 1rem) !important;
+  }
+  
+  /* Ocultar items de nav principal que ahora están en bottom nav */
+  .navbar .primary-nav-list {
+    display: none !important;
+  }
+}
+
+/* Item del bottom nav */
+.bottom-nav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 6px 4px 2px;
+  color: var(--bottom-nav-inactive-color);
+  text-decoration: none;
+  transition: color 0.2s ease, transform 0.15s ease;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  min-height: var(--bottom-nav-height);
+}
+
+.bottom-nav__item:hover,
+.bottom-nav__item:focus {
+  color: var(--bottom-nav-active-color);
+  text-decoration: none;
+}
+
+.bottom-nav__item:active {
+  transform: scale(0.95);
+}
+
+/* Item activo */
+.bottom-nav__item.active,
+.bottom-nav__item[aria-current="page"] {
+  color: var(--bottom-nav-active-color);
+}
+
+.bottom-nav__item.active::before,
+.bottom-nav__item[aria-current="page"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  background: var(--bottom-nav-active-color);
+  border-radius: 0 0 3px 3px;
+}
+
+/* Icono del bottom nav */
+.bottom-nav__icon {
+  font-size: var(--bottom-nav-icon-size);
+  line-height: 1;
+  margin-bottom: 0.25rem;
+  transition: transform 0.2s ease;
+}
+
+.bottom-nav__item:hover .bottom-nav__icon {
+  transform: translateY(-2px);
+}
+
+/* Label del bottom nav */
+.bottom-nav__label {
+  font-size: var(--bottom-nav-label-size);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Botón central destacado (Agregar) - CÍRCULO PERFECTO */
+.bottom-nav__item--primary {
+  position: relative;
+  flex: 0 0 auto;
+  width: 64px;
+}
+
+.bottom-nav__item--primary .bottom-nav__icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  background: var(--app-brand-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  margin-top: -8px;
+  margin-bottom: 2px;
+  box-shadow: 0 4px 12px rgba(var(--app-brand-primary-rgb, 79, 70, 229), 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  /* Forzar círculo */
+  aspect-ratio: 1 / 1;
+}
+
+.bottom-nav__item--primary:hover .bottom-nav__icon,
+.bottom-nav__item--primary:active .bottom-nav__icon {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(var(--app-brand-primary-rgb, 79, 70, 229), 0.45);
+}
+
+.bottom-nav__item--primary .bottom-nav__label {
+  margin-top: 0;
+}
+
+/* Voz al extremo derecho - destacado diferente */
+.bottom-nav__item--voice {
+  color: var(--success);
+}
+
+.bottom-nav__item--voice .bottom-nav__icon {
+  color: var(--success);
+}
+
+.bottom-nav__item--voice.active,
+.bottom-nav__item--voice:hover {
+  color: var(--success);
+}
+
+/* =============================================================================
+   MEGA MENU - Navbar Superior
+   ============================================================================= */
+.mega-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  z-index: 1044;
+  transition: opacity var(--mega-menu-transition), visibility 0s 0.3s;
+}
+
+.mega-menu-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--mega-menu-transition), visibility 0s 0s;
+}
+
+/* Panel principal del mega menu */
+.mega-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 85%;
+  max-width: 320px;
+  height: 100%;
+  /* FONDO SÓLIDO - no transparente */
+  background: var(--surface-card, #ffffff);
+  z-index: 1045;
+  transform: translateX(-100%);
+  transition: transform var(--mega-menu-transition);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 4px 0 25px rgba(0, 0, 0, 0.25);
+  /* Safe areas */
+  padding-top: var(--safe-area-top);
+  padding-bottom: var(--safe-area-bottom);
+}
+
+.mega-menu.active {
+  transform: translateX(0);
+}
+
+/* Header del mega menu */
+.mega-menu__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--app-brand-primary);
+  color: white;
+  min-height: 64px;
+}
+
+.mega-menu__title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mega-menu__close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mega-menu__close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Contenedor de paneles con slide */
+.mega-menu__panels {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.mega-menu__panel {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 0.75rem 0;
+  transition: transform var(--mega-menu-transition), opacity var(--mega-menu-transition);
+}
+
+/* Panel principal de categorías */
+.mega-menu__panel--main {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.mega-menu__panel--main.hidden {
+  transform: translateX(-30%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Panel de sub-categorías */
+.mega-menu__panel--sub {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mega-menu__panel--sub.active {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Botón de volver en sub-panel */
+.mega-menu__back {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border: none;
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+.mega-menu__back:hover {
+  background: var(--surface-active);
+}
+
+.mega-menu__back i {
+  font-size: 1.1rem;
+}
+
+/* Categoría en el menu principal */
+.mega-menu__category {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, padding-left 0.2s ease;
+  text-align: left;
+}
+
+.mega-menu__category:hover {
+  background: var(--surface-hover);
+  padding-left: 1.5rem;
+}
+
+.mega-menu__category-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--surface-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: var(--app-brand-primary);
+  margin-right: 0.875rem;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.mega-menu__category:hover .mega-menu__category-icon {
+  background: var(--app-brand-primary);
+  color: white;
+  transform: scale(1.05);
+}
+
+.mega-menu__category-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.mega-menu__category-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.mega-menu__category-title {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.mega-menu__category-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.mega-menu__category-arrow {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  transition: transform 0.2s ease;
+}
+
+.mega-menu__category:hover .mega-menu__category-arrow {
+  transform: translateX(4px);
+  color: var(--app-brand-primary);
+}
+
+/* Items dentro de sub-categoría */
+.mega-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease, padding-left 0.2s ease;
+}
+
+.mega-menu__item:hover {
+  background: var(--surface-hover);
+  padding-left: 1.5rem;
+  color: var(--app-brand-primary);
+  text-decoration: none;
+}
+
+.mega-menu__item i {
+  width: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+
+.mega-menu__item:hover i {
+  color: var(--app-brand-primary);
+}
+
+/* Divisor en el mega menu */
+.mega-menu__divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.5rem 1.25rem;
+}
+
+/* Sección de usuario en mega menu */
+.mega-menu__user {
+  padding: 0.875rem 1rem;
+  padding-bottom: calc(0.875rem + var(--safe-area-bottom, 0px));
+  border-top: 1px solid var(--border-color);
+  background: var(--surface-hover);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.mega-menu__user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.625rem;
+}
+
+.mega-menu__user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--app-brand-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.mega-menu__user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.mega-menu__user-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mega-menu__user-role {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.mega-menu__logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  text-decoration: none;
+}
+
+.mega-menu__logout:hover {
+  background: var(--danger);
+  color: white;
+  text-decoration: none;
+}
+
+/* =============================================================================
+   NAVBAR SUPERIOR - Simplificado para móvil
+   ============================================================================= */
+@media (max-width: 991.98px) {
+  /* Ocultar el collapse de Bootstrap en móvil */
+  .navbar-collapse {
+    display: none !important;
+  }
+  
+  /* Mostrar solo hamburguesa y logo */
+  .navbar-toggler {
+    display: flex !important;
+    order: -1;
+    margin-right: 0.5rem;
+  }
+  
+  /* Ajustar navbar para mega menu */
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+  
+  .navbar-brand {
+    margin-right: auto;
+  }
+}
+
+/* =============================================================================
+   PREFERENCIAS DENTRO DEL MEGA MENU
+   ============================================================================= */
+.mega-menu__prefs {
+  padding: 0 0.75rem;
+}
+
+.mega-menu__pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.5rem;
+  border-radius: 8px;
+}
+
+.mega-menu__pref-row:hover {
+  background: var(--surface-hover);
+}
+
+.mega-menu__pref-label {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.mega-menu__pref-toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--surface-active);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mega-menu__pref-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease;
+}
+
+.mega-menu__pref-toggle[aria-pressed="true"] {
+  background: var(--app-brand-primary);
+}
+
+.mega-menu__pref-toggle[aria-pressed="true"]::after {
+  transform: translateX(20px);
+}
+
+/* =============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================= */
+@media (min-width: 992px) {
+  /* En desktop, ocultar bottom nav y mega menu */
+  .bottom-nav,
+  .mega-menu,
+  .mega-menu-overlay {
+    display: none !important;
+  }
+  
+  /* Mostrar navbar tradicional */
+  .navbar-collapse {
+    display: flex !important;
+  }
+  
+  .navbar-toggler {
+    display: none !important;
+  }
+}
+
+/* Modo oscuro */
+[data-theme="dark"] .bottom-nav {
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  background: var(--surface-card);
+}
+
+[data-theme="dark"] .mega-menu {
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.4);
+  background: var(--surface-card);
+}
+
+/* =============================================================================
+   ANIMACIONES
+   ============================================================================= */
+@keyframes bottomNavPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.bottom-nav__item--pulse .bottom-nav__icon {
+  animation: bottomNavPulse 0.5s ease;
+}
+
+/* Haptic feedback visual */
+.bottom-nav__item:active {
+  background: var(--surface-hover);
+}

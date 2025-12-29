@@ -160,6 +160,39 @@ html[data-theme="dark"] .inventory-hero-actions .btn-outline-light {
   opacity: 0.85;
 }
 
+@media (max-width: 991.98px) {
+  .inventory-hero {
+    display: none;
+  }
+  .app-shell-main {
+    padding-top: 1rem;
+  }
+
+  .part-mobile-card {
+    padding: 1rem;
+  }
+  .part-mobile-header h5 {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+  .part-mobile-status .btn {
+    min-height: 44px;
+    padding: 0.55rem 0.9rem;
+    border-radius: 0.85rem;
+    font-weight: 600;
+  }
+  .part-mobile-prices strong {
+    font-size: 1.05rem;
+  }
+  .part-mobile-meta {
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+  .part-mobile-actions .btn {
+    padding: 0.55rem 0.65rem;
+  }
+}
+
 .inventory-table-wrapper {
   position: relative;
 }
@@ -237,49 +270,116 @@ html[data-theme="dark"] .inventory-hero-actions .btn-outline-light {
   font-size: 0.9rem;
 }
 
-.catalog-quick-results__item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: none;
+.catalog-quick-results-table {
   width: 100%;
-  text-align: left;
-  background: transparent;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-  cursor: pointer;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.92rem;
 }
 
-.catalog-quick-results__item:last-child {
+.catalog-quick-results-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+  z-index: 1;
+}
+
+.catalog-quick-results-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.catalog-quick-results-table tbody tr:last-child {
   border-bottom: none;
 }
 
-.catalog-quick-results__item:hover,
-.catalog-quick-results__item:focus-visible {
+.catalog-quick-results-table tbody tr:hover,
+.catalog-quick-results-table tbody tr:focus-visible {
   background: rgba(15, 60, 127, 0.05);
-  outline: none;
 }
 
-.catalog-result-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+.catalog-quick-results-table td {
+  padding: 0.6rem 0.75rem;
+  vertical-align: middle;
 }
 
-.catalog-result-name {
+.quick-result-name {
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.catalog-result-tags {
+.quick-result-meta {
   display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  font-size: 0.78rem;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-.catalog-result-tags .badge {
+.quick-result-vehicle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.quick-result-year {
+  font-size: 0.85rem;
   font-weight: 600;
+  color: var(--text-muted);
+}
+
+.quick-result-prices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.quick-result-prices small {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.quick-editable {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-bottom: 1px dashed transparent;
+  cursor: pointer;
+}
+
+.quick-editable::after {
+  content: '...';
+  font-size: 0.85rem;
+  color: transparent;
+  transition: color 0.15s ease;
+}
+
+.quick-editable:hover::after,
+.quick-editable:focus-visible::after {
+  color: var(--text-muted);
+}
+
+.quick-editable:hover,
+.quick-editable:focus-visible {
+  border-bottom-color: var(--border-color-strong, rgba(0,0,0,0.2));
+}
+
+.quick-editable[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.quick-editable[aria-disabled="true"]::after {
+  content: '';
 }
 
 .inventory-pill {
@@ -310,8 +410,21 @@ html[data-theme="dark"] .inventory-hero-actions .btn-outline-light {
   font-weight: 600;
 }
 
+.filter-primary-actions .order-select-shell {
+  min-width: 220px;
+}
+
 .parts-pagination-card .btn {
   min-width: 200px;
+}
+
+.parts-load-sentinel {
+  width: 100%;
+  height: 1px;
+}
+
+.quick-edit-modal-input {
+  width: 100%;
 }
 
 .recent-focus {
@@ -327,4 +440,198 @@ html[data-theme="dark"] .inventory-hero-actions .btn-outline-light {
   padding: 3rem 1rem;
   text-align: center;
   color: var(--text-muted);
+}
+
+/* ===== OPTIMIZACIONES MÓVIL ===== */
+
+/* Header compacto para móvil que reemplaza el hero oculto */
+.inventory-mobile-header {
+  display: none;
+}
+
+@media (max-width: 991.98px) {
+  .inventory-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--inventory-hero-gradient);
+    color: var(--inventory-hero-text);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.75rem;
+  }
+
+  .inventory-mobile-header h1 {
+    font-size: 1.1rem;
+    margin: 0;
+    color: inherit;
+  }
+
+  .inventory-mobile-header .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  /* Métricas móviles como strip horizontal */
+  .inventory-metrics-strip {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .inventory-metrics-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .inventory-metric-chip {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.85rem;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .inventory-metric-chip strong {
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .inventory-metric-chip span {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+
+  /* Filtros más compactos en móvil */
+  .filter-surface {
+    border-radius: var(--radius-md) !important;
+  }
+
+  .filter-surface .card-body {
+    padding: 0.85rem !important;
+  }
+
+  .inventory-search-card {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .inventory-search-card .card-body {
+    padding: 0.85rem !important;
+  }
+
+  .inventory-search-card .form-label {
+    margin-bottom: 0.25rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Barra de búsqueda más compacta */
+  .global-search-with-voice {
+    height: 44px;
+  }
+
+  .global-search-with-voice .form-control {
+    font-size: 0.9rem;
+  }
+
+  .voice-search-btn {
+    padding: 0.4rem 0.75rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  #global-part-voice-status {
+    font-size: 0.75rem !important;
+    margin-top: 0.35rem !important;
+  }
+
+  #catalog-cache-status {
+    font-size: 0.75rem !important;
+  }
+
+  /* Filtros colapsables más compactos */
+  .filter-primary-actions {
+    gap: 0.5rem !important;
+  }
+
+  .filter-primary-actions .btn {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+  }
+
+  .order-select-shell {
+    min-width: 0 !important;
+    flex: 1;
+  }
+
+  .order-select-shell .form-label {
+    display: none;
+  }
+
+  .order-select-shell .form-select {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  #parts-filter-panel .row {
+    gap: 0.5rem !important;
+  }
+
+  #parts-filter-panel .form-label {
+    font-size: 0.7rem !important;
+    margin-bottom: 0.2rem !important;
+  }
+
+  #parts-filter-panel .form-select,
+  #parts-filter-panel .form-control {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.65rem;
+  }
+
+  /* Chips de estado más compactos */
+  .filter-chip-group {
+    gap: 0.35rem !important;
+  }
+
+  .filter-chip {
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .filter-chip-dot {
+    width: 8px !important;
+    height: 8px !important;
+  }
+
+  /* Resumen de filtros compacto */
+  .inventory-filter-summary {
+    gap: 0.35rem !important;
+  }
+
+  .inventory-filter-summary .badge {
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* Paginación compacta */
+  #parts-pagination-card .card-body {
+    padding: 0.75rem !important;
+  }
+
+  #parts-display-counter {
+    font-size: 0.8rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  #load-more-parts-btn {
+    padding: 0.6rem 1.25rem !important;
+    font-size: 0.85rem !important;
+    min-width: 160px !important;
+  }
 }
