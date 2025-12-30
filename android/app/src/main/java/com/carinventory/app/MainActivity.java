@@ -3,7 +3,6 @@ package com.carinventory.app;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.graphics.Insets;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
@@ -19,7 +18,7 @@ import android.webkit.WebView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets as CoreInsets;
+import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -163,8 +162,8 @@ public class MainActivity extends BridgeActivity {
         
         // Listener que se ejecuta cuando los WindowInsets cambian
         ViewCompat.setOnApplyWindowInsetsListener(rootView, (view, windowInsets) -> {
-            CoreInsets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            CoreInsets displayCutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout());
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets displayCutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout());
             
             // Usar el máximo entre systemBars y displayCutout para cada lado
             int topPx = Math.max(systemBars.top, displayCutout.top);
