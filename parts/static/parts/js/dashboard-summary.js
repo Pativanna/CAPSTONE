@@ -54,45 +54,69 @@
     }
     destroyController();
     root.__dashboardInitialized = true;
-    const BAR_STYLE = { borderRadius: 12, borderSkipped: false, borderWidth: 0 };
+    const BAR_STYLE = { borderRadius: 8, borderSkipped: false, borderWidth: 0 };
+    const LINE_STYLE = { tension: 0.4, borderWidth: 3, fill: true, pointRadius: 4, pointHoverRadius: 6 };
+    
+    // Paleta de colores moderna
+    const COLORS = {
+      primary: '#667eea',
+      success: '#11998e',
+      danger: '#ef5350',
+      warning: '#f59e0b',
+      info: '#4facfe',
+      violet: '#8b5cf6',
+      pink: '#ec4899',
+      cyan: '#06b6d4'
+    };
+    
     const commonOpts = {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { usePointStyle: true, pointStyle: 'circle', padding: 16 }
+          labels: { 
+            usePointStyle: true, 
+            pointStyle: 'circle', 
+            padding: 12,
+            font: { size: 11, weight: '500' }
+          }
         },
         tooltip: {
           mode: 'index',
           intersect: false,
-          backgroundColor: 'rgba(17, 24, 39, 0.92)',
-          padding: 12,
+          backgroundColor: 'rgba(17, 24, 39, 0.95)',
+          padding: 10,
           boxPadding: 4,
-          titleFont: { size: 13, weight: '600' },
-          bodySpacing: 6
+          titleFont: { size: 12, weight: '600' },
+          bodyFont: { size: 11 },
+          bodySpacing: 4,
+          cornerRadius: 8
         }
       },
       elements: {
-        line: { tension: 0.35, borderWidth: 3, fill: false },
-        point: { radius: 4, hoverRadius: 6 }
+        line: LINE_STYLE,
+        point: { radius: 3, hoverRadius: 5 }
       },
       interaction: { mode: 'nearest', axis: 'x', intersect: false },
       scales: {
         y: {
           beginAtZero: true,
-          ticks: { precision: 0 },
-          grid: { color: 'rgba(15, 60, 127, 0.12)' }
+          ticks: { precision: 0, font: { size: 10 } },
+          grid: { color: 'rgba(15, 60, 127, 0.08)' }
         },
-        x: { grid: { display: false } }
+        x: { 
+          grid: { display: false },
+          ticks: { font: { size: 10 } }
+        }
       }
     };
 
     let statsCache = null;
-    let dailyType = 'sold';
-    let weeklyType = 'sold';
-    let monthlyType = 'sold';
-    let yearlyType = 'sold';
+    let dailyType = 'both';
+    let weeklyType = 'comparison';
+    let monthlyType = 'comparison';
+    let yearlyType = 'trend';
     let currentMode = 'monthly';
     let currentSpecial = 'available_by_workshop';
     const canvasEl = document.querySelector(cfg.chartSelector);
@@ -102,13 +126,27 @@
     const modeButtons = Array.from(document.querySelectorAll('[data-summary-mode]'));
     const specialButtons = specialToolbar ? Array.from(specialToolbar.querySelectorAll('[data-special-kind]')) : [];
 
-    function barDataset(label, data, color) {
+    function barDataset(label, data, color, order = 0) {
       return {
         label,
         data: data || [],
         backgroundColor: color,
         borderColor: color,
+        order,
         ...BAR_STYLE
+      };
+    }
+    
+    function lineDataset(label, data, color, order = 0) {
+      return {
+        type: 'line',
+        label,
+        data: data || [],
+        borderColor: color,
+        backgroundColor: color + '20',
+        fill: true,
+        order,
+        ...LINE_STYLE
       };
     }
 
@@ -168,6 +206,7 @@
       let labels = [];
       let datasets = [];
       let chartDesc = '';
+      let chartType = 'bar';
 
       const activateSelector = (element) => {
         if (selectorRow && element) {
@@ -178,36 +217,38 @@
 
       const dataByMode = statsCache[targetMode] || {};
 
-      function renderSimpleMode(typeState, options, dataKey, descriptions) {
-        const chips = createChipGroup(typeState.value, options, (next) => {
-          typeState.value = next;
-          renderSummary(targetMode);
+      if (targetMode === 'daily') {
+        // DIARIO: Comparativa vendidas vs agregadas (últimos 14 días)
+        const options = [
+          { value: 'both', label: 'Comparativa' },
+          { value: 'sold', label: 'Solo Vendidas' },
+          { value: 'added', label: 'Solo Agregadas' }
+        ];
+        const chips = createChipGroup(dailyType, options, (next) => {
+          dailyType = next;
+          renderSummary('daily');
         });
         activateSelector(chips);
         labels = dataByMode.axis || [];
-        const dataSeries = dataByMode[typeState.value] || [];
-        datasets.push(barDataset(options.find((opt) => opt.value === typeState.value).label, dataSeries, options.find((opt) => opt.value === typeState.value).color));
-        chartDesc = descriptions[typeState.value] || '';
-      }
-
-      if (targetMode === 'daily') {
-        renderSimpleMode(
-          { value: dailyType },
-          [
-            { value: 'sold', label: 'Vendidas', color: '#ef5350' },
-            { value: 'added', label: 'Agregadas', color: '#0069BC' }
-          ],
-          dataByMode,
-          {
-            sold: 'Evolución diaria de piezas vendidas en los últimos días.',
-            added: 'Evolución diaria de piezas agregadas al inventario.'
-          }
-        );
-        dailyType = dailyType;
+        
+        if (dailyType === 'both') {
+          datasets.push(barDataset('Vendidas', dataByMode.sold || [], COLORS.danger, 1));
+          datasets.push(lineDataset('Agregadas', dataByMode.added || [], COLORS.primary, 0));
+          chartDesc = 'Comparativa diaria: barras rojas = ventas, línea azul = ingresos al inventario.';
+        } else if (dailyType === 'sold') {
+          datasets.push(barDataset('Vendidas', dataByMode.sold || [], COLORS.danger));
+          chartDesc = 'Piezas vendidas por día en las últimas 2 semanas.';
+        } else {
+          datasets.push(barDataset('Agregadas', dataByMode.added || [], COLORS.primary));
+          chartDesc = 'Piezas agregadas al inventario por día.';
+        }
+        
       } else if (targetMode === 'weekly') {
+        // SEMANAL: Rendimiento semanal con tendencia
         const options = [
-          { value: 'sold', label: 'Vendidas', color: '#ef5350' },
-          { value: 'voice_sessions', label: 'Sesiones Voz', color: '#7e57c2' }
+          { value: 'comparison', label: 'Comparativa' },
+          { value: 'sold', label: 'Ventas' },
+          { value: 'voice_sessions', label: 'Sesiones Voz' }
         ];
         const chips = createChipGroup(weeklyType, options, (next) => {
           weeklyType = next;
@@ -215,14 +256,26 @@
         });
         activateSelector(chips);
         labels = dataByMode.axis || [];
-        datasets.push(barDataset(options.find((opt) => opt.value === weeklyType).label, dataByMode[weeklyType] || [], options.find((opt) => opt.value === weeklyType).color));
-        chartDesc = weeklyType === 'sold'
-          ? 'Cantidad de piezas vendidas agrupadas por semana.'
-          : 'Cantidad de sesiones de voz agrupadas por semana.';
+        
+        if (weeklyType === 'comparison') {
+          datasets.push(barDataset('Ventas', dataByMode.sold || [], COLORS.success, 1));
+          datasets.push(lineDataset('Sesiones Voz', dataByMode.voice_sessions || [], COLORS.violet, 0));
+          chartDesc = 'Rendimiento semanal: ventas (barras) vs actividad de voz (línea).';
+        } else if (weeklyType === 'sold') {
+          datasets.push(barDataset('Ventas Semanales', dataByMode.sold || [], COLORS.success));
+          chartDesc = 'Total de piezas vendidas por semana.';
+        } else {
+          datasets.push(barDataset('Sesiones de Voz', dataByMode.voice_sessions || [], COLORS.violet));
+          chartDesc = 'Sesiones de reconocimiento de voz por semana.';
+        }
+        
       } else if (targetMode === 'monthly') {
+        // MENSUAL: Análisis mensual completo
         const options = [
-          { value: 'sold', label: 'Vendidas', color: '#ef5350' },
-          { value: 'added', label: 'Agregadas', color: '#0069BC' }
+          { value: 'comparison', label: 'Comparativa' },
+          { value: 'sold', label: 'Ventas' },
+          { value: 'added', label: 'Ingresos' },
+          { value: 'balance', label: 'Balance' }
         ];
         const chips = createChipGroup(monthlyType, options, (next) => {
           monthlyType = next;
@@ -230,14 +283,38 @@
         });
         activateSelector(chips);
         labels = dataByMode.axis || [];
-        datasets.push(barDataset(options.find((opt) => opt.value === monthlyType).label, dataByMode[monthlyType] || [], options.find((opt) => opt.value === monthlyType).color));
-        chartDesc = monthlyType === 'sold'
-          ? 'Cantidad de piezas vendidas agrupadas por mes.'
-          : 'Cantidad de piezas agregadas al inventario agrupadas por mes.';
+        
+        if (monthlyType === 'comparison') {
+          datasets.push(barDataset('Vendidas', dataByMode.sold || [], COLORS.danger, 1));
+          datasets.push(barDataset('Agregadas', dataByMode.added || [], COLORS.primary, 2));
+          chartDesc = 'Comparativa mensual de flujo: vendidas (rojo) vs agregadas (azul).';
+        } else if (monthlyType === 'sold') {
+          datasets.push(barDataset('Ventas Mensuales', dataByMode.sold || [], COLORS.danger));
+          chartDesc = 'Volumen de ventas mensuales del período.';
+        } else if (monthlyType === 'added') {
+          datasets.push(barDataset('Ingresos Mensuales', dataByMode.added || [], COLORS.primary));
+          chartDesc = 'Piezas ingresadas al inventario por mes.';
+        } else {
+          // Balance: diferencia entre agregadas y vendidas
+          const sold = dataByMode.sold || [];
+          const added = dataByMode.added || [];
+          const balance = added.map((v, i) => (v || 0) - (sold[i] || 0));
+          datasets.push({
+            label: 'Balance Neto',
+            data: balance,
+            backgroundColor: balance.map(v => v >= 0 ? COLORS.success : COLORS.danger),
+            borderColor: balance.map(v => v >= 0 ? COLORS.success : COLORS.danger),
+            ...BAR_STYLE
+          });
+          chartDesc = 'Balance mensual: positivo (verde) = crecimiento, negativo (rojo) = reducción de stock.';
+        }
+        
       } else if (targetMode === 'yearly') {
+        // ANUAL: Tendencia histórica
         const options = [
-          { value: 'sold', label: 'Vendidas', color: '#ef5350' },
-          { value: 'added', label: 'Agregadas', color: '#0069BC' }
+          { value: 'trend', label: 'Tendencia' },
+          { value: 'sold', label: 'Ventas' },
+          { value: 'added', label: 'Ingresos' }
         ];
         const chips = createChipGroup(yearlyType, options, (next) => {
           yearlyType = next;
@@ -245,38 +322,59 @@
         });
         activateSelector(chips);
         labels = dataByMode.axis || [];
-        const yearlyOpt = options.find((opt) => opt.value === yearlyType) || options[0];
-        datasets.push(barDataset(yearlyOpt.label, dataByMode[yearlyOpt.value] || [], yearlyOpt.color));
-        chartDesc = yearlyType === 'sold'
-          ? 'Comportamiento anual de piezas vendidas.'
-          : 'Comportamiento anual de piezas agregadas.';
+        
+        if (yearlyType === 'trend') {
+          datasets.push(lineDataset('Ventas', dataByMode.sold || [], COLORS.danger, 0));
+          datasets.push(lineDataset('Ingresos', dataByMode.added || [], COLORS.primary, 1));
+          chartType = 'line';
+          chartDesc = 'Tendencia histórica anual: evolución de ventas e ingresos.';
+        } else if (yearlyType === 'sold') {
+          datasets.push(barDataset('Ventas Anuales', dataByMode.sold || [], COLORS.danger));
+          chartDesc = 'Total de ventas por año.';
+        } else {
+          datasets.push(barDataset('Ingresos Anuales', dataByMode.added || [], COLORS.primary));
+          chartDesc = 'Total de piezas ingresadas por año.';
+        }
+        
       } else {
+        // ESPECIAL: Diferentes análisis
         const kind = currentSpecial || 'available_by_workshop';
         const dataSpecial = (statsCache.special && statsCache.special[kind]) || { labels: [], values: [] };
         labels = dataSpecial.labels || [];
-        datasets.push(barDataset('Total', dataSpecial.values || [], '#26a69a'));
+        
+        const specialColors = {
+          available_by_workshop: COLORS.success,
+          parts_by_model: COLORS.primary,
+          model_value_sum: COLORS.warning,
+          recent_sales_by_workshop: COLORS.danger,
+          sales_all_time: COLORS.violet
+        };
+        
+        datasets.push(barDataset('Total', dataSpecial.values || [], specialColors[kind] || COLORS.info));
         chartDesc = ({
-          available_by_workshop: 'Cantidad de piezas disponibles agrupadas por taller.',
-          parts_by_model: 'Cantidad de piezas disponibles agrupadas por modelo de auto.',
-          model_value_sum: 'Suma de valores referenciales por modelo.',
-          recent_sales_by_workshop: 'Ventas confirmadas por taller en los últimos 30 días.',
-          sales_all_time: 'Histórico de ventas por año (todas las piezas).'
-        })[kind] || 'Resumen especial';
+          available_by_workshop: 'Distribución de piezas disponibles por taller.',
+          parts_by_model: 'Cantidad de piezas disponibles por modelo de auto.',
+          model_value_sum: 'Valor total estimado por modelo de auto.',
+          recent_sales_by_workshop: 'Ventas de los últimos 30 días por taller.',
+          sales_all_time: 'Histórico completo de ventas por año.'
+        })[kind] || 'Análisis especial del inventario.';
       }
 
     descriptionEl.textContent = chartDesc || '';
     if (canvasEl) {
-      canvasEl.setAttribute('aria-label', chartDesc || 'Resumen del inventario sin descripción disponible.');
+      canvasEl.setAttribute('aria-label', chartDesc || 'Resumen del inventario.');
     }
     updateModeButtons();
     toggleSpecialToolbar();
     updateSpecialButtons();
+    
     const existingChart = canvasEl && canvasEl.__summaryChart;
     if (existingChart && typeof existingChart.destroy === 'function') {
       existingChart.destroy();
     }
+    
     const newChart = new window.Chart(canvasEl, {
-      type: 'bar',
+      type: chartType,
       data: { labels, datasets },
       options: commonOpts
     });

@@ -23,6 +23,7 @@ class SecurityHeadersMiddleware:
         "https://cdnjs.cloudflare.com",
         "https://cdn.jsdelivr.net/npm",
         "https://unpkg.com",
+        "https://static.cloudflareinsights.com",  # Cloudflare Web Analytics
     )
     STYLE_CDN_SOURCES = (
         "https://fonts.googleapis.com",
@@ -44,14 +45,20 @@ class SecurityHeadersMiddleware:
         if not response:
             return response
 
+        # NOTA: No usamos scripts inline para compatibilidad con Turbo SPA.
+        # Todos los scripts están en archivos externos con nonce.
+        # Ver: Calidad/PRACTICAS_DESARROLLO.txt - Sección CSP + Turbo
         script_src = ["'self'", f"'nonce-{nonce}'", *self.SCRIPT_CDN_SOURCES]
         nonce_token = f"'nonce-{nonce}'"
         # Hashes de estilos inline específicos usados por la aplicación
+        # (Turbo puede generar algunos estilos inline durante parseHTMLDocument)
+        # Ver: Calidad/PRACTICAS_DESARROLLO.txt - Sección CSP + Turbo
         inline_style_hashes = [
             "'sha256-slBAuFS8II/0OVyG1iq6TGX+ou4IKWv71VWltRryO34='",
             "'sha256-qcbli+4DCLc3PNbu8bzKxrKaoXNugvRN2fsUg8ejCe4='",
             "'sha256-ZPR/EMn2/zndixTCtRDHU6AaRXXSrBvMQiyJP1+3J7U='",  # Turbo parseHTMLDocument
             "'sha256-U2ttywS9yS9QakQPvf8mcRFMVDtnPepmQNIG7WTBg1w='",  # Container max-width inline
+            "'sha256-NQuzntng+8Pt8oGSWsZWkKKX41P/R36eJ4VH/Kp2X88='",  # Turbo renderElement frame
         ]
         style_src = ["'self'", nonce_token, *inline_style_hashes, *self.STYLE_CDN_SOURCES]
         style_src_elem = ["'self'", nonce_token, *inline_style_hashes, *self.STYLE_CDN_SOURCES]
@@ -79,6 +86,8 @@ class SecurityHeadersMiddleware:
         connect_src.extend(self.CONNECT_EXTRA)
         img_src = ["'self'", "data:", "blob:", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"]
         font_src = ["'self'", "data:", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"]
+        # script-src-elem hereda de script-src pero lo definimos explícitamente para mayor control
+        script_src_elem = script_src.copy()
 
         csp = (
             f"default-src 'self'; "
@@ -87,6 +96,7 @@ class SecurityHeadersMiddleware:
             f"object-src 'none'; "
             f"frame-ancestors 'self'; "
             f"script-src {' '.join(script_src)}; "
+            f"script-src-elem {' '.join(script_src_elem)}; "
             f"style-src {' '.join(style_src)}; "
             f"style-src-elem {' '.join(style_src_elem)}; "
             f"style-src-attr {' '.join(style_src_attr)}; "

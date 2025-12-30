@@ -1,36 +1,46 @@
 {% extends 'parts/base.html' %}
+{% load static %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2 class="mb-0">{{ form.instance.pk|yesno:"Editar Auto,Agregar Auto" }}</h2>
-  <a href="{% url 'parts:auto_list' %}" class="btn btn-outline-secondary"><i class="fas fa-list"></i> Volver al listado</a>
+  <a href="{% url 'parts:auto_list' %}" class="btn btn-outline-secondary" data-turbo-frame="app-frame">
+    <i class="fas fa-list"></i> Volver al listado
+  </a>
 </div>
 
 <div class="card shadow-sm">
   <div class="card-body">
-    <form method="post" action="" novalidate data-turbo="false">
+    <form method="post" 
+          {% if form.instance.pk %}action="{% url 'parts:auto_edit' form.instance.pk %}"{% else %}action="{% url 'parts:auto_create' %}"{% endif %}
+          id="auto-form">
       {% csrf_token %}
+      
       <div class="row g-3">
         <div class="col-md-4">
-          <label class="form-label" for="id_brand_model">{{ form.brand_model.label }}</label>
+          <label class="form-label" for="id_brand_model">{{ form.brand_model.label }} <span class="text-danger">*</span></label>
           {{ form.brand_model }}
           {% if form.brand_model.errors %}
             <div class="invalid-feedback d-block">{{ form.brand_model.errors|striptags }}</div>
           {% endif %}
         </div>
+        
         <div class="col-md-2">
-          <label class="form-label" for="id_year">{{ form.year.label }}</label>
+          <label class="form-label" for="id_year">{{ form.year.label }} <span class="text-danger">*</span></label>
           {{ form.year }}
           {% if form.year.errors %}
             <div class="invalid-feedback d-block">{{ form.year.errors|striptags }}</div>
           {% endif %}
         </div>
+        
         <div class="col-md-3">
-          <label class="form-label" for="id_color">{{ form.color.label }}</label>
+          <label class="form-label" for="id_color">{{ form.color.label }} <span class="text-danger">*</span></label>
           {{ form.color }}
           {% if form.color.errors %}
             <div class="invalid-feedback d-block">{{ form.color.errors|striptags }}</div>
           {% endif %}
         </div>
+        
         <div class="col-md-3">
           <label class="form-label" for="id_license_plate">{{ form.license_plate.label }}</label>
           {{ form.license_plate }}
@@ -49,9 +59,19 @@
         {% endif %}
       </div>
 
+      {% if form.non_field_errors %}
+      <div class="alert alert-danger mt-3">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+
       <div class="mt-4 d-flex gap-2">
-        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
-        <a href="{% url 'parts:auto_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> Guardar
+        </button>
+        <a href="{% url 'parts:auto_list' %}" class="btn btn-secondary" data-turbo-frame="app-frame">
+          <i class="fas fa-times"></i> Cancelar
+        </a>
       </div>
     </form>
   </div>

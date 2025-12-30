@@ -178,7 +178,7 @@
           <a href="{% url 'parts:workshop_delete' w.id %}"
              class="btn btn-sm btn-danger"
              title="Eliminar"
-             data-turbo-frame="_top">
+             data-turbo-frame="app-frame">
             <i class="fas fa-trash"></i>
           </a>
         </td>
@@ -230,7 +230,7 @@
       <div class="d-flex gap-2">
         <a href="{% url 'parts:workshop_delete' w.id %}"
            class="btn btn-danger flex-fill"
-           data-turbo-frame="_top">
+           data-turbo-frame="app-frame">
           <i class="fas fa-trash"></i> Eliminar
         </a>
       </div>

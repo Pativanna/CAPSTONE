@@ -7,7 +7,7 @@
 
 <div class="card shadow-sm">
   <div class="card-body">
-    <form method="post" action="" novalidate data-turbo="false">
+    <form method="post" action="{{ action_url }}" novalidate data-turbo-frame="app-frame">
       {% csrf_token %}
       <div class="row g-3">
         <div class="col-md-6">

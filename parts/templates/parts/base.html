@@ -15,6 +15,9 @@
   <meta name="theme-color" content="#4f46e5">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
+  <!-- Early theme init - MUST be first script, sync, to prevent flash of wrong theme -->
+  <script src="{% static 'parts/js/theme-init.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>
+  
   <!-- Capacitor Remote Bridge - Custom bridge for remote content loading -->
   <!-- This enables native plugins when loading from server.url -->
   <!-- Note: We use our own bridge instead of capacitor-runtime.js because -->
@@ -89,15 +92,8 @@
         data-style-watch="primary"
         data-turbo-track="reload"
         nonce="{{ csp_nonce|default:'' }}">
-  <script nonce="{{ csp_nonce|default:'' }}">
-    document.documentElement.classList.add('app-loading');
-    window.__setAppLoadingProgress = function (value) {
-      var bar = document.querySelector('.app-loading-progress__bar');
-      if (!bar) return;
-      bar.style.width = Math.max(0, Math.min(100, value)) + '%';
-    };
-    window.__setAppLoadingProgress(5);
-  </script>
+  <!-- Script de inicialización de loading (externo para CSP+Turbo) -->
+  <script src="{% static 'parts/js/app-loading-init.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>
   
 <script src="{% static 'parts/vendor/turbo.es2017-umd.js' %}"
         data-turbo-track="reload"
@@ -115,14 +111,13 @@
     <div class="app-loading-progress__bar"></div>
   </div>
 </div>
-<div class="mobile-dead-zone mobile-dead-zone--top" aria-hidden="true"></div>
 
 <!-- Navbar fija superior -->
 {% block navbar %}
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow-sm">
   <div class="container-fluid">
-    <!-- Botón hamburguesa para Mega Menu (solo móvil) -->
-    <button class="navbar-toggler" 
+    <!-- Botón hamburguesa para Mega Menu (disponible en móvil Y desktop) -->
+    <button class="navbar-toggler navbar-toggler--mega" 
             type="button" 
             id="mega-menu-trigger"
             aria-label="Abrir menú"
@@ -191,8 +186,18 @@
       </ul>
       
       <!-- Controles de usuario a la derecha (desktop) -->
-      <ul class="navbar-nav ms-auto">
+      <ul class="navbar-nav ms-auto align-items-center">
         {% if user.is_authenticated %}
+          <!-- Botón de impresora (desktop) -->
+          <li class="nav-item me-2">
+            <a class="nav-link btn-icon-nav" 
+               href="{% url 'parts:printer_hub' %}"
+               data-turbo-frame="app-frame"
+               title="Hub de Impresora">
+              <i class="fas fa-print"></i>
+            </a>
+          </li>
+          
           <li class="nav-item align-items-center theme-toggle-item">
             <button type="button" id="theme-toggle" class="switch-tile" aria-pressed="false">
               <span class="tile-icon"><i class="bi bi-sun-fill"></i></span>
@@ -247,7 +252,7 @@
 <!-- Overlay para Mega Menu -->
 <div id="mega-menu-overlay" class="mega-menu-overlay" aria-hidden="true"></div>
 
-<!-- Mega Menu (solo móvil) -->
+<!-- Mega Menu (móvil y desktop) -->
 {% if user.is_authenticated %}
 <aside id="mega-menu" class="mega-menu" aria-label="Menú principal" aria-hidden="true">
   <header class="mega-menu__header">
@@ -445,41 +450,41 @@
 <!-- Bottom Navigation (solo móvil) -->
 <nav class="bottom-nav" aria-label="Navegación principal móvil">
   <a href="{% url 'parts:dashboard' %}" 
-     class="bottom-nav__item" 
-     data-turbo-frame="app-frame"
-     data-nav-id="inicio">
+     class="bottom-nav__item"
+     data-nav-id="inicio"
+     data-turbo-frame="app-frame">
     <span class="bottom-nav__icon"><i class="fas fa-home"></i></span>
     <span class="bottom-nav__label">Inicio</span>
   </a>
   
   <a href="{% url 'parts:part_list' %}" 
-     class="bottom-nav__item" 
-     data-turbo-frame="app-frame"
-     data-nav-id="repuestos">
+     class="bottom-nav__item"
+     data-nav-id="repuestos"
+     data-turbo-frame="app-frame">
     <span class="bottom-nav__icon"><i class="fas fa-cogs"></i></span>
     <span class="bottom-nav__label">Repuestos</span>
   </a>
   
   <a href="{% url 'parts:part_create' %}" 
-     class="bottom-nav__item bottom-nav__item--primary" 
-     data-turbo-frame="app-frame"
-     data-nav-id="agregar">
+     class="bottom-nav__item bottom-nav__item--primary"
+     data-nav-id="agregar"
+     data-turbo-frame="app-frame">
     <span class="bottom-nav__icon"><i class="fas fa-plus"></i></span>
     <span class="bottom-nav__label">Agregar</span>
   </a>
   
   <a href="{% url 'parts:verificador' %}" 
-     class="bottom-nav__item" 
-     data-turbo-frame="app-frame"
-     data-nav-id="lector">
+     class="bottom-nav__item"
+     data-nav-id="lector"
+     data-turbo-frame="app-frame">
     <span class="bottom-nav__icon"><i class="bi bi-upc-scan"></i></span>
     <span class="bottom-nav__label">Lector</span>
   </a>
   
   <a href="{% url 'parts:part_list' %}?voice=1" 
-     class="bottom-nav__item bottom-nav__item--voice" 
-     data-turbo-frame="app-frame"
-     data-nav-id="voz">
+     class="bottom-nav__item bottom-nav__item--voice"
+     data-nav-id="voz"
+     data-turbo-frame="app-frame">
     <span class="bottom-nav__icon"><i class="fas fa-microphone"></i></span>
     <span class="bottom-nav__label">Voz</span>
   </a>
@@ -617,7 +622,7 @@
   </div>
 </div>
 
-<div class="mobile-dead-zone mobile-dead-zone--bottom" aria-hidden="true"></div>
+<!-- Dead zone bottom eliminada - reemplazada por bottom-nav -->
 
 <!-- Modal de Test de Impresora -->
 <div class="modal fade printer-modal" id="printerTestModal" tabindex="-1" aria-labelledby="printerTestModalLabel" aria-hidden="true" data-test-url="{% url 'parts:impresora_test' %}">
@@ -666,108 +671,8 @@
   </div>
 </div>
 
-<script nonce="{{ csp_nonce|default:'' }}">
-  (function () {
-    const overlay = document.getElementById('app-loading-overlay');
-    if (!overlay) return;
-    const statusText = document.getElementById('app-loading-message');
-    const logBoot = window.__logBoot || function () {};
-    const pending = new Set();
-    let hideTimeout = null;
-    let hasHidden = false;
-    const FALLBACK_NOTICE_MS = 5000;
-    const FAILSAFE_NOTICE_MS = 15000;
-
-    setTimeout(() => {
-      if (!hasHidden && pending.size) {
-        overlay.classList.add('app-loading-overlay--waiting');
-        if (statusText) {
-          statusText.textContent = 'Sincronizando estilos locales…';
-        }
-        logBoot('stylewatch:waiting-for-assets', { pending: pending.size });
-      }
-    }, FALLBACK_NOTICE_MS);
-
-    setTimeout(() => {
-      if (!hasHidden && pending.size) {
-        logBoot('stylewatch:failsafe-hold', { pending: pending.size });
-        if (statusText) {
-          statusText.textContent = 'Validando archivos…';
-        }
-      }
-    }, FAILSAFE_NOTICE_MS);
-    
-    document.querySelectorAll('link[data-style-watch]').forEach((link) => {
-      if (link.sheet && link.sheet.cssRules && link.sheet.cssRules.length) {
-        logBoot('stylewatch:preloaded', { href: link.href });
-        return;
-      }
-      pending.add(link);
-      logBoot('stylewatch:pending', { href: link.href });
-      const mark = () => {
-        pending.delete(link);
-        logBoot('stylewatch:loaded', { href: link.href, remaining: pending.size });
-        if (!pending.size) {
-          hide();
-        }
-      };
-      link.addEventListener('load', mark, { once: true });
-      link.addEventListener('error', mark, { once: true });
-    });
-
-    function stylesApplied() {
-      try {
-        return Array.from(document.styleSheets || []).some((sheet) => {
-          try {
-            return (sheet.cssRules && sheet.cssRules.length > 0);
-          } catch (err) {
-            return false;
-          }
-        });
-      } catch (_err) {
-        return false;
-      }
-    }
-
-    function hide() {
-      if (!overlay || hasHidden) return;
-      if (pending.size && !stylesApplied()) {
-        logBoot('stylewatch:defer-hide', { pending: pending.size });
-        return;
-      }
-      hasHidden = true;
-      logBoot('overlay:hide', { remaining: pending.size });
-      overlay.classList.add('is-hidden');
-      if (hideTimeout) clearTimeout(hideTimeout);
-      hideTimeout = setTimeout(() => {
-        overlay.remove();
-        logBoot('overlay:removed', { ts: Date.now() });
-        document.dispatchEvent(new CustomEvent('page:ready', {
-          detail: { timestamp: Date.now(), reason: 'styles-loaded' }
-        }));
-        document.documentElement.classList.remove('app-loading');
-        if (window.__setAppLoadingProgress) {
-          window.__setAppLoadingProgress(100);
-        }
-      }, 600);
-    }
-
-    if (!pending.size) {
-      logBoot('stylewatch:ready', { pending: 0 });
-      hide();
-    } else {
-      logBoot('stylewatch:awaiting', { pending: pending.size });
-      
-      window.addEventListener('load', () => {
-        if (window.__setAppLoadingProgress) {
-          window.__setAppLoadingProgress(60);
-        }
-        logBoot('window:load-fired', { pending: pending.size });
-        hide();
-      }, { once: true });
-    }
-  })();
-</script>
+<!-- Script de style-watcher (externo para CSP+Turbo) -->
+<script src="{% static 'parts/js/style-watcher.js' %}" nonce="{{ csp_nonce|default:'' }}"></script>
 
 </body>
 </html>

@@ -605,20 +605,6 @@
       window.__persistUIMode();
     }, true);
 
-    document.addEventListener('turbo:frame-load', function (ev) {
-      var frame = ev.target;
-      if (!frame || frame.id !== APP_FRAME_ID) return;
-      var detailUrl = ev.detail && ev.detail.url;
-      var currentPath = normalizeAppFramePath(detailUrl || frame.getAttribute('src') || frame.src);
-      if (!currentPath) return;
-      var currentLocation = window.location.pathname + window.location.search + window.location.hash;
-      if (currentLocation !== currentPath) {
-        try {
-          history.replaceState({ turboFrame: APP_FRAME_ID }, '', currentPath);
-        } catch (_err) { /* ignore */ }
-      }
-    });
-
     window.addEventListener('popstate', function () {
       var path = window.location.pathname + window.location.search + window.location.hash;
       if (path.indexOf('/parts/') === 0) {
@@ -633,10 +619,84 @@
       var action = form.getAttribute('action') || window.location.href;
       var url = new URL(action, window.location.href);
       if (url.origin !== window.location.origin || url.pathname.indexOf('/parts/') !== 0) return;
+      
+      // Log del submit
+      bootLog('turbo:form-submit', { 
+        formId: form.id || '(no-id)', 
+        action: action,
+        method: form.method,
+        turboFrame: form.dataset.turboFrame || '(will-set)'
+      });
+      
       if (!form.dataset || !form.dataset.turboFrame) {
         form.setAttribute('data-turbo-frame', APP_FRAME_ID);
       }
     }, true);
+
+    // Capturar URL de requests GET para actualizar el historial
+    var pendingFrameUrl = null;
+    var lastFetchSource = null;
+    
+    document.addEventListener('turbo:before-fetch-request', function (e) {
+      var fetchOptions = e.detail && e.detail.fetchOptions;
+      var url = e.detail && e.detail.url;
+      
+      // Log detallado del fetch
+      bootLog('turbo:before-fetch', { 
+        url: url ? url.toString() : '(no-url)',
+        method: fetchOptions && fetchOptions.method ? fetchOptions.method : 'GET',
+        targetFrame: e.target && e.target.id ? e.target.id : '(unknown)'
+      });
+      
+      if (!url || !fetchOptions) return;
+      
+      // Solo para requests GET al frame de la app
+      if (fetchOptions.method && fetchOptions.method.toUpperCase() !== 'GET') return;
+      
+      try {
+        var urlObj = new URL(url);
+        if (urlObj.pathname.indexOf('/parts/') === 0) {
+          pendingFrameUrl = urlObj.pathname + urlObj.search;
+          lastFetchSource = 'turbo-fetch';
+        }
+      } catch (_err) { /* ignore */ }
+    });
+    
+    document.addEventListener('turbo:frame-load', function (ev) {
+      var frame = ev.target;
+      if (!frame || frame.id !== APP_FRAME_ID) return;
+      
+      // Usar la URL capturada si está disponible
+      var newPath = pendingFrameUrl;
+      var source = lastFetchSource || 'unknown';
+      pendingFrameUrl = null; // Limpiar
+      lastFetchSource = null;
+      
+      if (!newPath) {
+        // Fallback: intentar obtener de detail.url o src
+        var detailUrl = ev.detail && ev.detail.url;
+        newPath = normalizeAppFramePath(detailUrl || frame.getAttribute('src') || frame.src);
+        source = 'fallback-src';
+      }
+      
+      // Log detallado del frame load
+      bootLog('turbo:frame-loaded', { 
+        frameId: frame.id,
+        newPath: newPath,
+        currentPath: window.location.pathname + window.location.search,
+        source: source,
+        willUpdateUrl: newPath && (window.location.pathname + window.location.search) !== newPath
+      });
+      
+      if (!newPath) return;
+      
+      var currentPath = window.location.pathname + window.location.search;
+      if (currentPath !== newPath) {
+        try {
+          history.pushState({ turboFrame: APP_FRAME_ID }, '', newPath);
+        } catch (_err) { /* ignore */ }
+      }
+    });
   }
 
   function initResponsiveResync() {

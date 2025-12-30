@@ -28,16 +28,29 @@ El proyecto cumple con las siguientes normas ISO:
                     1. ISO/IEC 27001 y 27002 - SEGURIDAD
 ================================================================================
 
-UBICACIÓN: parts/middleware.py (266 líneas)
+UBICACIÓN: parts/middleware.py (~290 líneas)
 
 IMPLEMENTADO:
   ✅ Content-Security-Policy con nonce dinámico
   ✅ Referrer-Policy: strict-origin-when-cross-origin
   ✅ Permissions-Policy (camera, microphone, geolocation)
   ✅ Cross-Origin-Opener-Policy: same-origin
-  ✅ Hashes SHA256 para estilos inline
+  ✅ Hashes SHA256 para estilos inline (incluye hashes de Turbo)
   ✅ Detección de sesiones expiradas (AJAX/Turbo)
   ✅ Manejo de errores como JSON (PermissionDenied, Http404)
+  ✅ Scripts externos (NO inline) para compatibilidad Turbo+CSP
+  ✅ Cloudflare Web Analytics permitido en script-src
+  ✅ script-src-elem explícito para mayor control
+
+ARCHIVOS RELACIONADOS (CSP+Turbo):
+  - parts/static/parts/js/app-loading-init.js  → Script de loading (externo)
+  - parts/static/parts/js/style-watcher.js     → Observador de estilos (externo)
+  - parts/middleware.py inline_style_hashes[]  → Hashes de estilos Turbo
+
+PATRONES TURBO IMPLEMENTADOS:
+  ✅ Formularios con action_url explícita (ver PRACTICAS_DESARROLLO.txt 2.1)
+  ✅ Links con data-turbo-frame="app-frame" para navegación SPA
+  ✅ Vistas de delete pasan action_url al template
 
 NO VERIFICABLE (requiere revisión manual):
   ⚪ Configuración SSL/TLS en nginx
@@ -192,4 +205,4 @@ PRIORIDAD BAJA:
 NOTA: Este archivo se debe leer SIEMPRE antes de implementar cambios.
 Ubicación: /home/ubuntu/car_inventory/Calidad/ISO_AUDIT.txt
 
-Última actualización: 2025-12-09
+Última actualización: 2025-12-30

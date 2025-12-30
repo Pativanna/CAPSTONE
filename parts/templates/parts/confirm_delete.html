@@ -89,7 +89,7 @@
         {% endif %}
       </div>
       <div class="card-footer bg-light">
-        <form method="post" action="" data-turbo="false" class="d-flex gap-3 justify-content-center flex-wrap">
+        <form method="post" action="{{ action_url }}" data-turbo-frame="app-frame" class="d-flex gap-3 justify-content-center flex-wrap">
           {% csrf_token %}
           <button type="submit" class="btn btn-danger btn-lg">
             <i class="fas fa-trash"></i> Sí, eliminar

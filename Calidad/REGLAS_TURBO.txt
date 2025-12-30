@@ -1,0 +1,170 @@
+================================================================================
+                    REGLAS TURBO - REFERENCIA RÁPIDA
+                    Sistema de Inventario - Transervis
+================================================================================
+Fecha: 2025-12-30
+Versión: 1.0
+
+Este archivo resume las reglas OBLIGATORIAS para trabajar con Turbo (Hotwired)
+en este proyecto. LEER ANTES de implementar cualquier cambio de frontend.
+
+================================================================================
+                    1. FORMULARIOS EN TURBO FRAMES
+================================================================================
+
+❌ INCORRECTO (NO FUNCIONA):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ # Vista                                                                     │
+│ return render(request, 'template.html', {'object': obj})                    │
+│                                                                             │
+│ # Template                                                                  │
+│ <form method="post" action="">  <!-- ¡MAL! -->                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+✅ CORRECTO:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ # Vista                                                                     │
+│ return render(request, 'template.html', {                                   │
+│     'object': obj,                                                          │
+│     'action_url': reverse('parts:mi_accion', args=[pk]),  # ← OBLIGATORIO   │
+│ })                                                                          │
+│                                                                             │
+│ # Template                                                                  │
+│ <form method="post" action="{{ action_url }}" data-turbo-frame="app-frame"> │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+POR QUÉ: Turbo carga contenido vía fetch. Los forms con action="" resuelven
+la URL relativa a la página PRINCIPAL, no al contenido del frame.
+
+================================================================================
+                    2. SCRIPTS - NUNCA INLINE
+================================================================================
+
+❌ INCORRECTO (CSP BLOQUEA):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ <script nonce="{{ csp_nonce }}">                                            │
+│   // código inline - ¡BLOQUEADO por CSP en navegación Turbo!                │
+│ </script>                                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+✅ CORRECTO:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ <script src="{% static 'parts/js/mi-script.js' %}"                          │
+│         nonce="{{ csp_nonce }}"                                             │
+│         defer></script>                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+POR QUÉ: Cada request tiene un nonce diferente. Turbo inyecta HTML nuevo en
+el contexto CSP de la página original → nonce no coincide → script bloqueado.
+
+================================================================================
+                    3. ESTILOS INLINE - USAR HASHES
+================================================================================
+
+Si NECESITAS un estilo inline (ej: generado por librería), calcula su hash:
+
+  echo "contenido exacto del style" | openssl dgst -sha256 -binary | openssl base64
+
+Y agrégalo a middleware.py en inline_style_hashes[]:
+
+  inline_style_hashes = [
+      "'sha256-NUEVO_HASH_AQUI='",
+      ...
+  ]
+
+HASHES DE TURBO YA INCLUIDOS:
+  - sha256-slBAuFS8II/0OVyG1iq6TGX+ou4IKWv71VWltRryO34=
+  - sha256-qcbli+4DCLc3PNbu8bzKxrKaoXNugvRN2fsUg8ejCe4=
+  - sha256-ZPR/EMn2/zndixTCtRDHU6AaRXXSrBvMQiyJP1+3J7U=
+  - sha256-U2ttywS9yS9QakQPvf8mcRFMVDtnPepmQNIG7WTBg1w=
+  - sha256-NQuzntng+8Pt8oGSWsZWkKKX41P/R36eJ4VH/Kp2X88=
+
+================================================================================
+                    4. LINKS DE NAVEGACIÓN
+================================================================================
+
+Para navegación dentro del frame SPA:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ <a href="{% url 'parts:mi_vista' %}" data-turbo-frame="app-frame">          │
+│   Mi Link                                                                   │
+│ </a>                                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Para navegación con recarga completa (ej: logout):
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ <a href="{% url 'parts:logout' %}" data-turbo="false">                      │
+│   Cerrar Sesión                                                             │
+│ </a>                                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                    5. PATRÓN DE SCRIPTS DE PÁGINA
+================================================================================
+
+Todo script de página DEBE seguir este patrón:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ (function() {                                                               │
+│   'use strict';                                                             │
+│   let initialized = false;                                                  │
+│                                                                             │
+│   function onReady(callback) {                                              │
+│     const fire = () => {                                                    │
+│       if (!document.getElementById('miContainer')) return;                  │
+│       callback();                                                           │
+│     };                                                                      │
+│     if (document.readyState === 'loading') {                                │
+│       document.addEventListener('DOMContentLoaded', fire, { once: true });  │
+│     } else {                                                                │
+│       fire();                                                               │
+│     }                                                                       │
+│     document.addEventListener('turbo:load', fire);                          │
+│     document.addEventListener('turbo:frame-load', fire);                    │
+│   }                                                                         │
+│                                                                             │
+│   function init() {                                                         │
+│     if (initialized) return;                                                │
+│     initialized = true;                                                     │
+│     // ... código                                                           │
+│   }                                                                         │
+│                                                                             │
+│   function cleanup() { initialized = false; }                               │
+│                                                                             │
+│   onReady(init);                                                            │
+│   document.addEventListener('turbo:before-render', cleanup);                │
+│ })();                                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                    6. CHECKLIST RÁPIDO
+================================================================================
+
+Antes de implementar cualquier cambio de frontend:
+
+□ ¿Los forms tienen action="{{ action_url }}"?
+□ ¿La vista pasa action_url con reverse()?
+□ ¿Los scripts son externos (no inline)?
+□ ¿Los links usan data-turbo-frame="app-frame"?
+□ ¿Los scripts de página siguen el patrón onReady/init/cleanup?
+□ ¿Ejecuté ./aplicar_cambios.sh después del cambio?
+
+================================================================================
+                    7. ARCHIVOS DE REFERENCIA
+================================================================================
+
+Ejemplos de implementación correcta:
+  - parts/views.py: auto_delete(), workshop_delete(), part_delete()
+  - parts/templates/parts/confirm_delete.html
+  - parts/templates/parts/auto_list.html
+  - parts/static/parts/js/part-list.js
+
+Configuración CSP:
+  - parts/middleware.py (SecurityHeadersMiddleware)
+
+Scripts externos que reemplazan inline:
+  - parts/static/parts/js/app-loading-init.js
+  - parts/static/parts/js/style-watcher.js
+
+================================================================================
+Última actualización: 2025-12-30
+================================================================================

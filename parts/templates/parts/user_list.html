@@ -260,7 +260,7 @@
                                  Editar
                             </a>
                             {% if user.id != request.user.id %}
-                                <a href="{% url 'parts:user_delete' user.id %}" class="btn-delete" data-turbo-frame="_top">
+                                <a href="{% url 'parts:user_delete' user.id %}" class="btn-delete" data-turbo-frame="app-frame">
                                      Eliminar
                                 </a>
                             {% endif %}

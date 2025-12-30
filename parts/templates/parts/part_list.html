@@ -4,31 +4,32 @@
 
 {% block content %}
 <section class="inventory-shell">
-  <!-- Header móvil compacto (visible solo en <992px) -->
+  <!-- Header móvil compacto con métricas integradas (visible solo en <992px) -->
   <div class="inventory-mobile-header">
-    <h1><i class="bi bi-box-seam me-2"></i>Inventario</h1>
-    <a href="{% url 'parts:part_create' %}" class="btn btn-light btn-sm" data-turbo-frame="app-frame">
-      <i class="fas fa-plus"></i> Nueva
-    </a>
-  </div>
-
-  <!-- Métricas móviles como strip horizontal -->
-  <div class="inventory-metrics-strip d-lg-none">
-    <div class="inventory-metric-chip">
-      <strong>{{ total_piezas|intcomma }}</strong>
-      <span>total</span>
+    <div class="inventory-mobile-header__top">
+      <h1><i class="bi bi-box-seam me-2"></i>Inventario</h1>
+      <a href="{% url 'parts:part_create' %}" class="inventory-mobile-header__btn" data-turbo="false">
+        <i class="fas fa-plus"></i> Nueva
+      </a>
     </div>
-    <div class="inventory-metric-chip">
-      <strong>{{ inventory_stats.available|default:0|intcomma }}</strong>
-      <span>disponibles</span>
-    </div>
-    <div class="inventory-metric-chip">
-      <strong>{{ inventory_stats.sold|default:0|intcomma }}</strong>
-      <span>vendidas</span>
-    </div>
-    <div class="inventory-metric-chip">
-      <strong>{{ inventory_stats.incomplete|default:0|intcomma }}</strong>
-      <span>incompletas</span>
+    <!-- Métricas dentro del header con scroll horizontal -->
+    <div class="inventory-mobile-header__metrics">
+      <div class="inventory-metric-chip">
+        <strong>{{ total_piezas|intcomma }}</strong>
+        <span>total</span>
+      </div>
+      <div class="inventory-metric-chip">
+        <strong>{{ inventory_stats.available|default:0|intcomma }}</strong>
+        <span>disponibles</span>
+      </div>
+      <div class="inventory-metric-chip">
+        <strong>{{ inventory_stats.sold|default:0|intcomma }}</strong>
+        <span>vendidas</span>
+      </div>
+      <div class="inventory-metric-chip">
+        <strong>{{ inventory_stats.incomplete|default:0|intcomma }}</strong>
+        <span>incompletas</span>
+      </div>
     </div>
   </div>
 
@@ -97,24 +98,33 @@
       <div class="inventory-search-card mb-4">
         <label for="global-part-search" class="form-label text-muted small mb-1">Búsqueda inteligente</label>
         <div class="voice-search-shell d-flex flex-column flex-lg-row gap-3">
-          <div class="input-group input-group-lg shadow-sm rounded-pill global-search-with-voice">
-            <span class="input-group-text bg-transparent border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
-            <input type="search"
-                   id="global-part-search"
-                   name="q"
-                   class="form-control border-0"
-                   placeholder="Ej: volante en cuero, focos toyota, etc."
-                   aria-label="Buscar en todo el inventario"
-                   value="{{ busqueda_global }}"
-                   data-client-search="false">
-            <button type="button"
-                    class="btn btn-outline-primary text-nowrap voice-search-btn"
-                    id="global-part-voice-btn"
-                    aria-label="Dictar búsqueda"
-                    title="Dictar búsqueda por voz">
-              <i class="fas fa-microphone" id="voice-search-btn-icon"></i>
-              <span class="d-none d-md-inline ms-2" id="voice-search-mode-label">Voz (Nube)</span>
-            </button>
+          <div class="search-autocomplete-wrapper position-relative flex-grow-1">
+            <div class="input-group input-group-lg shadow-sm rounded-pill global-search-with-voice">
+              <span class="input-group-text bg-transparent border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
+              <input type="search"
+                     id="global-part-search"
+                     name="q"
+                     class="form-control border-0"
+                     placeholder="Ej: volante en cuero, focos toyota, etc."
+                     aria-label="Buscar en todo el inventario"
+                     value="{{ busqueda_global }}"
+                     autocomplete="off"
+                     data-client-search="false">
+              <button type="button"
+                      class="btn btn-outline-primary text-nowrap voice-search-btn"
+                      id="global-part-voice-btn"
+                      aria-label="Dictar búsqueda"
+                      title="Dictar búsqueda por voz">
+                <i class="fas fa-microphone" id="voice-search-btn-icon"></i>
+                <span class="d-none d-md-inline ms-2" id="voice-search-mode-label">Voz (Nube)</span>
+              </button>
+            </div>
+            <!-- Dropdown de sugerencias estilo MercadoLibre -->
+            <div id="search-suggestions-dropdown" 
+                 class="search-suggestions-dropdown d-none"
+                 role="listbox"
+                 aria-label="Sugerencias de búsqueda">
+            </div>
           </div>
         </div>
         <div class="mt-2 d-flex align-items-center gap-2 text-muted small flex-wrap" id="global-part-voice-status">
@@ -187,22 +197,42 @@
          data-mobile-default="closed">
       <div class="row g-3 align-items-end">
         <div class="col-12 col-md-4 col-lg-3">
-          <label for="filter-model" class="form-label text-muted small mb-1">Modelo asociado</label>
-          <select id="filter-model" name="modelo" class="form-select">
-            <option value="">Todos</option>
-            {% for modelo in modelos_disponibles %}
-              <option value="{{ modelo }}" {% if modelo_filtrado == modelo %}selected{% endif %}>{{ modelo }}</option>
-            {% endfor %}
-          </select>
+          <label for="filter-model-input" class="form-label text-muted small mb-1">Modelo asociado</label>
+          <div class="filter-autocomplete-wrapper position-relative">
+            <input type="text" 
+                   id="filter-model-input" 
+                   class="form-control filter-autocomplete-input" 
+                   placeholder="Buscar modelo..."
+                   autocomplete="off"
+                   data-filter-type="model"
+                   value="{{ modelo_filtrado|default:'' }}">
+            <input type="hidden" id="filter-model" name="modelo" value="{{ modelo_filtrado|default:'' }}">
+            <div id="filter-model-results" class="filter-autocomplete-results d-none"></div>
+            {% if modelo_filtrado %}
+            <button type="button" class="filter-clear-btn" data-clear-filter="model" aria-label="Limpiar modelo">
+              <i class="fas fa-times"></i>
+            </button>
+            {% endif %}
+          </div>
         </div>
         <div class="col-12 col-md-4 col-lg-3">
-          <label for="filter-year" class="form-label text-muted small mb-1">Año del vehículo</label>
-          <select id="filter-year" name="anio" class="form-select" {% if not modelo_filtrado %}data-placeholder="true"{% endif %}>
-            <option value="">Todos</option>
-            {% for anio in anios_disponibles %}
-              <option value="{{ anio }}" {% if anio_filtrado == anio|stringformat:"s" %}selected{% endif %}>{{ anio }}</option>
-            {% endfor %}
-          </select>
+          <label for="filter-year-input" class="form-label text-muted small mb-1">Año del vehículo</label>
+          <div class="filter-autocomplete-wrapper position-relative">
+            <input type="text" 
+                   id="filter-year-input" 
+                   class="form-control filter-autocomplete-input" 
+                   placeholder="Buscar año..."
+                   autocomplete="off"
+                   data-filter-type="year"
+                   value="{{ anio_filtrado|default:'' }}">
+            <input type="hidden" id="filter-year" name="anio" value="{{ anio_filtrado|default:'' }}">
+            <div id="filter-year-results" class="filter-autocomplete-results d-none"></div>
+            {% if anio_filtrado %}
+            <button type="button" class="filter-clear-btn" data-clear-filter="year" aria-label="Limpiar año">
+              <i class="fas fa-times"></i>
+            </button>
+            {% endif %}
+          </div>
         </div>
         <div class="col-12 col-md-4 col-lg-3">
           <label for="filter-workshop" class="form-label text-muted small mb-1">Ubicación / taller</label>
@@ -435,7 +465,12 @@
         nonce="{{ csp_nonce|default:'' }}"
         data-page-script="parts:table-utils"
         data-turbo-track="reload"></script>
-<script src="{% static 'parts/js/part-list.js' %}?v=20250305a"
+<script src="{% static 'parts/js/catalog-db.js' %}?v=20251230a"
+        defer
+        nonce="{{ csp_nonce|default:'' }}"
+        data-page-script="parts:catalog-db"
+        data-turbo-track="reload"></script>
+<script src="{% static 'parts/js/part-list.js' %}?v=20251230b"
         defer
         nonce="{{ csp_nonce|default:'' }}"
         data-page-script="parts:part-list"

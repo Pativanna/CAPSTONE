@@ -64,6 +64,8 @@ urlpatterns = [
     path('parts/voice-search/transcribe-openai/', vosk_views.voice_search_transcribe_openai, name='voice_search_transcribe_openai'),
     
     path('parts/api/catalog-cache/', views.parts_catalog_cache, name='parts_catalog_cache'),
+    path('parts/api/search/suggest/', views.search_suggest, name='search_suggest'),
+    path('parts/api/filter/suggest/', views.filter_suggest, name='filter_suggest'),
     # Endpoints adicionales se habilitarán cuando el módulo esté listo
 
     # Mic config & test

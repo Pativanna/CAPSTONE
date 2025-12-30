@@ -10,26 +10,17 @@
    CSS VARIABLES - Mobile Navigation
    ============================================================================= */
 :root {
-  --bottom-nav-height: 56px;
-  --bottom-nav-bg: var(--surface-card);
-  --bottom-nav-border: var(--border-color);
+  --bottom-nav-height: 64px;
+  /* Bottom nav usa mismos colores que el navbar superior para coherencia */
+  --bottom-nav-bg: linear-gradient(120deg, var(--app-brand-primary, #0f3c7f), var(--app-brand-primary-soft, #1d4f9c));
+  --bottom-nav-bg-solid: var(--app-brand-primary, #0f3c7f);
+  --bottom-nav-border: rgba(255, 255, 255, 0.1);
   --bottom-nav-icon-size: 1.35rem;
   --bottom-nav-label-size: 0.6rem;
-  --bottom-nav-active-color: var(--app-brand-primary);
-  --bottom-nav-inactive-color: var(--text-muted);
-  --mega-menu-width: 100%;
-  --mega-menu-bg: var(--surface-elevated);
+  --bottom-nav-active-color: #ffffff;
+  --bottom-nav-inactive-color: rgba(255, 255, 255, 0.7);
+  --mega-menu-bg: var(--surface-elevated, #ffffff);
   --mega-menu-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Safe area con fallbacks robustos */
-  --safe-area-top: env(safe-area-inset-top, 0px);
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-area-left: env(safe-area-inset-left, 0px);
-  --safe-area-right: env(safe-area-inset-right, 0px);
-  
-  /* Fallback manual si env() no funciona - será sobrescrito por JS */
-  --android-nav-height: 0px;
-  --android-status-height: 0px;
 }
 
 /* =============================================================================
@@ -41,30 +32,27 @@
   bottom: 0;
   left: 0;
   right: 0;
+  /* Gradiente igual al navbar superior */
   background: var(--bottom-nav-bg);
   border-top: 1px solid var(--bottom-nav-border);
-  z-index: 1050;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-  
-  /* Altura base + safe area inferior (usa max para tomar el mayor valor) */
-  --effective-safe-bottom: max(var(--safe-area-bottom), var(--android-nav-height));
-  height: calc(var(--bottom-nav-height) + var(--effective-safe-bottom));
-  padding-bottom: var(--effective-safe-bottom);
-  padding-left: var(--safe-area-left);
-  padding-right: var(--safe-area-right);
+  z-index: 9999;
+  box-shadow: 0 -4px 20px rgba(15, 60, 127, 0.25);
+  /* Altura base + safe area */
+  height: calc(var(--bottom-nav-height) + var(--safe-area-bottom, 24px));
+  padding-bottom: var(--safe-area-bottom, 24px);
 }
 
 @media (max-width: 991.98px) {
   .bottom-nav {
-    display: flex;
+    display: flex !important;
     justify-content: space-around;
     align-items: flex-start;
-    padding-top: 4px;
+    padding-top: 6px;
   }
   
   /* Ajustar padding del contenido principal para el bottom nav */
   .app-shell-main {
-    padding-bottom: calc(var(--bottom-nav-height) + var(--effective-safe-bottom, 0px) + 1rem) !important;
+    padding-bottom: calc(var(--bottom-nav-height) + 24px + 1rem) !important;
   }
   
   /* Ocultar items de nav principal que ahora están en bottom nav */
@@ -80,16 +68,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 6px 4px 2px;
+  padding: 8px 4px 4px;
   color: var(--bottom-nav-inactive-color);
-  text-decoration: none;
+  text-decoration: none !important;
   transition: color 0.2s ease, transform 0.15s ease;
   position: relative;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
   background: transparent;
   border: none;
   cursor: pointer;
-  min-height: var(--bottom-nav-height);
+  min-height: 48px;
+  /* Asegurar que sea clickeable */
+  pointer-events: auto !important;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .bottom-nav__item:hover,
@@ -147,7 +140,9 @@
 .bottom-nav__item--primary {
   position: relative;
   flex: 0 0 auto;
-  width: 64px;
+  width: 70px;
+  /* Asegurar que tenga espacio para el círculo elevado */
+  margin-top: -8px;
 }
 
 .bottom-nav__item--primary .bottom-nav__icon {
@@ -155,43 +150,56 @@
   height: 44px;
   min-width: 44px;
   min-height: 44px;
-  background: var(--app-brand-primary);
-  color: white;
+  /* Círculo blanco sobre fondo azul */
+  background: #ffffff;
+  color: var(--app-brand-primary, #0f3c7f);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
-  margin-top: -8px;
-  margin-bottom: 2px;
-  box-shadow: 0 4px 12px rgba(var(--app-brand-primary-rgb, 79, 70, 229), 0.35);
+  margin-top: 0;
+  margin-bottom: 4px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  /* Forzar círculo */
   aspect-ratio: 1 / 1;
 }
 
 .bottom-nav__item--primary:hover .bottom-nav__icon,
 .bottom-nav__item--primary:active .bottom-nav__icon {
   transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(var(--app-brand-primary-rgb, 79, 70, 229), 0.45);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .bottom-nav__item--primary .bottom-nav__label {
   margin-top: 0;
+  color: #ffffff;
 }
 
-/* Voz al extremo derecho - destacado diferente */
+/* Voz - destacado con color verde */
 .bottom-nav__item--voice {
-  color: var(--success);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .bottom-nav__item--voice .bottom-nav__icon {
-  color: var(--success);
+  color: #4ade80; /* Verde brillante */
+}
+
+.bottom-nav__item--voice:hover .bottom-nav__icon,
+.bottom-nav__item--voice.active .bottom-nav__icon {
+  color: #86efac; /* Verde más claro al hover */
 }
 
 .bottom-nav__item--voice.active,
 .bottom-nav__item--voice:hover {
-  color: var(--success);
+  color: #4ade80;
+}
+
+/* Dark mode - Bottom nav con colores más oscuros */
+[data-theme="dark"] .bottom-nav {
+  background: linear-gradient(120deg, #091629, #14274a);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  border-top-color: rgba(255, 255, 255, 0.08);
 }
 
 /* =============================================================================
@@ -620,21 +628,87 @@
    RESPONSIVE ADJUSTMENTS
    ============================================================================= */
 @media (min-width: 992px) {
-  /* En desktop, ocultar bottom nav y mega menu */
-  .bottom-nav,
-  .mega-menu,
-  .mega-menu-overlay {
+  /* En desktop, ocultar solo el bottom nav */
+  .bottom-nav {
     display: none !important;
   }
   
-  /* Mostrar navbar tradicional */
+  /* Mega menu VISIBLE también en desktop (pero no activo por defecto) */
+  .mega-menu,
+  .mega-menu-overlay {
+    /* Se muestran cuando están activos */
+  }
+  
+  /* Mega menu más ancho en desktop */
+  .mega-menu {
+    width: 360px;
+    max-width: 360px;
+  }
+  
+  /* Navbar toggler SIEMPRE visible para abrir mega menu */
+  .navbar-toggler--mega {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    padding: 0.5rem;
+    margin-right: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    transition: background 0.2s ease;
+  }
+  
+  .navbar-toggler--mega:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+  
+  .navbar-toggler--mega:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+  }
+  
+  /* Mantener navbar collapse visible también */
   .navbar-collapse {
     display: flex !important;
   }
-  
-  .navbar-toggler {
-    display: none !important;
-  }
+}
+
+/* Estilos base para navbar toggler mega en todos los tamaños */
+.navbar-toggler--mega {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0.35rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.navbar-toggler--mega:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Botón de impresora en navbar (desktop) */
+.btn-icon-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff !important;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.btn-icon-nav:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.btn-icon-nav i {
+  font-size: 1.1rem;
 }
 
 /* Modo oscuro */

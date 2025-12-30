@@ -11,90 +11,181 @@
   
   console.log('[CapacitorBridge] Initializing remote bridge...');
   
-  // Check if we're in a native app context
-  const isNativeAndroid = typeof window.androidBridge !== 'undefined';
+  // Check if we're in a native app context - múltiples métodos de detección
+  const isNativeAndroid = typeof window.androidBridge !== 'undefined' 
+    || (navigator.userAgent.includes('Android') && navigator.userAgent.includes('wv'))
+    || (navigator.userAgent.includes('Android') && typeof window.Capacitor !== 'undefined');
   const isNativeIOS = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge;
-  const isNative = isNativeAndroid || isNativeIOS;
+  const isCapacitor = typeof window.Capacitor !== 'undefined';
+  const isNative = isNativeAndroid || isNativeIOS || isCapacitor;
   
-  console.log('[CapacitorBridge] isNativeAndroid:', isNativeAndroid);
-  console.log('[CapacitorBridge] isNativeIOS:', isNativeIOS);
+  // Detectar si es móvil Android (incluso sin ser nativo) para aplicar safe areas
+  const isAndroidMobile = /Android/i.test(navigator.userAgent);
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  console.log('[CapacitorBridge] Detection:', {
+    isNativeAndroid,
+    isNativeIOS,
+    isCapacitor,
+    isNative,
+    isAndroidMobile,
+    isMobileDevice,
+    userAgent: navigator.userAgent.substring(0, 100)
+  });
 
   // ===== SAFE AREA DETECTION =====
-  // Detecta y aplica safe areas para Android cuando env() no funciona
+  // Detecta y aplica safe areas para Android.
+  // Prioridad: 1) Valores inyectados desde Android nativo, 2) env() CSS, 3) estimación
+  
+  // Flag para saber si ya recibimos safe areas desde Android nativo
+  let nativeSafeAreasReceived = false;
+  
+  // Escuchar safe areas inyectados desde MainActivity.java
+  window.addEventListener('nativeSafeAreasReady', function(e) {
+    console.log('[CapacitorBridge] Received native safe areas from Android:', e.detail);
+    nativeSafeAreasReceived = true;
+    
+    const areas = e.detail || window.__NATIVE_SAFE_AREAS__;
+    if (areas && (areas.top > 0 || areas.bottom > 0)) {
+      applySafeAreaCSS(areas.top, areas.bottom, false);
+    }
+  });
+  
+  // Verificar si ya hay safe areas inyectados (puede haberse ejecutado antes de este script)
+  function checkExistingNativeSafeAreas() {
+    if (window.__NATIVE_SAFE_AREAS__) {
+      console.log('[CapacitorBridge] Found pre-existing native safe areas:', window.__NATIVE_SAFE_AREAS__);
+      nativeSafeAreasReceived = true;
+      const areas = window.__NATIVE_SAFE_AREAS__;
+      if (areas.top > 0 || areas.bottom > 0) {
+        applySafeAreaCSS(areas.top, areas.bottom, false);
+        return true;
+      }
+    }
+    return false;
+  }
+  
   function initSafeAreas() {
     console.log('[CapacitorBridge] Initializing safe areas...');
     
-    // Verificar si env() ya funciona (tiene valores > 0)
+    // Primero verificar si ya tenemos safe areas desde Android nativo
+    if (checkExistingNativeSafeAreas()) {
+      console.log('[CapacitorBridge] Using native Android safe areas');
+      return;
+    }
+    
+    // Datos del dispositivo (para fallback)
+    const density = window.devicePixelRatio || 1;
+    const screenHeight = window.screen.height;
+    const screenWidth = window.screen.width;
+    const innerHeight = window.innerHeight;
+    const aspectRatio = screenHeight / screenWidth;
+    const systemBarsHeight = screenHeight - innerHeight;
+    
+    console.log('[CapacitorBridge] Device info:', {
+      density,
+      screenHeight,
+      screenWidth,
+      innerHeight,
+      aspectRatio: aspectRatio.toFixed(2),
+      systemBarsHeight
+    });
+    
+    // Verificar si env() ya funciona
     const testEl = document.createElement('div');
-    testEl.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);visibility:hidden;';
+    testEl.style.cssText = 'position:fixed;bottom:env(safe-area-inset-bottom,0px);visibility:hidden;';
     document.body.appendChild(testEl);
-    const envWorks = getComputedStyle(testEl).top !== '0px';
+    const computedBottom = getComputedStyle(testEl).bottom;
+    const envWorks = computedBottom !== '0px' && computedBottom !== 'auto';
     document.body.removeChild(testEl);
     
     if (envWorks) {
       console.log('[CapacitorBridge] CSS env() safe-area working natively');
+      applySafeAreaCSS(0, 0, true);
       return;
     }
     
-    // Si estamos en Android nativo, calcular safe areas manualmente
-    if (isNativeAndroid) {
-      console.log('[CapacitorBridge] Calculating Android safe areas manually...');
-      
-      // Detectar si hay navigation bar en la parte inferior
-      // En Android, la altura de la navigation bar suele ser ~48dp
-      // Pero varía según el dispositivo y configuración
-      
-      // Usar visualViewport para detectar diferencias
-      const viewport = window.visualViewport || {
-        height: window.innerHeight,
-        width: window.innerWidth
-      };
-      
-      // La diferencia entre screen y viewport puede indicar la nav bar
-      const screenHeight = window.screen.height;
-      const viewportHeight = viewport.height;
-      const screenWidth = window.screen.width;
-      
-      // Estimar altura de navigation bar (típicamente 48-56px en density 2-3)
-      // Usar ratio de pantalla para estimar
-      const density = window.devicePixelRatio || 1;
-      const estimatedNavBar = Math.round(48 * density / density); // ~48px
-      
-      // Estimar status bar height (típicamente 24-28dp)
-      const estimatedStatusBar = Math.round(24 * density / density); // ~24px
-      
-      // Para dispositivos con gesture navigation, la barra es más pequeña (~20px)
-      // Detectar si es gesture navigation basado en el ratio de pantalla
-      const aspectRatio = screenHeight / screenWidth;
-      const isGestureNav = aspectRatio > 2.0; // Pantallas altas suelen tener gesture nav
-      
-      const navBarHeight = isGestureNav ? 20 : estimatedNavBar;
-      const statusBarHeight = estimatedStatusBar;
-      
-      console.log('[CapacitorBridge] Estimated safe areas:', {
-        navBarHeight,
-        statusBarHeight,
-        density,
-        aspectRatio,
-        isGestureNav
-      });
-      
-      // Aplicar variables CSS
-      document.documentElement.style.setProperty('--android-nav-height', navBarHeight + 'px');
-      document.documentElement.style.setProperty('--android-status-height', statusBarHeight + 'px');
-      
-      // También sobrescribir safe-area si no funciona env()
-      document.documentElement.style.setProperty('--safe-area-bottom', navBarHeight + 'px');
-      document.documentElement.style.setProperty('--safe-area-top', statusBarHeight + 'px');
+    const shouldApplySafeAreas = isNative || isAndroidMobile || isCapacitor;
+    
+    if (!shouldApplySafeAreas) {
+      console.log('[CapacitorBridge] Not a mobile/native app, skipping safe areas');
+      applySafeAreaCSS(0, 0, false);
+      return;
     }
     
-    // Para iOS, env() debería funcionar, pero como fallback
-    if (isNativeIOS && !envWorks) {
-      console.log('[CapacitorBridge] iOS safe areas fallback');
-      // iPhone X+ tienen notch de ~44px arriba y ~34px abajo
-      document.documentElement.style.setProperty('--safe-area-top', '44px');
-      document.documentElement.style.setProperty('--safe-area-bottom', '34px');
+    // Esperar valores nativos de Android
+    if ((isNativeAndroid || isAndroidMobile) && !nativeSafeAreasReceived) {
+      console.log('[CapacitorBridge] Waiting for native safe areas...');
+      setTimeout(() => {
+        if (!nativeSafeAreasReceived) {
+          console.log('[CapacitorBridge] Using fallback estimation');
+          applyFallbackSafeAreas(aspectRatio, systemBarsHeight);
+        }
+      }, 300);
+      return;
     }
+    
+    if (isNativeIOS && !envWorks) {
+      applySafeAreaCSS(44, 34, false);
+    }
+  }
+  
+  function applyFallbackSafeAreas(aspectRatio, systemBarsHeight) {
+    const isLikelyGestureNav = aspectRatio > 2.1;
+    let statusBarDp = 32;
+    let navBarDp = isLikelyGestureNav ? 24 : 48;
+    
+    if (systemBarsHeight > statusBarDp) {
+      navBarDp = Math.min(56, systemBarsHeight - statusBarDp);
+    }
+    
+    console.log('[CapacitorBridge] Fallback safe areas:', { statusBarDp, navBarDp });
+    applySafeAreaCSS(statusBarDp, navBarDp, false);
+  }
+  
+  function applySafeAreaCSS(topPx, bottomPx, useEnv) {
+    const root = document.documentElement;
+    
+    if (useEnv) {
+      // Usar env() con fallbacks
+      root.style.setProperty('--safe-area-top', 'env(safe-area-inset-top, 32px)');
+      root.style.setProperty('--safe-area-bottom', 'env(safe-area-inset-bottom, 24px)');
+      root.style.setProperty('--safe-area-left', 'env(safe-area-inset-left, 0px)');
+      root.style.setProperty('--safe-area-right', 'env(safe-area-inset-right, 0px)');
+    } else {
+      // Usar valores calculados
+      root.style.setProperty('--safe-area-top', topPx + 'px');
+      root.style.setProperty('--safe-area-bottom', bottomPx + 'px');
+      root.style.setProperty('--safe-area-left', '0px');
+      root.style.setProperty('--safe-area-right', '0px');
+    }
+    
+    // Variables específicas para Android
+    root.style.setProperty('--android-status-height', topPx + 'px');
+    root.style.setProperty('--android-nav-height', bottomPx + 'px');
+    
+    // Aplicar directamente al bottom-nav si existe (igual que siempre)
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav && bottomPx > 0) {
+      const currentHeight = 64; // --bottom-nav-height
+      bottomNav.style.height = (currentHeight + bottomPx) + 'px';
+      bottomNav.style.paddingBottom = bottomPx + 'px';
+      console.log('[CapacitorBridge] Applied safe area to bottom-nav:', bottomPx + 'px');
+    }
+    
+    // Aplicar directamente al navbar superior con altura y padding
+    const navbar = document.querySelector('.navbar.fixed-top');
+    if (navbar && topPx > 0) {
+      const navbarBaseHeight = 60;
+      navbar.style.height = (navbarBaseHeight + topPx) + 'px';
+      navbar.style.minHeight = (navbarBaseHeight + topPx) + 'px';
+      navbar.style.maxHeight = (navbarBaseHeight + topPx) + 'px';
+      navbar.style.paddingTop = topPx + 'px';
+      navbar.style.alignItems = 'flex-end';
+      console.log('[CapacitorBridge] Applied safe area to navbar:', topPx + 'px, total height:', (navbarBaseHeight + topPx) + 'px');
+    }
+    
+    console.log('[CapacitorBridge] Safe area CSS applied:', { topPx, bottomPx, useEnv });
   }
   
   // Ejecutar detección de safe areas inmediatamente
@@ -394,5 +485,73 @@
   
   console.log('[CapacitorBridge] Initialized. Plugins:', Object.keys(cap.Plugins));
   console.log('[CapacitorBridge] PluginHeaders:', JSON.stringify(cap.PluginHeaders));
+  
+  // ===== AUTO-REGISTER KNOWN PLUGINS =====
+  // Registrar plugins conocidos para que estén disponibles
+  console.log('[CapacitorBridge] Auto-registering known plugins...');
+  cap.registerPlugin('MLKitScanner');
+  cap.registerPlugin('MicrophonePlugin');
+  cap.registerPlugin('App');
+  
+  // ===== MICROPHONE PERMISSION HELPER =====
+  // Helper para solicitar permisos de micrófono antes de usar getUserMedia
+  window.requestMicrophonePermission = async function() {
+    console.log('[CapacitorBridge] requestMicrophonePermission called');
+    
+    // En Android nativo, usar el plugin
+    if (isNativeAndroid && cap.Plugins.MicrophonePlugin) {
+      try {
+        const result = await cap.Plugins.MicrophonePlugin.requestPermission();
+        console.log('[CapacitorBridge] MicrophonePlugin result:', result);
+        return result.granted;
+      } catch (err) {
+        console.warn('[CapacitorBridge] MicrophonePlugin error:', err);
+        // Fallback al método web
+      }
+    }
+    
+    // En web o si el plugin falla, intentar getUserMedia directamente
+    // (esto mostrará el diálogo de permisos del navegador)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Detener el stream inmediatamente (solo queríamos el permiso)
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (err) {
+      console.warn('[CapacitorBridge] getUserMedia permission error:', err);
+      return false;
+    }
+  };
+  
+  // Helper para verificar permiso sin solicitarlo
+  window.checkMicrophonePermission = async function() {
+    console.log('[CapacitorBridge] checkMicrophonePermission called');
+    
+    // En Android nativo, usar el plugin
+    if (isNativeAndroid && cap.Plugins.MicrophonePlugin) {
+      try {
+        const result = await cap.Plugins.MicrophonePlugin.checkPermission();
+        console.log('[CapacitorBridge] MicrophonePlugin check result:', result);
+        return result.granted;
+      } catch (err) {
+        console.warn('[CapacitorBridge] MicrophonePlugin check error:', err);
+      }
+    }
+    
+    // En web, usar Permissions API si está disponible
+    if (navigator.permissions && navigator.permissions.query) {
+      try {
+        const result = await navigator.permissions.query({ name: 'microphone' });
+        return result.state === 'granted';
+      } catch (err) {
+        console.warn('[CapacitorBridge] Permissions API error:', err);
+      }
+    }
+    
+    // No podemos verificar sin solicitar
+    return null;
+  };
+  
+  console.log('[CapacitorBridge] Microphone helpers registered');
   
 })();

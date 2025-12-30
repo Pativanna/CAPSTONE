@@ -115,6 +115,51 @@ Ejemplo correcto:
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ================================================================================
+                  2.1 FORMULARIOS EN TURBO FRAMES (CRÍTICO)
+================================================================================
+
+PROBLEMA:
+  Cuando Turbo carga contenido en un frame vía fetch, los formularios con
+  action="" resuelven la URL relativa a la PÁGINA PRINCIPAL, no a la URL
+  del contenido cargado en el frame.
+
+  Ejemplo del problema:
+    - Usuario está en /autos/ (página principal)
+    - Hace clic en "Eliminar" que carga /autos/delete/12/ en el frame
+    - El form tiene action="" 
+    - Al enviar, POST va a /autos/ en lugar de /autos/delete/12/
+    - ¡La eliminación no funciona!
+
+REGLA FUNDAMENTAL:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│     SIEMPRE PASAR action_url EXPLÍCITA DESDE LA VISTA AL TEMPLATE           │
+│                                                                             │
+│   Vista (views.py):                                                         │
+│   return render(request, 'parts/mi_template.html', {                        │
+│       'object': obj,                                                        │
+│       'action_url': reverse('parts:mi_accion', args=[pk]),  # ← OBLIGATORIO │
+│       'cancel_url': reverse('parts:mi_lista'),                              │
+│   })                                                                        │
+│                                                                             │
+│   Template (mi_template.html):                                              │
+│   <form method="post"                                                       │
+│         action="{{ action_url }}"           <!-- ← USAR action_url -->      │
+│         data-turbo-frame="app-frame">                                       │
+│       {% csrf_token %}                                                      │
+│       ...                                                                   │
+│   </form>                                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+VISTAS QUE NECESITAN action_url:
+  ✅ Todas las vistas de DELETE (confirm_delete.html)
+  ✅ Todas las vistas de CREATE/EDIT que se cargan en frames
+  ✅ Cualquier form que se muestre dentro de un turbo-frame
+
+ARCHIVOS DE REFERENCIA (implementación correcta):
+  - parts/views.py: auto_delete, workshop_delete, part_delete
+  - parts/templates/parts/confirm_delete.html
+
+================================================================================
                     3. PLUGINS NATIVOS (CAPACITOR)
 ================================================================================
 
@@ -135,6 +180,60 @@ CREAR UN PLUGIN:
 
 5. Bridge JS en parts/static/parts/js/capacitor-remote-bridge.js
    O usar window.Capacitor.Plugins.MiPlugin directamente
+
+================================================================================
+                  3.1 PERMISOS EN ANDROID (CRÍTICO)
+================================================================================
+
+PATRÓN DE PERMISOS:
+
+Para que getUserMedia (micrófono/cámara) funcione en el WebView de Android,
+se necesitan DOS niveles de permisos:
+
+1. PERMISO ANDROID (en el sistema operativo):
+   - Declarado en AndroidManifest.xml
+   - Solicitado vía Plugin de Capacitor o ActivityResultLauncher
+
+2. PERMISO WEBVIEW (en el contenedor del HTML):
+   - El WebView pregunta al usuario cuando JS llama getUserMedia()
+   - Requiere WebChromeClient con onPermissionRequest()
+
+PLUGINS DE PERMISOS DISPONIBLES:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CÁMARA (MLKitScannerPlugin):                                                │
+│   - Usado para escaneo de códigos de barras                                 │
+│   - AndroidManifest: <uses-permission android:name="android.permission.CAMERA"/>
+│   - Uso:                                                                    │
+│     const { MLKitScanner } = Capacitor.Plugins;                             │
+│     const result = await MLKitScanner.startScan();                          │
+│                                                                             │
+│ MICRÓFONO (MicrophonePlugin):                                               │
+│   - Usado para grabación de voz/WebRTC                                      │
+│   - AndroidManifest: <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+│   - Uso:                                                                    │
+│     // Opción 1: Vía plugin                                                 │
+│     const { MicrophonePlugin } = Capacitor.Plugins;                         │
+│     const result = await MicrophonePlugin.requestPermission();              │
+│     if (result.granted) { /* usar getUserMedia */ }                         │
+│                                                                             │
+│     // Opción 2: Vía helper global                                          │
+│     if (await window.requestMicrophonePermission()) {                       │
+│       const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+│     }                                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+WEBCHROMECLIENT (MainActivity.java):
+  - Intercepta solicitudes de permisos desde JavaScript
+  - Verifica permisos Android y los solicita si es necesario
+  - Otorga o deniega el permiso al WebView
+
+ARCHIVOS CLAVE:
+  - android/app/src/main/AndroidManifest.xml (declaración de permisos)
+  - android/app/src/main/java/.../MainActivity.java (WebChromeClient)
+  - android/app/src/main/java/.../MicrophonePlugin.java
+  - android/app/src/main/java/.../MLKitScannerPlugin.java
+  - parts/static/parts/js/capacitor-remote-bridge.js (helpers JS)
 
 ================================================================================
                     4. AUDITORÍA (ISO 9001)
@@ -194,7 +293,69 @@ DESPUÉS DE DEPLOY:
   BASE_URL=https://www.transervis.cl scripts/healthcheck.sh
 
 ================================================================================
-                    7. ERRORES COMUNES Y SOLUCIONES
+                    7. CSP + TURBO (CRÍTICO)
+================================================================================
+
+PROBLEMA:
+  Turbo hace navegación SPA: carga HTML nuevo vía fetch y lo inyecta en el DOM.
+  Cada respuesta HTTP tiene un NONCE diferente en CSP.
+  Cuando Turbo inyecta el nuevo HTML, el navegador usa el CSP de la página
+  ORIGINAL, no el del nuevo contenido.
+  
+  Resultado: Scripts inline con nonce del nuevo contenido son BLOQUEADOS.
+
+REGLA FUNDAMENTAL:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│              NUNCA USAR SCRIPTS INLINE EN TEMPLATES                         │
+│                                                                             │
+│   ❌ INCORRECTO:                                                            │
+│   <script nonce="{{ csp_nonce }}">                                          │
+│     // código inline                                                        │
+│   </script>                                                                 │
+│                                                                             │
+│   ✅ CORRECTO:                                                              │
+│   <script src="{% static 'parts/js/mi-script.js' %}"                        │
+│           nonce="{{ csp_nonce }}"                                           │
+│           defer></script>                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+POR QUÉ:
+  - Scripts EXTERNOS con src= se identifican por su URL, no por nonce
+  - El navegador permite cargar scripts de 'self' independiente del nonce
+  - Scripts inline DEPENDEN del nonce, que cambia en cada request
+
+ARCHIVOS CLAVE:
+  - parts/static/parts/js/app-loading-init.js  → Reemplaza inline de loading
+  - parts/static/parts/js/style-watcher.js     → Reemplaza inline de estilos
+  - parts/middleware.py                         → Configuración CSP
+
+ESTILOS INLINE:
+  Los estilos inline SÍ pueden usarse si están en el middleware con su hash:
+  - middleware.py tiene inline_style_hashes[] con hashes SHA256
+  - Si necesitas agregar un estilo inline, calcula su hash y agrégalo
+
+HASHES DE TURBO CONOCIDOS (ya incluidos en middleware.py):
+  - sha256-slBAuFS8II/0OVyG1iq6TGX+ou4IKWv71VWltRryO34=  (estilo base)
+  - sha256-qcbli+4DCLc3PNbu8bzKxrKaoXNugvRN2fsUg8ejCe4=  (estilo base)
+  - sha256-ZPR/EMn2/zndixTCtRDHU6AaRXXSrBvMQiyJP1+3J7U=  (parseHTMLDocument)
+  - sha256-U2ttywS9yS9QakQPvf8mcRFMVDtnPepmQNIG7WTBg1w=  (container max-width)
+  - sha256-NQuzntng+8Pt8oGSWsZWkKKX41P/R36eJ4VH/Kp2X88=  (renderElement frame)
+
+HASH DE UN SCRIPT/ESTILO:
+  echo "contenido del script" | openssl dgst -sha256 -binary | openssl base64
+  Resultado: sha256-xxxxxx=
+
+ERRORES RELACIONADOS:
+  "Refused to execute inline script because it violates CSP..."
+  → El script inline no tiene el nonce correcto
+  → SOLUCIÓN: Mover a archivo externo
+
+  "Refused to load script from 'cloudflareinsights.com'..."
+  → Cloudflare inyecta scripts no permitidos
+  → SOLUCIÓN: Agregar dominio a SCRIPT_CDN_SOURCES en middleware.py
+
+================================================================================
+                    8. ERRORES COMUNES Y SOLUCIONES
 ================================================================================
 
 ERROR: "Unable to find plugin: XxxPlugin"
@@ -213,20 +374,37 @@ ERROR: Doble inicialización de scripts
 CAUSA: No hay guard de inicialización
 SOLUCIÓN: Usar variable `initialized` y verificar antes de init()
 
+ERROR: "Refused to execute inline script" después de navegación Turbo
+CAUSA: Script inline con nonce que no coincide con CSP original
+SOLUCIÓN: Mover script a archivo externo (ver sección 7)
+
+ERROR: "PREPARANDO ESTILOS..." infinito
+CAUSA: CSP bloqueó scripts críticos de la página
+SOLUCIÓN: Ver sección 7, verificar que no haya scripts inline
+
+ERROR: Form POST va a URL incorrecta en Turbo frame
+CAUSA: action="" se resuelve relativo a página original, no al frame
+SOLUCIÓN: Pasar action_url explícita desde la vista al template
+EJEMPLO:
+  Vista:  'action_url': reverse('parts:auto_delete', args=[pk])
+  Template: <form action="{{ action_url }}" ...>
+
 ================================================================================
-                    8. CHECKLIST PRE-IMPLEMENTACIÓN
+                    9. CHECKLIST PRE-IMPLEMENTACIÓN
 ================================================================================
 
 □ ¿Leí ISO_AUDIT.txt?
 □ ¿Leí PRACTICAS_DESARROLLO.txt?
 □ ¿Revisé código similar existente?
 □ ¿El cambio sigue el patrón Turbo?
+□ ¿Los forms tienen action_url explícita? (para Turbo frames)
+□ ¿NO estoy usando scripts inline? (ver sección 7)
 □ ¿Agregué auditoría si es necesario?
 □ ¿El commit sigue Conventional Commits?
 □ ¿Ejecuté ./aplicar_cambios.sh después del push?
 
 ================================================================================
-                    9. CONTACTO Y SOPORTE
+                    10. CONTACTO Y SOPORTE
 ================================================================================
 
 Repositorio: github.com/Pativanna/CAPSTONE
@@ -234,5 +412,5 @@ Branch principal: traspaso-app
 Producción: https://www.transervis.cl
 
 ================================================================================
-Última actualización: 2025-12-09
+Última actualización: 2025-12-30
 ================================================================================
