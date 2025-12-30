@@ -1,7 +1,5 @@
 package com.carinventory.app;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
@@ -9,15 +7,8 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
-import android.view.WindowInsets;
-import android.view.WindowManager;
-import android.webkit.PermissionRequest;
-import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -28,23 +19,6 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     private static final String TAG = "MainActivity";
     private WebView webView;
-    private PermissionRequest pendingPermissionRequest;
-    
-    // Launcher para solicitar permisos de audio
-    private final ActivityResultLauncher<String> requestAudioPermissionLauncher =
-        registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            Log.i(TAG, "🎤 Audio permission result: " + isGranted);
-            if (pendingPermissionRequest != null) {
-                if (isGranted) {
-                    pendingPermissionRequest.grant(pendingPermissionRequest.getResources());
-                    Log.i(TAG, "✅ WebView audio permission granted");
-                } else {
-                    pendingPermissionRequest.deny();
-                    Log.w(TAG, "❌ WebView audio permission denied");
-                }
-                pendingPermissionRequest = null;
-            }
-        });
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -77,80 +51,21 @@ public class MainActivity extends BridgeActivity {
             webSettings.setDatabaseEnabled(true);
             
             // Habilitar MediaStream para WebRTC/audio
+            // IMPORTANTE: No establecer MediaPlaybackRequiresUserGesture en false
+            // ya que Capacitor lo maneja correctamente
             webSettings.setMediaPlaybackRequiresUserGesture(false);
             
-            // Configurar WebChromeClient para manejar permisos de medios
-            setupWebChromeClient();
+            // NOTA: No establecemos un WebChromeClient personalizado aquí.
+            // Capacitor usa BridgeWebChromeClient que ya maneja correctamente
+            // las solicitudes de permisos de micrófono y cámara (onPermissionRequest).
+            // Solo necesitamos asegurarnos de tener los permisos en AndroidManifest.xml:
+            // - RECORD_AUDIO
+            // - MODIFY_AUDIO_SETTINGS  
+            // - CAMERA
             
             // Configurar listener para inyectar safe areas cuando cambie la página
             setupSafeAreaInjection();
         }
-    }
-    
-    /**
-     * Configura un WebChromeClient personalizado para manejar permisos de medios
-     * como micrófono y cámara desde JavaScript (getUserMedia).
-     */
-    private void setupWebChromeClient() {
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onPermissionRequest(final PermissionRequest request) {
-                Log.i(TAG, "📋 WebView permission request: " + java.util.Arrays.toString(request.getResources()));
-                
-                runOnUiThread(() -> {
-                    boolean needsAudio = false;
-                    boolean needsVideo = false;
-                    
-                    for (String resource : request.getResources()) {
-                        if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
-                            needsAudio = true;
-                        }
-                        if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(resource)) {
-                            needsVideo = true;
-                        }
-                    }
-                    
-                    // Verificar permisos de Android
-                    boolean hasAudioPermission = ContextCompat.checkSelfPermission(
-                        MainActivity.this, Manifest.permission.RECORD_AUDIO
-                    ) == PackageManager.PERMISSION_GRANTED;
-                    
-                    boolean hasCameraPermission = ContextCompat.checkSelfPermission(
-                        MainActivity.this, Manifest.permission.CAMERA
-                    ) == PackageManager.PERMISSION_GRANTED;
-                    
-                    Log.i(TAG, "🔐 Android permissions - Audio: " + hasAudioPermission + ", Camera: " + hasCameraPermission);
-                    
-                    // Si necesita audio y no tiene permiso, solicitarlo
-                    if (needsAudio && !hasAudioPermission) {
-                        Log.i(TAG, "🎤 Requesting RECORD_AUDIO permission...");
-                        pendingPermissionRequest = request;
-                        requestAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
-                        return;
-                    }
-                    
-                    // Si necesita video y no tiene permiso, solicitarlo
-                    if (needsVideo && !hasCameraPermission) {
-                        Log.i(TAG, "📷 Requesting CAMERA permission...");
-                        pendingPermissionRequest = request;
-                        requestAudioPermissionLauncher.launch(Manifest.permission.CAMERA);
-                        return;
-                    }
-                    
-                    // Todos los permisos necesarios están otorgados
-                    Log.i(TAG, "✅ Granting WebView permission request");
-                    request.grant(request.getResources());
-                });
-            }
-            
-            @Override
-            public void onPermissionRequestCanceled(PermissionRequest request) {
-                Log.i(TAG, "❌ WebView permission request canceled");
-                pendingPermissionRequest = null;
-            }
-        });
-        
-        Log.i(TAG, "✅ WebChromeClient configured for media permissions");
     }
     
     /**
