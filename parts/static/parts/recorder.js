@@ -83,9 +83,10 @@ document.addEventListener("DOMContentLoaded", () => {
     // Verificar si getUserMedia está disponible
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const isCapacitor = window.Capacitor?.isNativePlatform?.();
       
       let errorMsg = '⚠️ El micrófono no está disponible.\n\n';
-      if (!isSecure) {
+      if (!isSecure && !isCapacitor) {
         errorMsg += '🔒 HTTPS es requerido para acceder al micrófono.\n\n';
         errorMsg += '📝 Opciones:\n';
         errorMsg += '1. Configura HTTPS/SSL en el servidor\n';
@@ -99,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
       alert(errorMsg);
       console.error('getUserMedia no disponible:', {
         secure: isSecure,
+        isCapacitor: isCapacitor,
         protocol: window.location.protocol,
         hostname: window.location.hostname
       });
@@ -108,6 +110,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     try {
+      // En Capacitor/Android, solicitar permiso nativo primero
+      if (window.Capacitor?.isNativePlatform?.() && window.requestMicrophonePermission) {
+        console.log('🎤 Solicitando permiso de micrófono nativo...');
+        const granted = await window.requestMicrophonePermission();
+        if (!granted) {
+          throw new Error('Permiso de micrófono denegado por el sistema');
+        }
+        console.log('✅ Permiso de micrófono nativo concedido');
+      }
+      
       // MEJORA: Solicitar audio con configuración óptima para Whisper
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -166,14 +178,24 @@ document.addEventListener("DOMContentLoaded", () => {
       
     } catch (err) {
       console.error('❌ Error accediendo al micrófono:', err);
+      const isCapacitor = window.Capacitor?.isNativePlatform?.();
       let errorMsg = 'No se pudo acceder al micrófono.\n\n';
       
-      if (err.name === 'NotAllowedError') {
-        errorMsg += '❌ Permiso denegado. Por favor:\n';
-        errorMsg += '1. Permite el acceso al micrófono en tu navegador\n';
-        errorMsg += '2. Revisa la configuración de permisos del sitio';
-      } else if (err.name === 'NotFoundError') {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        if (isCapacitor) {
+          errorMsg += '❌ Permiso denegado.\n\n';
+          errorMsg += 'Ve a Ajustes > Apps > Transervis > Permisos\n';
+          errorMsg += 'y habilita el permiso de Micrófono.';
+        } else {
+          errorMsg += '❌ Permiso denegado. Por favor:\n';
+          errorMsg += '1. Permite el acceso al micrófono en tu navegador\n';
+          errorMsg += '2. Revisa la configuración de permisos del sitio';
+        }
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         errorMsg += '🎤 No se detectó ningún micrófono conectado';
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        errorMsg += '🔒 El micrófono está siendo usado por otra aplicación.\n';
+        errorMsg += 'Cierra otras apps que puedan estar usando el micrófono.';
       } else {
         errorMsg += '⚠️ Error: ' + err.message;
       }

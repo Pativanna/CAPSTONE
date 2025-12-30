@@ -84,16 +84,52 @@
         return;
       }
       this.emitState('connecting');
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000
-        },
-        video: false
-      });
+      
+      // En Capacitor/Android, solicitar permiso nativo primero
+      if (window.Capacitor?.isNativePlatform?.() && window.requestMicrophonePermission) {
+        bitacora('Solicitando permiso de micrófono nativo...');
+        try {
+          const granted = await window.requestMicrophonePermission();
+          if (!granted) {
+            throw new Error('Permiso de micrófono denegado por el sistema');
+          }
+          bitacora('Permiso de micrófono nativo concedido');
+        } catch (err) {
+          bitacora('Error solicitando permiso nativo:', err);
+          // Continuar de todos modos, getUserMedia mostrará su propio diálogo
+        }
+      }
+      
+      try {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 48000
+          },
+          video: false
+        });
+      } catch (err) {
+        const isCapacitor = window.Capacitor?.isNativePlatform?.();
+        let errorMsg = 'No se pudo acceder al micrófono.';
+        
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          errorMsg = isCapacitor
+            ? 'Permiso de micrófono denegado. Habilítalo en Ajustes > Apps > Transervis > Permisos.'
+            : 'Permiso de micrófono denegado. Haz clic en el icono de candado en la barra de direcciones.';
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          errorMsg = 'No se encontró ningún micrófono en el dispositivo.';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          errorMsg = 'El micrófono está siendo usado por otra aplicación.';
+        } else if (err.name === 'OverconstrainedError') {
+          errorMsg = 'El micrófono no soporta la configuración solicitada.';
+        }
+        
+        console.error('[PuenteComandosVoz] getUserMedia error:', err.name, err.message);
+        throw new Error(errorMsg);
+      }
 
       this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
       if (this.audioContext.state === 'suspended') {
@@ -1064,7 +1100,18 @@
         this.updateCommandBoxVisibility();
       } catch (error) {
         console.error('Error iniciando sesión manos libres:', error);
-        alert('No se pudo iniciar el micrófono. Verifica los permisos.');
+        // Mostrar mensaje de error más descriptivo
+        const errorMsg = error.message || 'No se pudo iniciar el micrófono. Verifica los permisos.';
+        if (window.showToast) {
+          window.showToast({
+            title: 'Error de micrófono',
+            body: errorMsg,
+            variant: 'danger',
+            delay: 6000
+          });
+        } else {
+          alert(errorMsg);
+        }
         this.sesionActiva = false;
         if (this.puenteVoz) {
           this.puenteVoz.disconnect();

@@ -204,6 +204,16 @@
       hideHandsFreeCard(); // Ocultar tarjeta de manos libres
       ocultarResultados(); // Asegurar que resultados estén ocultos
 
+      // En Capacitor/Android, solicitar permiso nativo primero
+      if (window.Capacitor?.isNativePlatform?.() && window.requestMicrophonePermission) {
+        log(' Solicitando permiso de micrófono nativo...');
+        const granted = await window.requestMicrophonePermission();
+        if (!granted) {
+          throw { name: 'NotAllowedError', message: 'Permiso de micrófono denegado por el sistema' };
+        }
+        log(' Permiso de micrófono nativo concedido');
+      }
+
       // 1. Capturar audio con WebRTC (AEC/NS/AGC habilitado)
       log( ' Solicitando getUserMedia con AEC/NS/AGC...');
       flujoMedios = await navigator.mediaDevices.getUserMedia({
@@ -454,13 +464,21 @@
 
     } catch (error) {
       error( ' Error iniciando:', error);
+      const isCapacitor = window.Capacitor?.isNativePlatform?.();
       
-      if (error.name === 'NotAllowedError') {
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setEstado('PERMISO DENEGADO');
-        setDetalle('Debes permitir el acceso al micrófono');
-      } else if (error.name === 'NotFoundError') {
+        if (isCapacitor) {
+          setDetalle('Habilita el micrófono en Ajustes > Apps > Transervis');
+        } else {
+          setDetalle('Debes permitir el acceso al micrófono');
+        }
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
         setEstado('NO HAY MICRÓFONO');
         setDetalle('No se detectó ningún micrófono');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        setEstado('MICRÓFONO OCUPADO');
+        setDetalle('Otra app está usando el micrófono');
       } else {
         setEstado('ERROR');
         setDetalle(error.message || 'Error desconocido');

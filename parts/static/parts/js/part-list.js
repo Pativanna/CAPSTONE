@@ -2047,16 +2047,32 @@
         VoiceSearchUtils.setStatus('Tu navegador no soporta grabación WebRTC', 'danger');
         return;
       }
-      navigator.mediaDevices
-        .getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            channelCount: 1
+      
+      // Función asíncrona para manejar la solicitud de permisos
+      const requestAndRecord = async () => {
+        // En Capacitor/Android, solicitar permiso nativo primero
+        if (window.Capacitor?.isNativePlatform?.() && window.requestMicrophonePermission) {
+          try {
+            const granted = await window.requestMicrophonePermission();
+            if (!granted) {
+              VoiceSearchUtils.setStatus('Permiso de micrófono denegado', 'danger');
+              return;
+            }
+          } catch (err) {
+            console.warn('voice-search permission request error', err);
           }
-        })
-        .then((stream) => {
+        }
+        
+        navigator.mediaDevices
+          .getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              channelCount: 1
+            }
+          })
+          .then((stream) => {
           hybridState.stream = stream;
           hybridState.chunks = [];
           const mimeType = pickSupportedMimeType();
@@ -2086,11 +2102,20 @@
         })
         .catch((err) => {
           console.error('voice-search-openai', err);
-          VoiceSearchUtils.setStatus('Permiso de micrófono denegado', 'danger');
+          const isCapacitor = window.Capacitor?.isNativePlatform?.();
+          let msg = 'Permiso de micrófono denegado';
+          if (isCapacitor && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+            msg = 'Habilita micrófono en Ajustes > Apps > Transervis';
+          }
+          VoiceSearchUtils.setStatus(msg, 'danger');
           cleanupHybridStream();
           voiceBtn.classList.remove('recording');
           setHybridIcon('idle');
         });
+      };
+      
+      // Ejecutar la función asíncrona
+      requestAndRecord();
     };
 
     const hybridPointerDown = (event) => {
@@ -2236,44 +2261,68 @@
         VoiceSearchUtils.setStatus('Tu navegador no soporta captura de audio', 'danger');
         return;
       }
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then((stream) => {
-          localState.stream = stream;
-          const mimeType = pickSupportedMimeType();
-          localState.mimeType = mimeType || DEFAULT_AUDIO_MIME;
-          let recorderOptions = mimeType ? { mimeType } : undefined;
+      
+      // Función asíncrona para manejar permisos
+      const requestAndRecord = async () => {
+        // En Capacitor/Android, solicitar permiso nativo primero
+        if (window.Capacitor?.isNativePlatform?.() && window.requestMicrophonePermission) {
           try {
-            localState.recorder = recorderOptions ? new MediaRecorder(stream, recorderOptions) : new MediaRecorder(stream);
+            const granted = await window.requestMicrophonePermission();
+            if (!granted) {
+              VoiceSearchUtils.setStatus('Permiso de micrófono denegado', 'danger');
+              return;
+            }
           } catch (err) {
-            console.warn('voice-search local recorder fallback', err);
-            localState.recorder = new MediaRecorder(stream);
-            localState.mimeType = DEFAULT_AUDIO_MIME;
+            console.warn('voice-search local permission error', err);
           }
-          localState.chunks = [];
-          localState.recorder.addEventListener('dataavailable', (evt) => {
-            if (evt.data && evt.data.size) localState.chunks.push(evt.data);
+        }
+        
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => {
+            localState.stream = stream;
+            const mimeType = pickSupportedMimeType();
+            localState.mimeType = mimeType || DEFAULT_AUDIO_MIME;
+            let recorderOptions = mimeType ? { mimeType } : undefined;
+            try {
+              localState.recorder = recorderOptions ? new MediaRecorder(stream, recorderOptions) : new MediaRecorder(stream);
+            } catch (err) {
+              console.warn('voice-search local recorder fallback', err);
+              localState.recorder = new MediaRecorder(stream);
+              localState.mimeType = DEFAULT_AUDIO_MIME;
+            }
+            localState.chunks = [];
+            localState.recorder.addEventListener('dataavailable', (evt) => {
+              if (evt.data && evt.data.size) localState.chunks.push(evt.data);
+            });
+            localState.recorder.addEventListener('stop', handleLocalStop);
+            localState.recorder.start();
+            localState.recording = true;
+            voiceBtn.classList.add('recording');
+            if (icon) {
+              icon.classList.remove('fa-microphone', 'fa-wave-square', 'fa-spinner', 'fa-spin');
+              icon.classList.add('fa-stop');
+            }
+            VoiceSearchUtils.setStatus('Grabando... di el nombre de la pieza (Local)', 'info');
+            localState.timeoutId = setTimeout(() => {
+              VoiceSearchUtils.setStatus('Procesando búsqueda...', 'info');
+              stopLocalRecording();
+            }, 4500);
+          })
+          .catch((err) => {
+            console.error('voice-search-permission', err);
+            const isCapacitor = window.Capacitor?.isNativePlatform?.();
+            let msg = 'Permiso de micrófono denegado';
+            if (isCapacitor && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+              msg = 'Habilita micrófono en Ajustes > Apps';
+            }
+            VoiceSearchUtils.setStatus(msg, 'danger');
+            stopLocalStream();
+            resetLocalButton();
           });
-          localState.recorder.addEventListener('stop', handleLocalStop);
-          localState.recorder.start();
-          localState.recording = true;
-          voiceBtn.classList.add('recording');
-          if (icon) {
-            icon.classList.remove('fa-microphone', 'fa-wave-square', 'fa-spinner', 'fa-spin');
-            icon.classList.add('fa-stop');
-          }
-          VoiceSearchUtils.setStatus('Grabando... di el nombre de la pieza (Local)', 'info');
-          localState.timeoutId = setTimeout(() => {
-            VoiceSearchUtils.setStatus('Procesando búsqueda...', 'info');
-            stopLocalRecording();
-          }, 4500);
-        })
-        .catch((err) => {
-          console.error('voice-search-permission', err);
-          VoiceSearchUtils.setStatus('Permiso de micrófono denegado', 'danger');
-          stopLocalStream();
-          resetLocalButton();
-        });
+      };
+      
+      requestAndRecord();
     };
 
     voiceBtn.addEventListener('click', () => {
