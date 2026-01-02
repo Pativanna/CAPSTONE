@@ -250,34 +250,51 @@
       if (!bottomNav) return;
 
       const currentPath = window.location.pathname;
+      const currentSearch = window.location.search;
       const navItems = bottomNav.querySelectorAll('.bottom-nav__item');
 
+      // Primero, remover active de todos
       navItems.forEach(item => {
         item.classList.remove('active');
         item.removeAttribute('aria-current');
-
-        const href = item.getAttribute('href');
-        if (!href) return;
-
-        // Extraer path sin query params
-        const itemPath = href.split('?')[0];
-
-        // Verificar si coincide
-        if (currentPath === itemPath) {
-          item.classList.add('active');
-          item.setAttribute('aria-current', 'page');
-        } else if (currentPath.startsWith(itemPath) && itemPath !== '/') {
-          // Match parcial para sub-páginas
-          item.classList.add('active');
-          item.setAttribute('aria-current', 'page');
-        }
       });
 
-      // Caso especial: Dashboard es "Inicio"
-      const dashboardItem = bottomNav.querySelector('[data-nav-id="inicio"]');
-      if (dashboardItem && currentPath === '/') {
-        dashboardItem.classList.add('active');
-        dashboardItem.setAttribute('aria-current', 'page');
+      // Determinar qué item debe estar activo basado en data-nav-id
+      let activeNavId = null;
+
+      // Mapeo de paths a nav-ids (ordenado de más específico a menos específico)
+      const pathMappings = [
+        // Voz: /parts/ con ?voice=1
+        { navId: 'voz', test: () => currentPath === '/parts/' && currentSearch.includes('voice=1') },
+        // Agregar: /parts/add/ exacto
+        { navId: 'agregar', test: () => currentPath === '/parts/add/' },
+        // Lector/Verificador: cualquier path que empiece con /verificador/
+        { navId: 'lector', test: () => currentPath.startsWith('/verificador') },
+        // Repuestos: /parts/ exacto SIN voice param, o cualquier /parts/* excepto /parts/add/
+        { navId: 'repuestos', test: () => {
+          if (currentPath === '/parts/' && !currentSearch.includes('voice=1')) return true;
+          if (currentPath.startsWith('/parts/') && currentPath !== '/parts/add/') return true;
+          return false;
+        }},
+        // Inicio/Dashboard: /dashboard/ o raíz /
+        { navId: 'inicio', test: () => currentPath === '/dashboard/' || currentPath === '/' },
+      ];
+
+      // Encontrar el primer match
+      for (const mapping of pathMappings) {
+        if (mapping.test()) {
+          activeNavId = mapping.navId;
+          break;
+        }
+      }
+
+      // Aplicar clase active al item correspondiente
+      if (activeNavId) {
+        const activeItem = bottomNav.querySelector(`[data-nav-id="${activeNavId}"]`);
+        if (activeItem) {
+          activeItem.classList.add('active');
+          activeItem.setAttribute('aria-current', 'page');
+        }
       }
     }
 
