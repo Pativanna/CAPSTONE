@@ -1493,12 +1493,6 @@
       if (label) {
         label.textContent = level > 0.25 ? 'Audio detectado' : 'Esperando audio...';
       }
-      
-      // Emitir evento de nivel para Voice Wizard Bridge (throttled)
-      if (!this._lastAudioLevelEmit || Date.now() - this._lastAudioLevelEmit > 100) {
-        this._lastAudioLevelEmit = Date.now();
-        this.emitWizardEvent('handsfree:audioLevel', { level });
-      }
     }
 
     handleDiagEvent(payload) {
@@ -1640,9 +1634,6 @@
       this.btnConfirmData.style.display = 'inline-block';
       this.announceCapturedData();
       this.showDataFeedback(this.capturedData);
-      
-      // Emitir evento para Voice Wizard Bridge
-      this.emitWizardEvent('handsfree:dataCaptured', this.capturedData);
     }
 
     editField(element, fieldName) {
@@ -1758,13 +1749,6 @@
           
           this.showStatusMessage('Guardado...', 'success');
           this.triggerCardPulse('confirm');
-          
-          // Emitir evento para Voice Wizard Bridge
-          this.emitWizardEvent('handsfree:saved', {
-            ...data,
-            parte: this.capturedData?.parte,
-            name: this.capturedData?.parte
-          });
           
           await this.printBarcode(data);
           
@@ -2159,23 +2143,6 @@
       bitacora('State change:', this.state, '->', newState);
       this.state = newState;
       this.updateUI();
-      
-      // Emitir evento para el Voice Wizard Bridge
-      this.emitWizardEvent('handsfree:statechange', {
-        state: newState,
-        buttonState: this.btnHandsFree?.dataset?.state
-      });
-    }
-    
-    /**
-     * Emite eventos personalizados para comunicarse con voice-wizard-bridge.js
-     */
-    emitWizardEvent(eventName, detail = {}) {
-      try {
-        document.dispatchEvent(new CustomEvent(eventName, { detail }));
-      } catch (e) {
-        bitacora('Error emitting wizard event:', e);
-      }
     }
 
     updateUI() {

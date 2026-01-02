@@ -13,11 +13,10 @@ tengan conocimiento compartido y no repitan errores.
 ================================================================================
 
 1. [2026-01-02] Bottom Nav - Múltiples items activos simultáneamente
-2. [2026-01-02] Voice UI - Mala UX en ingesta por voz (rediseño completo)
-3. [2025-12-30] Micrófono Android - getUserMedia falla en Capacitor
-4. [2025-12-30] Java syntax - import alias no soportado
-5. [2025-12-30] CSP + Turbo - Scripts inline bloqueados
-6. [2025-12-09] Turbo Forms - action="" resuelve URL incorrecta
+2. [2025-12-30] Micrófono Android - getUserMedia falla en Capacitor
+3. [2025-12-30] Java syntax - import alias no soportado
+4. [2025-12-30] CSP + Turbo - Scripts inline bloqueados
+5. [2025-12-09] Turbo Forms - action="" resuelve URL incorrecta
 
 ================================================================================
 ## 1. [2026-01-02] Bottom Nav - Múltiples items activos simultáneamente
@@ -68,63 +67,7 @@ CÓDIGO CORRECTO:
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ================================================================================
-## 2. [2026-01-02] Voice UI - Mala UX en ingesta por voz (REDISEÑO COMPLETO)
-================================================================================
-
-PROBLEMA:
-  La interfaz de ingesta por voz tenía múltiples problemas de UX:
-  1. No se centraba verticalmente en la pantalla
-  2. Mostraba todos los comandos disponibles a la vez (muy ruidoso)
-  3. Al cambiar de estado, la altura del contenedor cambiaba causando "saltos"
-  4. Diseño no optimizado para móvil
-  5. Difícil entender en qué paso del flujo estaba el usuario
-
-CAUSA:
-  El diseño original fue incremental, añadiendo elementos sin una visión
-  de UX coherente tipo "wizard". El CSS no tenía altura fija y los elementos
-  se mostraban/ocultaban sin transiciones.
-
-SOLUCIÓN:
-  Rediseño completo con patrón "Wizard" (un paso a la vez):
-  
-  1. Nueva UI con 4 pasos claros:
-     - Paso 0: Selección de Taller y Vehículo
-     - Paso 1: Escucha de voz (botón grande centrado)
-     - Paso 2: Revisión de datos capturados
-     - Paso 3: Confirmación de éxito
-  
-  2. Contenedor con ALTURA FIJA para evitar saltos
-  
-  3. Solo UN comando visible a la vez (el relevante para el paso actual)
-  
-  4. Transiciones suaves entre pasos (CSS transitions)
-  
-  5. Indicadores de progreso tipo dots (● ○ ○ ○)
-  
-  6. Bridge JS que conecta la nueva UI con la lógica existente mediante
-     CustomEvents: handsfree:statechange, handsfree:dataCaptured, etc.
-
-ARCHIVOS CREADOS:
-  - parts/static/parts/css/voice-wizard.css (nuevo diseño)
-  - parts/static/parts/js/voice-wizard-bridge.js (comunicación con hands-free)
-  - parts/templates/parts/part_form_v2.html (nuevo template)
-
-ARCHIVOS MODIFICADOS:
-  - parts/static/parts/hands-free-voice.js (emisión de eventos)
-  - parts/views.py (usar nuevo template)
-
-PRINCIPIOS DE DISEÑO (ISO 9241-171):
-  - Botones grandes para móvil (mínimo 44px touch target)
-  - Un solo comando visible por vez
-  - Altura fija (--vw-step-height: 420px) evita reflows
-  - Centrado vertical y horizontal perfecto
-  - Transiciones de 300ms para cambios de estado
-  - ARIA labels para accesibilidad
-
-COMMIT: (pendiente)
-
-================================================================================
-## 3. [2025-12-30] Micrófono Android - getUserMedia falla en Capacitor
+## 2. [2025-12-30] Micrófono Android - getUserMedia falla en Capacitor
 ================================================================================
 
 PROBLEMA:
@@ -168,7 +111,7 @@ COMMITS: c9a680d, 68763e8
 REFERENCIA: https://github.com/ionic-team/capacitor/issues/6967
 
 ================================================================================
-## 4. [2025-12-30] Java syntax - import alias no soportado
+## 3. [2025-12-30] Java syntax - import alias no soportado
 ================================================================================
 
 PROBLEMA:
@@ -193,7 +136,7 @@ ARCHIVOS AFECTADOS:
 COMMIT: 575e0b7
 
 ================================================================================
-## 5. [2025-12-30] CSP + Turbo - Scripts inline bloqueados
+## 4. [2025-12-30] CSP + Turbo - Scripts inline bloqueados
 ================================================================================
 
 PROBLEMA:
@@ -226,7 +169,7 @@ ARCHIVOS AFECTADOS:
 VER TAMBIÉN: REGLAS_TURBO.txt sección 2
 
 ================================================================================
-## 6. [2025-12-09] Turbo Forms - action="" resuelve URL incorrecta
+## 5. [2025-12-09] Turbo Forms - action="" resuelve URL incorrecta
 ================================================================================
 
 PROBLEMA:
