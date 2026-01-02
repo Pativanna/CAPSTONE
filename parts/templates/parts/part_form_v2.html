@@ -74,10 +74,28 @@
         <!-- Estado: Inactivo / Escuchando / Grabando -->
         <div id="current-status" class="vw-sr-only" aria-live="polite">Listo para iniciar</div>
         
-        <!-- Botón principal de micrófono -->
-        <button type="button" id="btn-hands-free" class="vw-mic-button" data-state="inactive" aria-label="Iniciar grabación de voz">
-          <i class="fas fa-microphone" id="mic-icon"></i>
-        </button>
+        <!-- ARRIBA: Medidor de audio -->
+        <div class="vw-audio-meter vw-audio-top" id="audio-meter-wrapper">
+          <div class="vw-audio-meter-label" id="audio-level-label">Sin audio detectado</div>
+          <div class="vw-audio-meter-bar">
+            <div class="vw-audio-meter-fill" id="audio-level-bar"></div>
+          </div>
+        </div>
+        
+        <!-- Indicador de confianza (oculto hasta que haya detección) -->
+        <div class="vw-confidence d-none" id="voice-confidence">
+          <span class="vw-confidence-dot" id="confidence-dot"></span>
+          <span class="vw-confidence-text" id="confidence-text">--</span>
+        </div>
+        
+        <!-- CENTRO: Zona visual del micrófono con texto superpuesto -->
+        <div class="vw-mic-area">
+          <div class="vw-mic-icon-bg">
+            <i class="fas fa-hands" id="mic-bg-icon"></i>
+            <span class="vw-mic-label">Manos</span>
+            <span class="vw-mic-label">Libres</span>
+          </div>
+        </div>
         
         <!-- Instrucción actual (solo una visible) -->
         <div class="vw-instruction" id="voice-instruction">
@@ -87,19 +105,10 @@
           Luego di <span class="vw-instruction-command">"Iniciar"</span> para comenzar a dictar
         </p>
         
-        <!-- Medidor de audio compacto -->
-        <div class="vw-audio-meter" id="audio-meter-wrapper">
-          <div class="vw-audio-meter-bar">
-            <div class="vw-audio-meter-fill" id="audio-level-bar"></div>
-          </div>
-          <div class="vw-audio-meter-label" id="audio-level-label">Esperando audio...</div>
-        </div>
-        
-        <!-- Indicador de confianza (oculto hasta que haya detección) -->
-        <div class="vw-confidence d-none" id="voice-confidence">
-          <span class="vw-confidence-dot" id="confidence-dot"></span>
-          <span class="vw-confidence-text" id="confidence-text">--</span>
-        </div>
+        <!-- ABAJO: Botón grande de iniciar -->
+        <button type="button" id="btn-hands-free" class="vw-btn-iniciar" data-state="inactive" aria-label="Iniciar grabación de voz">
+          <i class="fas fa-microphone me-2" id="mic-icon"></i> Iniciar
+        </button>
       </div>
       
       <!-- ========== PASO 2: Revisión de Datos ========== -->
