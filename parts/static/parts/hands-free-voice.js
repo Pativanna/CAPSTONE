@@ -1246,6 +1246,13 @@
       if (this.commandConfidenceBar) {
         const width = clamped !== null ? clamped : 0;
         this.commandConfidenceBar.style.width = `${width}%`;
+        // Update data-level for mini-bar CSS
+        let level = '';
+        if (width >= 80) level = 'excellent';
+        else if (width >= 60) level = 'high';
+        else if (width >= 40) level = 'medium';
+        else if (width > 0) level = 'low';
+        this.commandConfidenceBar.dataset.level = level;
         const track = this.commandConfidenceBar.parentElement;
         if (track) {
           track.setAttribute('aria-valuenow', width);
@@ -1326,6 +1333,13 @@
       if (this.commandConfidenceBar) {
         const width = preserve && hasConfidence ? this.lastCommandConfidence : 0;
         this.commandConfidenceBar.style.width = `${width}%`;
+        // Update data-level for mini-bar CSS
+        let level = '';
+        if (width >= 80) level = 'excellent';
+        else if (width >= 60) level = 'high';
+        else if (width >= 40) level = 'medium';
+        else if (width > 0) level = 'low';
+        this.commandConfidenceBar.dataset.level = level;
         const track = this.commandConfidenceBar.parentElement;
         if (track) {
           track.setAttribute('aria-valuenow', width);

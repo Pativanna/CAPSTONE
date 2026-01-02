@@ -19,50 +19,33 @@
       
       <!-- Tarjeta principal de Manos Libres -->
       <div class="card shadow-lg border-0" id="hands-free-card"{% if user.is_authenticated %} data-user-id="{{ user.id }}"{% endif %}>
-        <div class="card-header bg-primary text-white text-center py-2">
-          <h4 class="mb-0 fs-5">&nbsp;</h4>
-        </div>
         
-        <div class="card-body p-4">
+        <div class="card-body p-3">
           
-            <div class="status-box mb-3 d-none" id="command-box">
-              <small class="text-muted d-block mb-1">Comando</small>
-              <div id="expected-command" class="command-badge badge-info">
-              ESPERANDO COMANDO: "INICIAR INGRESO"
-              </div>
-            </div>
+          <div class="status-box mb-2 d-none" id="command-box">
+            <small class="text-muted d-block mb-1">Comando</small>
+            <div id="expected-command" class="command-badge badge-info">ESPERANDO COMANDO: "INICIAR INGRESO"</div>
+          </div>
+          
           <div id="current-status" class="visually-hidden" aria-live="polite">Inactivo</div>
-          <div id="audio-meter-wrapper" class="audio-meter-wrapper mb-4">
-            <small class="text-muted d-block">Nivel de audio</small>
+          
+          <!-- Medidor de audio compacto (sin labels extra) -->
+          <div id="audio-meter-wrapper" class="audio-meter-wrapper mb-2">
             <div class="audio-meter">
               <div id="audio-level-bar" class="audio-meter-bar"></div>
             </div>
-            <small id="audio-level-label" class="text-muted small d-block mt-1">Esperando audio...</small>
-            <div id="audio-quality-hint" class="audio-quality-hint text-muted small mt-1" aria-live="polite"></div>
           </div>
 
-          <div id="voice-command-feedback" class="voice-command-feedback card mb-4">
-            <div class="card-body py-2 px-3">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <small class="text-muted text-uppercase fw-semibold">Comando de voz</small>
-                <span id="voice-command-confidence" class="badge text-bg-secondary text-uppercase">--</span>
-              </div>
-              <div id="voice-command-feedback-text" class="fw-semibold small">Sin comandos detectados</div>
-              <small id="voice-command-feedback-detail" class="text-muted d-block mt-1">
-                Usa “Iniciar ingreso”, “Detener ingreso”, “Confirmar ingreso”, “Cancelar ingreso” o “Repetir ingreso”.
-              </small>
-              <div class="confidence-meter mt-2" aria-live="polite">
-                <div class="confidence-meter-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                  <div id="voice-command-confidence-bar" class="confidence-meter-fill"></div>
-                </div>
-                <div id="voice-command-confidence-label" class="confidence-meter-label small text-muted mt-1">
-                  Confianza en vivo: --
-                </div>
-              </div>
+          <!-- Panel de comandos ultra-compacto -->
+          <div id="voice-command-feedback" class="voice-feedback-compact mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <div id="voice-command-confidence-bar" class="confidence-bar-mini"></div>
+              <span id="voice-command-feedback-text" class="small flex-grow-1">Di "Iniciar"</span>
+              <span id="voice-command-confidence" class="badge text-bg-secondary badge-sm">--</span>
             </div>
           </div>
 
-          <div id="voice-data-feedback" class="voice-command-feedback card mb-4 d-none" hidden>
+          <div id="voice-data-feedback" class="voice-command-feedback card mb-3 d-none" hidden>
             <div class="card-body py-2 px-3">
               <div class="d-flex justify-content-between align-items-center mb-1">
                 <small class="text-muted text-uppercase fw-semibold">Datos extraídos</small>
@@ -76,7 +59,7 @@
           </div>
 
           <!-- Botón Central Grande -->
-          <div id="hands-free-main-button-container" class="d-flex justify-content-center mb-4">
+          <div id="hands-free-main-button-container" class="d-flex justify-content-center mb-3">
             <button type="button" id="btn-hands-free" class="btn-main" data-state="inactive">
               <i class="fas fa-microphone mb-2"></i>
               <div class="btn-text">Iniciar Manos Libres</div>
@@ -201,13 +184,13 @@
         </div>
 
         <!-- Botones en footer -->
-        <div class="card-footer hands-free-footer text-center py-3">
+        <div class="card-footer hands-free-footer text-center py-2">
           <div class="d-flex justify-content-center gap-2 flex-wrap">
-            <button type="button" id="btn-select-vehicle" class="btn btn-outline-primary hands-free-action-btn">
-              <i class="fas fa-car"></i> Seleccionar Vehículo
+            <button type="button" id="btn-select-vehicle" class="btn btn-outline-primary hands-free-action-btn btn-sm">
+              <i class="fas fa-car"></i> Vehículo
             </button>
-            <button type="button" id="btn-manual-entry" class="btn btn-outline-secondary hands-free-action-btn">
-              <i class="fas fa-keyboard"></i> Ingreso Manual
+            <button type="button" id="btn-manual-entry" class="btn btn-outline-secondary hands-free-action-btn btn-sm">
+              <i class="fas fa-keyboard"></i> Manual
             </button>
           </div>
         </div>
