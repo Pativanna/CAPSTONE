@@ -16,10 +16,21 @@
   max-width: 600px;
   margin: 0 auto;
   border-radius: 1rem;
+  /* Permitir que la tarjeta se ajuste al contenido disponible */
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#hands-free-card > .card-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 #hands-free-main-button-container {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .status-box {
@@ -88,13 +99,14 @@
 }
 
 .btn-main {
-  width: min(55vw, 220px);
-  height: min(55vw, 220px);
+  /* Tamaño variable según viewport - más pequeño en pantallas bajas */
+  width: clamp(140px, min(50vw, 28vh), 200px);
+  height: clamp(140px, min(50vw, 28vh), 200px);
   border-radius: 50%;
   border: none;
   background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-soft));
   color: white;
-  font-size: 1.1rem;
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   display: inline-flex;
   flex-direction: column;
   align-items: center;
@@ -105,10 +117,11 @@
   position: relative;
   overflow: visible;
   margin: 0 auto;
+  flex-shrink: 0;
 }
 
 .btn-main i {
-  font-size: 3rem;
+  font-size: clamp(2rem, 8vw, 3rem);
 }
 
 .btn-main:hover:not(:disabled) {
@@ -197,8 +210,9 @@
 
 @media (max-width: 576px) {
   #hands-free-card .btn-main {
-    width: 160px;
-    height: 160px;
+    /* En móvil: más pequeño aún si la altura es limitada */
+    width: clamp(120px, min(45vw, 25vh), 160px);
+    height: clamp(120px, min(45vw, 25vh), 160px);
   }
 }
 
@@ -305,50 +319,56 @@
 }
 
 .hands-free-section {
-  padding-top: 1rem !important;
-  padding-bottom: 1rem !important;
-  /* Centrado vertical - ocupa altura disponible menos navbar */
-  min-height: calc(100vh - 160px);
-  min-height: calc(100dvh - 160px);
+  /* Usar variables de safe area y navbar del app-shell */
+  --hf-safe-top: var(--safe-area-top, env(safe-area-inset-top, 0px));
+  --hf-safe-bottom: var(--safe-area-bottom, env(safe-area-inset-bottom, 0px));
+  --hf-navbar-height: var(--mobile-navbar-height, 64px);
+  /* Altura total a restar: top-navbar + safe-top + bottom-navbar + safe-bottom + padding */
+  --hf-total-offset: calc(56px + var(--hf-safe-top) + var(--hf-navbar-height) + var(--hf-safe-bottom) + 1rem);
+  
+  padding: 0.5rem !important;
+  /* Altura exacta disponible, NO min-height para evitar scroll */
+  height: calc(100vh - var(--hf-total-offset));
+  height: calc(100dvh - var(--hf-total-offset));
+  max-height: calc(100vh - var(--hf-total-offset));
+  max-height: calc(100dvh - var(--hf-total-offset));
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
   .hands-free-section {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
-    min-height: calc(100vh - 140px);
-    min-height: calc(100dvh - 140px);
+    --hf-total-offset: calc(48px + var(--hf-safe-top) + var(--hf-navbar-height) + var(--hf-safe-bottom) + 0.5rem);
+    padding: 0.25rem !important;
   }
   #hands-free-card .card-body {
-    padding: 1.25rem;
+    padding: 1rem;
   }
   #hands-free-card .card-header,
   #hands-free-card .card-footer {
-    padding: 1rem 1.25rem;
+    padding: 0.75rem 1rem;
   }
 }
 
-/* Pantallas muy pequeñas: permitir scroll si es necesario */
-@media (max-height: 600px) {
+/* Pantallas muy pequeñas en altura: permitir scroll */
+@media (max-height: 550px) {
   .hands-free-section {
-    min-height: auto;
+    height: auto;
+    max-height: none;
+    overflow: visible;
     justify-content: flex-start;
   }
 }
 
 @media (max-width: 576px) {
-  .btn-main {
-    width: min(70vw, 190px);
-    height: min(70vw, 190px);
-  }
   .audio-meter-wrapper {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
   .data-panel {
-    padding: 1.25rem;
+    padding: 1rem;
   }
 }
 
