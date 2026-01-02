@@ -1084,7 +1084,7 @@ def part_create(request):
     ultimo_auto_id = request.session.get('last_used_auto_id', '')
     ultimo_auto_etiqueta = request.session.get('last_used_auto_label', '')
     logger.info("Renderizando formulario de creación de piezas")
-    return render(request, 'parts/part_form.html', {
+    return render(request, 'parts/part_form_v2.html', {
         'form': form,
         'autos': autos_disponibles,
         'workshops': Workshop.objects.order_by('name'),
