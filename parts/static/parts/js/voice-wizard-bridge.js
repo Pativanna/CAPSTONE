@@ -425,29 +425,24 @@
     // Actualizar estado del botón
     elements.btnHandsFree.dataset.state = state;
     
-    // Actualizar icono y texto del botón
+    // Actualizar icono
     if (elements.micIcon) {
-      elements.micIcon.className = 'fas me-2';
+      elements.micIcon.className = 'fas';
       switch(state) {
         case 'inactive':
           elements.micIcon.classList.add('fa-microphone');
-          elements.btnHandsFree.innerHTML = '<i class="fas fa-microphone me-2"></i> Iniciar';
           break;
         case 'listening':
           elements.micIcon.classList.add('fa-microphone');
-          elements.btnHandsFree.innerHTML = '<i class="fas fa-microphone me-2"></i> Escuchando...';
           break;
         case 'recording':
           elements.micIcon.classList.add('fa-stop');
-          elements.btnHandsFree.innerHTML = '<i class="fas fa-stop me-2"></i> Detener';
           break;
         case 'processing':
           elements.micIcon.classList.add('fa-spinner', 'fa-spin');
-          elements.btnHandsFree.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando';
           break;
         case 'success':
           elements.micIcon.classList.add('fa-check');
-          elements.btnHandsFree.innerHTML = '<i class="fas fa-check me-2"></i> ¡Listo!';
           break;
       }
     }
