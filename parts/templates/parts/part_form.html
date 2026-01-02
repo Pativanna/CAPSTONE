@@ -13,9 +13,7 @@
 <!-- CSRF Token para JavaScript -->
 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 
-<section class="container py-4 hands-free-section">
-  <div class="row justify-content-center">
-    <div class="col-lg-6 col-md-8">
+<section class="hands-free-section">
       
       <!-- Tarjeta principal de Manos Libres -->
       <div class="card shadow-lg border-0" id="hands-free-card"{% if user.is_authenticated %} data-user-id="{{ user.id }}"{% endif %}>
@@ -195,9 +193,6 @@
           </div>
         </div>
       </div>
-
-    </div>
-  </div>
 </section>
 
 <!-- Modal para Selección de Vehículo -->
