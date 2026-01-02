@@ -1,0 +1,234 @@
+================================================================================
+                    BUGS CONOCIDOS Y SOLUCIONES
+                    Sistema de Inventario - Transervis
+================================================================================
+Fecha de creación: 2026-01-02
+Última actualización: 2026-01-02
+
+Este archivo documenta bugs encontrados y sus soluciones para que ambas IAs
+tengan conocimiento compartido y no repitan errores.
+
+================================================================================
+                    ÍNDICE
+================================================================================
+
+1. [2026-01-02] Bottom Nav - Múltiples items activos simultáneamente
+2. [2025-12-30] Micrófono Android - getUserMedia falla en Capacitor
+3. [2025-12-30] Java syntax - import alias no soportado
+4. [2025-12-30] CSP + Turbo - Scripts inline bloqueados
+5. [2025-12-09] Turbo Forms - action="" resuelve URL incorrecta
+
+================================================================================
+## 1. [2026-01-02] Bottom Nav - Múltiples items activos simultáneamente
+================================================================================
+
+PROBLEMA:
+  El navbar inferior mostraba múltiples items como activos (ej: "Repuestos" 
+  y "Voz" al mismo tiempo) cuando el usuario estaba en ciertas páginas.
+
+CAUSA:
+  La lógica en mobile-nav.js usaba:
+  1. href.split('?')[0] para extraer el path, lo que hacía que "/parts/?voice=1"
+     se convirtiera en "/parts/"
+  2. startsWith() para matching parcial, que es demasiado amplio
+  
+  Resultado: Tanto "Repuestos" (/parts/) como "Voz" (/parts/?voice=1) 
+  coincidían cuando el path era /parts/add/ o cualquier /parts/*
+
+SOLUCIÓN:
+  Reescribir updateBottomNavActive() con:
+  - Mapeo explícito por data-nav-id
+  - Orden de precedencia de más específico a menos específico
+  - Verificación de query params para distinguir "voz" de "repuestos"
+  - Solo un item puede estar activo (el primer match gana)
+
+ARCHIVOS AFECTADOS:
+  - parts/static/parts/js/mobile-nav.js
+
+COMMIT: 2273eb9
+
+CÓDIGO CORRECTO:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ const pathMappings = [                                                      │
+│   { navId: 'voz', test: () => currentPath === '/parts/' &&                  │
+│                              currentSearch.includes('voice=1') },           │
+│   { navId: 'agregar', test: () => currentPath === '/parts/add/' },          │
+│   { navId: 'lector', test: () => currentPath.startsWith('/verificador') },  │
+│   { navId: 'repuestos', test: () => {                                       │
+│     if (currentPath === '/parts/' && !currentSearch.includes('voice=1'))    │
+│       return true;                                                          │
+│     if (currentPath.startsWith('/parts/') &&                                │
+│         currentPath !== '/parts/add/') return true;                         │
+│     return false;                                                           │
+│   }},                                                                       │
+│   { navId: 'inicio', test: () => currentPath === '/dashboard/' ||           │
+│                                  currentPath === '/' },                     │
+│ ];                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+## 2. [2025-12-30] Micrófono Android - getUserMedia falla en Capacitor
+================================================================================
+
+PROBLEMA:
+  Al usar funciones de voz en la app Android (Capacitor), getUserMedia fallaba
+  con "NotAllowedError: Permission denied" aunque el usuario había aceptado
+  el permiso.
+
+CAUSA:
+  Dos problemas combinados:
+  
+  1. Faltaba el permiso MODIFY_AUDIO_SETTINGS en AndroidManifest.xml
+     WebView requiere AMBOS permisos para audio:
+     - RECORD_AUDIO
+     - MODIFY_AUDIO_SETTINGS
+  
+  2. Se había implementado un WebChromeClient personalizado que SOBRESCRIBÍA
+     el BridgeWebChromeClient de Capacitor. El de Capacitor ya maneja
+     correctamente onPermissionRequest(), pero el personalizado no tenía
+     toda la funcionalidad.
+
+SOLUCIÓN:
+  1. Agregar a AndroidManifest.xml:
+     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+  
+  2. ELIMINAR el WebChromeClient personalizado de MainActivity.java
+     Dejar que Capacitor use su BridgeWebChromeClient por defecto
+  
+  3. Agregar llamadas a window.requestMicrophonePermission() antes de
+     getUserMedia() en los archivos JS que usan audio
+
+ARCHIVOS AFECTADOS:
+  - android/app/src/main/AndroidManifest.xml
+  - android/app/src/main/java/.../MainActivity.java
+  - parts/static/parts/hands-free-voice.js
+  - parts/static/parts/recorder.js
+  - parts/static/parts/voice-webrtc-hybrid.js
+  - parts/static/parts/js/part-list.js
+
+COMMITS: c9a680d, 68763e8
+
+REFERENCIA: https://github.com/ionic-team/capacitor/issues/6967
+
+================================================================================
+## 3. [2025-12-30] Java syntax - import alias no soportado
+================================================================================
+
+PROBLEMA:
+  Error de compilación en MainActivity.java:
+  "error: ';' expected" en la línea del import
+
+CAUSA:
+  Se usó sintaxis de Kotlin para alias de import:
+  import androidx.core.graphics.Insets as CoreInsets;
+  
+  Java NO soporta alias en imports (eso es sintaxis de Kotlin).
+
+SOLUCIÓN:
+  Cambiar a import directo sin alias:
+  import androidx.core.graphics.Insets;
+  
+  Y usar "Insets" directamente en el código.
+
+ARCHIVOS AFECTADOS:
+  - android/app/src/main/java/.../MainActivity.java
+
+COMMIT: 575e0b7
+
+================================================================================
+## 4. [2025-12-30] CSP + Turbo - Scripts inline bloqueados
+================================================================================
+
+PROBLEMA:
+  Scripts inline con nonce eran bloqueados después de navegación Turbo:
+  "Refused to execute inline script because it violates CSP..."
+
+CAUSA:
+  Turbo hace navegación SPA: carga HTML vía fetch e inyecta en el DOM.
+  Cada respuesta HTTP tiene un NONCE diferente.
+  Cuando Turbo inyecta HTML nuevo, el navegador usa el CSP de la página
+  ORIGINAL, no el del nuevo contenido.
+  
+  Resultado: El nonce del script inline no coincide con el CSP activo.
+
+SOLUCIÓN:
+  NUNCA usar scripts inline en templates. Siempre archivos externos:
+  
+  ❌ INCORRECTO:
+  <script nonce="{{ csp_nonce }}">código</script>
+  
+  ✅ CORRECTO:
+  <script src="{% static 'parts/js/mi-script.js' %}" 
+          nonce="{{ csp_nonce }}" defer></script>
+
+ARCHIVOS AFECTADOS:
+  - Todos los templates que tenían scripts inline
+  - parts/static/parts/js/app-loading-init.js (reemplaza inline)
+  - parts/static/parts/js/style-watcher.js (reemplaza inline)
+
+VER TAMBIÉN: REGLAS_TURBO.txt sección 2
+
+================================================================================
+## 5. [2025-12-09] Turbo Forms - action="" resuelve URL incorrecta
+================================================================================
+
+PROBLEMA:
+  Formularios dentro de turbo-frames con action="" enviaban POST a la URL
+  incorrecta (la de la página principal en lugar de la del frame).
+
+CAUSA:
+  Cuando Turbo carga contenido en un frame vía fetch, los forms con action=""
+  resuelven la URL relativa a la PÁGINA PRINCIPAL, no a la URL del contenido
+  cargado en el frame.
+  
+  Ejemplo:
+  - Usuario está en /autos/ (página principal)
+  - Click en "Eliminar" carga /autos/delete/12/ en el frame
+  - Form tiene action=""
+  - POST va a /autos/ en lugar de /autos/delete/12/
+
+SOLUCIÓN:
+  SIEMPRE pasar action_url explícita desde la vista al template:
+  
+  Vista:
+  return render(request, 'template.html', {
+      'object': obj,
+      'action_url': reverse('parts:mi_accion', args=[pk]),
+  })
+  
+  Template:
+  <form method="post" action="{{ action_url }}">
+
+ARCHIVOS AFECTADOS:
+  - Todas las vistas de delete, create, update que se cargan en frames
+  - parts/templates/parts/confirm_delete.html
+
+VER TAMBIÉN: REGLAS_TURBO.txt sección 1, PRACTICAS_DESARROLLO.txt sección 2.1
+
+================================================================================
+                    TEMPLATE PARA NUEVOS BUGS
+================================================================================
+
+Copiar y pegar este template cuando documentes un nuevo bug:
+
+## N. [FECHA] Título descriptivo del bug
+================================================================================
+
+PROBLEMA:
+  Descripción del síntoma visible para el usuario
+
+CAUSA:
+  Explicación técnica de por qué ocurre
+
+SOLUCIÓN:
+  Pasos para solucionar o código correcto
+
+ARCHIVOS AFECTADOS:
+  - ruta/archivo1
+  - ruta/archivo2
+
+COMMIT: hash (si aplica)
+
+================================================================================
+Fin del archivo
+================================================================================

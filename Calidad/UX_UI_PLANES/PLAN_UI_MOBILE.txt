@@ -1,8 +1,12 @@
 ================================================================================
             PLAN DE MEJORA UI/UX - INVENTARIO CAR INVENTORY (MÓVIL)
 ================================================================================
-Fecha: 2025-12-09
+Fecha creación: 2025-12-09
+Última actualización: 2026-01-02
 Responsable: Codex (IA)
+
+⚠️ IMPORTANTE: LEER PRIMERO /Calidad/LEEME_PRIMERO.txt
+   Hay DOS IAs trabajando en el proyecto - documentar descubrimientos aquí.
 
 NORMAS DE REFERENCIA:
   - ISO/IEC 9241-171 (accesibilidad y usabilidad en interfaces)

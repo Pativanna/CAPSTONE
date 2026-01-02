@@ -1,8 +1,12 @@
 ================================================================================
           INSTRUCCIONES DE IMPLEMENTACIÓN SEGURA Y PROFESIONAL (ISO)
 ================================================================================
-Fecha: 2025-12-09
-Versión: 1.0
+Fecha creación: 2025-12-09
+Última actualización: 2026-01-02
+Versione: 1.1
+
+⚠️ IMPORTANTE: LEER PRIMERO /Calidad/LEEME_PRIMERO.txt
+   Hay DOS IAs trabajando en el proyecto - documentar descubrimientos aquí.
 
 OBJETIVO:
   - Asegurar que TODO cambio de código cumpla con las normas ISO aplicables

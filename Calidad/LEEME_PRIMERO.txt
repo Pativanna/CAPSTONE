@@ -1,0 +1,108 @@
+================================================================================
+        ⚠️⚠️⚠️  INSTRUCCIÓN CRÍTICA PARA IA/COPILOT  ⚠️⚠️⚠️
+================================================================================
+Fecha de creación: 2026-01-02
+Última actualización: 2026-01-02
+
+================================================================================
+                    LECTURA OBLIGATORIA - SIN EXCEPCIONES
+================================================================================
+
+ANTES DE ENVIAR CUALQUIER RESPUESTA O ESCRIBIR CÓDIGO:
+
+  1. LEER COMPLETA esta carpeta /home/ubuntu/car_inventory/Calidad/
+     - LEEME_PRIMERO.txt (este archivo)
+     - ISO_AUDIT.txt
+     - ISO_IMPLEMENTACION_SEGURA.txt
+     - PRACTICAS_DESARROLLO.txt
+     - REGLAS_TURBO.txt
+     - BUGS_CONOCIDOS.txt
+     - OPTIMIZACION_BUSQUEDA_v2.txt
+     - NOTAS_DEPLOY.md
+     - UX_UI_PLANES/PLAN_UI_MOBILE.txt
+
+  2. NO ASUMIR que ya conoces el contenido - SIEMPRE releer
+  
+  3. VERIFICAR si hay archivos nuevos en la carpeta
+
+================================================================================
+                    CONTEXTO: DOS IAs TRABAJANDO EN PARALELO
+================================================================================
+
+IMPORTANTE: Hay DOS asistentes de IA trabajando en este proyecto de forma
+independiente. Esto significa:
+
+  ✅ SIEMPRE documentar descubrimientos importantes en esta carpeta
+  ✅ SIEMPRE leer toda la carpeta antes de cada respuesta
+  ✅ NUNCA asumir que el otro asistente ya documentó algo
+  ✅ ACTUALIZAR archivos existentes cuando encuentres nuevos patrones/bugs
+  ✅ CREAR nuevos archivos si el tema es lo suficientemente importante
+
+ARCHIVOS QUE DEBES ACTUALIZAR CUANDO ENCUENTRES ALGO NUEVO:
+  - BUGS_CONOCIDOS.txt → Bugs encontrados y sus soluciones
+  - PRACTICAS_DESARROLLO.txt → Nuevos patrones de código descubiertos
+  - REGLAS_TURBO.txt → Problemas específicos de Turbo/Hotwired
+
+================================================================================
+                    PROTOCOLO DE DOCUMENTACIÓN
+================================================================================
+
+Cuando encuentres un bug o patrón importante:
+
+1. AGREGAR al archivo correspondiente con formato:
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ ## [FECHA] Título del descubrimiento                                    │
+   │                                                                         │
+   │ PROBLEMA:                                                               │
+   │   Descripción clara del problema encontrado                             │
+   │                                                                         │
+   │ CAUSA:                                                                  │
+   │   Por qué ocurre el problema                                            │
+   │                                                                         │
+   │ SOLUCIÓN:                                                               │
+   │   Cómo se solucionó                                                     │
+   │                                                                         │
+   │ ARCHIVOS AFECTADOS:                                                     │
+   │   - ruta/al/archivo1.js                                                 │
+   │   - ruta/al/archivo2.py                                                 │
+   │                                                                         │
+   │ COMMIT: hash-del-commit (si aplica)                                     │
+   └─────────────────────────────────────────────────────────────────────────┘
+
+2. Si es un patrón que debe seguirse siempre, agregarlo a PRACTICAS_DESARROLLO.txt
+
+3. Si es específico de Turbo/CSP, agregarlo a REGLAS_TURBO.txt
+
+================================================================================
+                    VERIFICACIÓN DE CUMPLIMIENTO
+================================================================================
+
+Antes de enviar tu respuesta, verifica mentalmente:
+
+  □ ¿Leí TODOS los archivos de /Calidad/?
+  □ ¿Mi solución sigue los patrones documentados?
+  □ ¿Debo documentar algo nuevo que descubrí?
+  □ ¿Estoy siguiendo las reglas de Turbo/CSP?
+  □ ¿Usé action_url en formularios dentro de turbo-frames?
+  □ ¿Mis scripts son externos (no inline)?
+  □ ¿Seguí el patrón onReady/init/cleanup para scripts de página?
+
+================================================================================
+                    STACK TECNOLÓGICO (RECORDATORIO)
+================================================================================
+
+  - Backend: Django 4.x + Django Channels (WebSocket)
+  - Frontend: Turbo (Hotwired) + Vanilla JS (NO React, NO Vue)
+  - Mobile: Capacitor 7.x (WebView híbrido hacia servidor remoto)
+  - Base de datos: SQLite (dev) / PostgreSQL (prod)
+  - Cache: Redis
+  - Server: Daphne (ASGI) + Nginx
+
+ARQUITECTURA CRÍTICA:
+  El APK de Capacitor NO contiene el código de la app.
+  Solo contiene el WebView que carga https://www.transervis.cl
+  Por eso SIEMPRE hay que ejecutar ./aplicar_cambios.sh después de pushear.
+
+================================================================================
+Fin del archivo - LEER SIEMPRE ANTES DE RESPONDER
+================================================================================

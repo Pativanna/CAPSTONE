@@ -2,28 +2,39 @@
               PRÁCTICAS DE DESARROLLO - LECTURA OBLIGATORIA
               Sistema de Inventario - Transervis
 ================================================================================
-Fecha: 2025-12-09
-Versión: 1.0
+Fecha creación: 2025-12-09
+Última actualización: 2026-01-02
+Versión: 1.1
 
 ================================================================================
-⚠️  INSTRUCCIÓN PARA IA/COPILOT: LEER SIEMPRE ANTES DE CADA IMPLEMENTACIÓN
+⚠️⚠️⚠️  INSTRUCCIÓN CRÍTICA PARA IA/COPILOT ⚠️⚠️⚠️
 ================================================================================
+
+LEER PRIMERO: /home/ubuntu/car_inventory/Calidad/LEEME_PRIMERO.txt
+
+CONTEXTO: Hay DOS asistentes de IA trabajando en este proyecto de forma
+independiente. AMBOS deben leer TODA la carpeta /Calidad/ antes de responder.
 
 Antes de implementar cualquier cambio, el asistente DEBE:
-1. Leer /home/ubuntu/car_inventory/Calidad/ISO_AUDIT.txt
-2. Leer este archivo (PRACTICAS_DESARROLLO.txt)
-3. Revisar el patrón existente en el código relacionado
-4. Proponer los cambios ANTES de implementar
+1. Leer LEEME_PRIMERO.txt (instrucciones críticas)
+2. Leer BUGS_CONOCIDOS.txt (bugs y soluciones documentadas)
+3. Leer ISO_AUDIT.txt (cumplimiento ISO)
+4. Leer este archivo (PRACTICAS_DESARROLLO.txt)
+5. Leer REGLAS_TURBO.txt (reglas específicas de Turbo/Hotwired)
+6. Revisar el patrón existente en el código relacionado
+7. Si encuentras algo nuevo, DOCUMENTARLO en Calidad/
 
 ================================================================================
 0. LECTURA OBLIGATORIA ANTES DE CADA RESPUESTA
 ================================================================================
 
 ANTES DE ENVIAR CUALQUIER RESPUESTA O NUEVO MENSAJE:
-  - Volver a leer todos los archivos dentro de /home/ubuntu/car_inventory/Calidad/
-    (ISO_AUDIT.txt, PRACTICAS_DESARROLLO.txt, NOTAS_DEPLOY.md y cualquier otro que se agregue).
+  - Volver a leer TODOS los archivos dentro de /home/ubuntu/car_inventory/Calidad/
+    (LEEME_PRIMERO.txt, BUGS_CONOCIDOS.txt, ISO_AUDIT.txt, PRACTICAS_DESARROLLO.txt,
+    REGLAS_TURBO.txt, NOTAS_DEPLOY.md y cualquier otro que se agregue).
   - Confirmar mentalmente que la información sigue vigente y considerar cualquier
     instrucción nueva antes de escribir código o explicar cambios.
+  - Si descubres un bug o patrón nuevo, DOCUMENTARLO en BUGS_CONOCIDOS.txt
 
 ================================================================================
                     1. ARQUITECTURA DEL PROYECTO
@@ -412,5 +423,10 @@ Branch principal: traspaso-app
 Producción: https://www.transervis.cl
 
 ================================================================================
-Última actualización: 2025-12-30
+Última actualización: 2026-01-02
+================================================================================
+
+NOTA PARA IAs: Si has llegado aquí, recuerda que también debes documentar
+cualquier nuevo descubrimiento en BUGS_CONOCIDOS.txt para que la otra IA
+también tenga acceso a la información.
 ================================================================================

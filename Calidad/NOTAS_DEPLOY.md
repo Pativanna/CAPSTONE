@@ -1,10 +1,19 @@
 # NOTAS DE DEPLOY - APK y Servidor
 
-## ⚠️ INSTRUCCIÓN PARA IA/COPILOT
+Última actualización: 2026-01-02
 
-**ANTES de implementar cualquier cambio, DEBES leer:**
-1. `Calidad/ISO_AUDIT.txt` - Auditoría de cumplimiento ISO
-2. `Calidad/PRACTICAS_DESARROLLO.txt` - Patrones y buenas prácticas
+## ⚠️⚠️⚠️ INSTRUCCIÓN CRÍTICA PARA IA/COPILOT ⚠️⚠️⚠️
+
+**LEER PRIMERO: `/Calidad/LEEME_PRIMERO.txt`**
+
+Hay DOS asistentes de IA trabajando en este proyecto.
+AMBOS deben leer TODA la carpeta `/Calidad/` antes de responder:
+
+1. `LEEME_PRIMERO.txt` - **LEER SIEMPRE PRIMERO**
+2. `BUGS_CONOCIDOS.txt` - Bugs encontrados y soluciones
+3. `ISO_AUDIT.txt` - Auditoría de cumplimiento ISO
+4. `PRACTICAS_DESARROLLO.txt` - Patrones y buenas prácticas
+5. `REGLAS_TURBO.txt` - Reglas específicas de Turbo/Hotwired
 
 ---
 

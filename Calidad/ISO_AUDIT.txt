@@ -2,9 +2,13 @@
                     AUDITORÍA DE CUMPLIMIENTO ISO
                     Sistema de Inventario - Transervis
 ================================================================================
-Fecha: 2025-12-09
-Versión: 1.0
+Fecha creación: 2025-12-09
+Última actualización: 2026-01-02
+Versión: 1.1
 Auditor: Sistema Automatizado
+
+⚠️ IMPORTANTE: LEER PRIMERO /Calidad/LEEME_PRIMERO.txt
+   Hay DOS IAs trabajando en el proyecto - documentar descubrimientos aquí.
 
 ================================================================================
                            RESUMEN EJECUTIVO

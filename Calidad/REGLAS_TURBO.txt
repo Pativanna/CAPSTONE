@@ -2,8 +2,12 @@
                     REGLAS TURBO - REFERENCIA RÁPIDA
                     Sistema de Inventario - Transervis
 ================================================================================
-Fecha: 2025-12-30
-Versión: 1.0
+Fecha creación: 2025-12-30
+Última actualización: 2026-01-02
+Versión: 1.1
+
+⚠️ IMPORTANTE: LEER PRIMERO /Calidad/LEEME_PRIMERO.txt
+   Hay DOS IAs trabajando en el proyecto - documentar descubrimientos aquí.
 
 Este archivo resume las reglas OBLIGATORIAS para trabajar con Turbo (Hotwired)
 en este proyecto. LEER ANTES de implementar cualquier cambio de frontend.

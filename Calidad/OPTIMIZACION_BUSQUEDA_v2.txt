@@ -1,8 +1,12 @@
 ================================================================================
           OPTIMIZACIÓN DEL SISTEMA DE BÚSQUEDA INTELIGENTE v2.0
 ================================================================================
-Fecha: 2025-12-30
+Fecha creación: 2025-12-30
+Última actualización: 2026-01-02
 Autor: Sistema Automatizado (Copilot)
+
+⚠️ IMPORTANTE: LEER PRIMERO /Calidad/LEEME_PRIMERO.txt
+   Hay DOS IAs trabajando en el proyecto.
 
 ================================================================================
                            RESUMEN EJECUTIVO
