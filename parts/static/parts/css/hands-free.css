@@ -305,12 +305,22 @@
 }
 
 .hands-free-section {
-  padding-top: 1.5rem !important;
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+  /* Centrado vertical - ocupa altura disponible menos navbar */
+  min-height: calc(100vh - 160px);
+  min-height: calc(100dvh - 160px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {
   .hands-free-section {
-    padding-top: 0.75rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    min-height: calc(100vh - 140px);
+    min-height: calc(100dvh - 140px);
   }
   #hands-free-card .card-body {
     padding: 1.25rem;
@@ -318,6 +328,14 @@
   #hands-free-card .card-header,
   #hands-free-card .card-footer {
     padding: 1rem 1.25rem;
+  }
+}
+
+/* Pantallas muy pequeñas: permitir scroll si es necesario */
+@media (max-height: 600px) {
+  .hands-free-section {
+    min-height: auto;
+    justify-content: flex-start;
   }
 }
 
